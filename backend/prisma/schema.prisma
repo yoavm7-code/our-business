@@ -1,0 +1,196 @@
+// Our Money - Database Schema
+// PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --------------------------------------------
+// Household (shared by two users)
+// --------------------------------------------
+model Household {
+  id        String   @id @default(uuid())
+  name      String   @default("Our Household")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users       User[]
+  accounts    Account[]
+  categories  Category[]
+  transactions Transaction[]
+  documents   Document[]
+  rules       CategoryRule[]
+}
+
+// --------------------------------------------
+// Users (two users per household)
+// --------------------------------------------
+model User {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  passwordHash String  @map("password_hash")
+  name        String?
+  householdId String   @map("household_id")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+}
+
+// --------------------------------------------
+// Accounts (bank, credit card, insurance, investment)
+// --------------------------------------------
+model Account {
+  id           String   @id @default(uuid())
+  householdId  String   @map("household_id")
+  name         String
+  type         AccountType
+  provider     String?  // e.g. "bank-xyz", "visa", "pension-fund"
+  externalId   String?  @unique @map("external_id") // from open banking / API
+  balance      Decimal  @default(0) @db.Decimal(14, 2)
+  currency     String   @default("ILS")
+  isActive     Boolean  @default(true) @map("is_active")
+  syncToken    String?  @map("sync_token") // for incremental sync
+  metadata     Json?    // provider-specific (encrypted credentials ref, etc.)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  household    Household     @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@index([householdId])
+  @@index([type])
+}
+
+enum AccountType {
+  BANK
+  CREDIT_CARD
+  INSURANCE
+  PENSION
+  INVESTMENT
+  CASH
+}
+
+// --------------------------------------------
+// Categories (default + custom per household)
+// --------------------------------------------
+model Category {
+  id           String   @id @default(uuid())
+  householdId  String   @map("household_id")
+  name         String
+  slug         String   // e.g. "groceries", "salary"
+  icon         String?  // emoji or icon name
+  color        String?  // hex
+  isDefault    Boolean  @default(false) @map("is_default")
+  isIncome     Boolean  @default(false) @map("is_income")
+  parentId     String?  @map("parent_id")
+  sortOrder    Int      @default(0) @map("sort_order")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  household    Household     @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  parent       Category?    @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children     Category[]   @relation("CategoryHierarchy")
+  transactions Transaction[]
+  rules        CategoryRule[]
+
+  @@unique([householdId, slug])
+  @@index([householdId])
+}
+
+// --------------------------------------------
+// Transactions (income & expenses)
+// --------------------------------------------
+model Transaction {
+  id                 String    @id @default(uuid())
+  householdId        String    @map("household_id")
+  accountId         String    @map("account_id")
+  categoryId        String?   @map("category_id")
+  date              DateTime  @db.Date
+  description       String
+  amount            Decimal   @db.Decimal(14, 2) // positive = income, negative = expense (for installments = payment made)
+  currency          String    @default("ILS")
+  source            TransactionSource
+  externalId        String?   @unique @map("external_id") // from API sync
+  documentId        String?   @map("document_id") // if extracted from upload
+  rawText           String?   @map("raw_text") // original line from statement/OCR
+  totalAmount       Decimal?  @map("total_amount") @db.Decimal(14, 2) // for installments: full price (e.g. 1950)
+  installmentCurrent Int?     @map("installment_current") // e.g. 2 (payment 2 of 3)
+  installmentTotal   Int?     @map("installment_total") // e.g. 3
+  metadata          Json?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  household  Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  account    Account   @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  document   Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  @@index([householdId, date])
+  @@index([accountId])
+  @@index([categoryId])
+  @@index([source])
+}
+
+enum TransactionSource {
+  MANUAL
+  UPLOAD
+  API
+}
+
+// --------------------------------------------
+// Documents (uploaded files + extracted data)
+// --------------------------------------------
+model Document {
+  id           String   @id @default(uuid())
+  householdId  String   @map("household_id")
+  fileName     String   @map("file_name")
+  mimeType     String   @map("mime_type")
+  storagePath  String   @map("storage_path") // S3 key or local path
+  fileSize     Int      @map("file_size")
+  status       DocumentStatus @default(PENDING)
+  ocrText      String?  @map("ocr_text") @db.Text
+  extractedJson Json?   @map("extracted_json") // AI-extracted transactions
+  errorMessage String?  @map("error_message")
+  uploadedAt   DateTime @default(now()) @map("uploaded_at")
+  processedAt  DateTime? @map("processed_at")
+
+  household    Household     @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@index([householdId])
+  @@index([status])
+}
+
+enum DocumentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+// --------------------------------------------
+// Rules for auto-categorization (learn from user)
+// --------------------------------------------
+model CategoryRule {
+  id          String   @id @default(uuid())
+  householdId String   @map("household_id")
+  categoryId  String   @map("category_id")
+  pattern     String   // regex or keyword (e.g. "SUPER*", "AMAZON")
+  patternType String   @default("contains") @map("pattern_type") // contains, startsWith, regex
+  priority    Int      @default(0) // higher = applied first
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  category  Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([householdId])
+  @@index([categoryId])
+}

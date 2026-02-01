@@ -1,0 +1,103 @@
+import {
+  Body,
+  Controller,
+  DefaultValuePipe,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { HouseholdId } from '../common/decorators/household.decorator';
+import { TransactionsService } from './transactions.service';
+import { CreateTransactionDto } from './dto/create-transaction.dto';
+import { UpdateTransactionDto } from './dto/update-transaction.dto';
+import { TransactionsQueryDto } from './dto/transactions-query.dto';
+
+@Controller('api/transactions')
+@UseGuards(JwtAuthGuard)
+export class TransactionsController {
+  constructor(private transactionsService: TransactionsService) {}
+
+  @Post()
+  create(@HouseholdId() householdId: string, @Body() dto: CreateTransactionDto) {
+    return this.transactionsService.create(householdId, dto);
+  }
+
+  @Post('suggest-category')
+  async suggestCategory(
+    @HouseholdId() householdId: string,
+    @Body() body: { description: string },
+  ) {
+    const categoryId = await this.transactionsService.suggestCategory(householdId, body.description ?? '');
+    return { categoryId };
+  }
+
+  @Post('bulk-delete')
+  bulkDelete(
+    @HouseholdId() householdId: string,
+    @Body() body: { ids: string[] },
+  ) {
+    return this.transactionsService.removeMany(householdId, body.ids ?? []);
+  }
+
+  @Get()
+  findAll(
+    @HouseholdId() householdId: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('accountId') accountId?: string,
+    @Query('categoryId') categoryId?: string,
+    @Query('search') search?: string,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page?: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit?: number,
+  ) {
+    const query: TransactionsQueryDto = {
+      from,
+      to,
+      accountId,
+      categoryId,
+      search,
+      page: page ?? 1,
+      limit: limit ?? 20,
+    };
+    return this.transactionsService.findAll(householdId, query);
+  }
+
+  @Get(':id')
+  findOne(@HouseholdId() householdId: string, @Param('id') id: string) {
+    return this.transactionsService.findOne(householdId, id);
+  }
+
+  @Put(':id')
+  update(
+    @HouseholdId() householdId: string,
+    @Param('id') id: string,
+    @Body() dto: UpdateTransactionDto,
+  ) {
+    return this.transactionsService.update(householdId, id, dto);
+  }
+
+  @Patch(':id/category')
+  updateCategory(
+    @HouseholdId() householdId: string,
+    @Param('id') id: string,
+    @Body() body: { categoryId: string | null },
+  ) {
+    return this.transactionsService.updateCategory(
+      householdId,
+      id,
+      body.categoryId ?? null,
+    );
+  }
+
+  @Delete(':id')
+  remove(@HouseholdId() householdId: string, @Param('id') id: string) {
+    return this.transactionsService.remove(householdId, id);
+  }
+}
