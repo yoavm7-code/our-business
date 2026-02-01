@@ -107,7 +107,7 @@ git push -u origin main
 |-----|-----|
 | **Root Directory** | `backend` |
 | **Build Command** | `npm install && npx prisma generate && npm run build` |
-| **Start Command** | `npx prisma migrate deploy && npm run start` |
+| **Start Command** | `sh start.sh` |
 | **Watch Paths** | `backend/**` |
 
 ### 4.2 משתני סביבה (Variables)
@@ -116,7 +116,8 @@ git push -u origin main
 
 | משתנה | ערך |
 |-------|-----|
-| `DATABASE_URL` | העתק מ-PostgreSQL (לחץ **Add Reference** → **Postgres** → **DATABASE_URL**) |
+| `DATABASE_URL` | Add Reference → שירות ה-PostgreSQL → **DATABASE_URL** |
+| `DATABASE_PUBLIC_URL` | Add Reference → שירות ה-PostgreSQL → **DATABASE_PUBLIC_URL** *(מומלץ – פותר שגיאת P1001)* |
 | `JWT_SECRET` | מפתח סודי ארוך (למשל: `openssl rand -base64 32`) |
 | `JWT_EXPIRES_IN` | `7d` |
 | `PORT` | `4000` |
@@ -219,15 +220,24 @@ Railway יזהה את ה-push ויבצע deploy אוטומטי.
 - ודא ש-`JWT_SECRET` מוגדר
 
 ### P1001: Can't reach database server at our-money.railway.internal
-אם ה-Backend מנסה להתחבר ל-`railway.internal` ונכשל:
+הרשת הפנימית `railway.internal` לפעמים לא עובדת. הפתרון: להשתמש ב-`DATABASE_PUBLIC_URL`.
 
-1. **השינוי בקוד** – נוספה השהיה של 5 שניות בתחילת ה-Start Command. בצע `git push` כדי לפרוס מחדש.
-2. **שימוש ב-DATABASE_PUBLIC_URL** – אם אחרי ה-push עדיין נכשל:
-   - היכנס ל-**PostgreSQL** → **Variables** והעתק את `DATABASE_PUBLIC_URL`
-   - היכנס ל-**Backend** → **Variables**
-   - עדכן `DATABASE_URL` להעתקה של `DATABASE_PUBLIC_URL` (במקום Reference ל-DATABASE_URL הרגיל)
-   - **Redeploy** ל-Backend
-3. ודא ש-**Backend** ו-**PostgreSQL** באותו פרויקט Railway
+**אפשרות א' – הוספת DATABASE_PUBLIC_URL (מומלץ)**
+
+1. **Backend** → **Variables** → **New Variable**
+2. שם: `DATABASE_PUBLIC_URL`
+3. ערך: `${{ PostgreSQL.DATABASE_PUBLIC_URL }}` *(החלף `PostgreSQL` בשם שירות ה-Postgres שלך – למשל `Postgres` או `our-money`)*
+4. הקוד ישתמש ב-`DATABASE_PUBLIC_URL` אוטומטית דרך `start.sh`
+5. ודא ש-**Start Command** ב-Backend הוא `sh start.sh`
+6. **Redeploy**
+
+**אפשרות ב' – החלפת DATABASE_URL**
+
+1. **Backend** → **Variables** → מצא `DATABASE_URL`
+2. ערוך את הערך מ-`${{ PostgreSQL.DATABASE_URL }}` ל-`${{ PostgreSQL.DATABASE_PUBLIC_URL }}`
+3. **Redeploy**
+
+**אם אין DATABASE_PUBLIC_URL ב-PostgreSQL** – היכנס ל-**PostgreSQL** → **Variables** והעתק ידנית את הערכים ליצירת URL: `postgresql://USER:PASSWORD@HOST:PORT/DATABASE` (מ-PGHOST, PGPORT וכו', או מהגדרות TCP Proxy)
 
 ### Frontend מציג שגיאות רשת
 - ודא ש-`NEXT_PUBLIC_API_URL` מכיל את כתובת ה-Backend (כולל `https://`)

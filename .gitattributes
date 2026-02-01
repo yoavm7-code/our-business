@@ -1,0 +1,2 @@
+# Ensure shell scripts use LF (required for Linux/Railway)
+*.sh text eol=lf
