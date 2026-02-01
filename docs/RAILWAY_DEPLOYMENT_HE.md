@@ -218,6 +218,17 @@ Railway יזהה את ה-push ויבצע deploy אוטומטי.
 - ודא ש-`DATABASE_URL` תקין
 - ודא ש-`JWT_SECRET` מוגדר
 
+### P1001: Can't reach database server at our-money.railway.internal
+אם ה-Backend מנסה להתחבר ל-`railway.internal` ונכשל:
+
+1. **השינוי בקוד** – נוספה השהיה של 5 שניות בתחילת ה-Start Command. בצע `git push` כדי לפרוס מחדש.
+2. **שימוש ב-DATABASE_PUBLIC_URL** – אם אחרי ה-push עדיין נכשל:
+   - היכנס ל-**PostgreSQL** → **Variables** והעתק את `DATABASE_PUBLIC_URL`
+   - היכנס ל-**Backend** → **Variables**
+   - עדכן `DATABASE_URL` להעתקה של `DATABASE_PUBLIC_URL` (במקום Reference ל-DATABASE_URL הרגיל)
+   - **Redeploy** ל-Backend
+3. ודא ש-**Backend** ו-**PostgreSQL** באותו פרויקט Railway
+
 ### Frontend מציג שגיאות רשת
 - ודא ש-`NEXT_PUBLIC_API_URL` מכיל את כתובת ה-Backend (כולל `https://`)
 - ודא ש-`FRONTEND_URL` ב-Backend תואם את כתובת ה-Frontend (CORS)
