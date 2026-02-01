@@ -45,7 +45,7 @@ export default function UploadPage() {
           setProgress((p) => ({
             ...p,
             phase: 'processing',
-            status: state.status === 'PROCESSING' ? t('upload.processing') : state.status,
+            status: state.status === 'PROCESSING' ? t('upload.processing') : (state.status ?? t('upload.processing')),
           }));
         } else {
           const count = state.transactionsCount ?? state.document?._count?.transactions ?? 0;
@@ -57,7 +57,7 @@ export default function UploadPage() {
               ? t('upload.doneCount', { count })
               : state.document?.status === 'FAILED'
                 ? t('upload.doneFailed')
-                : state.status,
+                : (state.status ?? ''),
             transactionsCount: state.transactionsCount ?? state.document?._count?.transactions,
           }));
         }
