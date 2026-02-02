@@ -326,48 +326,67 @@ export default function TransactionsPage() {
           {t('transactionsPage.addTransaction')}
         </button>
       </div>
-      <div className="flex flex-wrap gap-4 items-center">
-        <DateRangePicker from={from} to={to} onChange={handleDateRangeChange} />
-        <input
-          type="search"
-          className="input min-w-[180px]"
-          placeholder={t('transactionsPage.search')}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <select
-          className="input w-auto min-w-[160px]"
-          value={accountId}
-          onChange={(e) => { setAccountId(e.target.value); setPage(1); }}
-        >
-          <option value="">{t('common.allAccounts')}</option>
-          {accountsList.map((a) => (
-            <option key={a.id} value={a.id}>{a.name}</option>
-          ))}
-        </select>
-        <select
-          className="input w-auto min-w-[140px]"
-          value={categoryId}
-          onChange={(e) => { setCategoryId(e.target.value); setPage(1); }}
-        >
-          <option value="">{t('common.allCategories')}</option>
-          {categoriesList.map((c) => (
-            <option key={c.id} value={c.id}>{getCategoryDisplayName(c.name, c.slug, t)}</option>
-          ))}
-        </select>
-        <label className="flex items-center gap-2 text-sm">
-          <span className="text-slate-600">{t('common.rowsPerPage')}</span>
-          <select
-            className="input w-auto min-w-[80px]"
-            value={limit}
-            onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
-          >
-            <option value={10}>10</option>
-            <option value={20}>20</option>
-            <option value={50}>50</option>
-            <option value={100}>100</option>
-          </select>
-        </label>
+      <div className="card p-4 space-y-4">
+        {/* First row: Date range and search */}
+        <div className="flex flex-wrap gap-4 items-center">
+          <DateRangePicker from={from} to={to} onChange={handleDateRangeChange} />
+          <div className="relative flex-1 min-w-[200px] max-w-[300px]">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute start-3 top-1/2 -translate-y-1/2 text-slate-400">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input
+              type="search"
+              className="input w-full ps-10"
+              placeholder={t('transactionsPage.search')}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        </div>
+        
+        {/* Second row: Dropdowns */}
+        <div className="flex flex-wrap gap-3 items-center pt-2 border-t border-[var(--border)]">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-500">{t('common.account')}:</span>
+            <select
+              className="input w-auto min-w-[140px] py-1.5 text-sm"
+              value={accountId}
+              onChange={(e) => { setAccountId(e.target.value); setPage(1); }}
+            >
+              <option value="">{t('common.allAccounts')}</option>
+              {accountsList.map((a) => (
+                <option key={a.id} value={a.id}>{a.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-500">{t('common.category')}:</span>
+            <select
+              className="input w-auto min-w-[140px] py-1.5 text-sm"
+              value={categoryId}
+              onChange={(e) => { setCategoryId(e.target.value); setPage(1); }}
+            >
+              <option value="">{t('common.allCategories')}</option>
+              {categoriesList.map((c) => (
+                <option key={c.id} value={c.id}>{getCategoryDisplayName(c.name, c.slug, t)}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-2 ms-auto">
+            <span className="text-sm text-slate-500">{t('common.rowsPerPage')}:</span>
+            <select
+              className="input w-auto min-w-[70px] py-1.5 text-sm"
+              value={limit}
+              onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </div>
+        </div>
       </div>
       {error && (
         <div className="rounded-lg bg-red-50 dark:bg-red-900/20 p-4 text-red-700 dark:text-red-300">

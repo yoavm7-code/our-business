@@ -43,7 +43,12 @@
     "last2Years": "Last 2 years",
     "yearFrom": "From year",
     "yearTo": "To year",
-    "apply": "Apply"
+    "apply": "Apply",
+    "quickSelect": "Quick select",
+    "recent": "Recent",
+    "months": "Months",
+    "years": "Years",
+    "customYearRange": "Custom year range"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -131,7 +136,10 @@
     "successMessage": "Document uploaded and processed successfully.",
     "recentUploads": "Recent uploads",
     "noTransactionsExtracted": "No transactions extracted. Try widening the date range on Transactions, or upload a clearer image.",
-    "ocrMayTakeMinute": "OCR + extraction may take a minute"
+    "ocrMayTakeMinute": "OCR + extraction may take a minute",
+    "noAccountsYet": "You haven't set up any accounts yet. To upload documents, first add at least one account (e.g. bank account, credit card).",
+    "goToSettings": "Go to Settings to add an account",
+    "accountHint": "Choose the account where the transactions in this document belong (e.g. if this is a Bank Leumi statement, select your Bank Leumi account)"
   },
   "income": {
     "title": "Income",

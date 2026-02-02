@@ -91,17 +91,33 @@ export default function UploadPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-1">{t('upload.account')}</label>
-            <select
-              className="input"
-              value={accountId}
-              onChange={(e) => setAccountId(e.target.value)}
-              required
-            >
-              <option value="">{t('common.chooseAccount')}</option>
-              {accountsList.map((a) => (
-                <option key={a.id} value={a.id}>{a.name}</option>
-              ))}
-            </select>
+            {accountsList.length === 0 ? (
+              <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                <p className="text-sm text-amber-800 dark:text-amber-200 mb-2">
+                  {t('upload.noAccountsYet')}
+                </p>
+                <a href="/settings" className="text-sm text-primary-600 hover:underline font-medium">
+                  {t('upload.goToSettings')} →
+                </a>
+              </div>
+            ) : (
+              <>
+                <select
+                  className="input"
+                  value={accountId}
+                  onChange={(e) => setAccountId(e.target.value)}
+                  required
+                >
+                  <option value="">{t('common.chooseAccount')}</option>
+                  {accountsList.map((a) => (
+                    <option key={a.id} value={a.id}>{a.name}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-slate-500 mt-1.5">
+                  {t('upload.accountHint')}
+                </p>
+              </>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">{t('upload.fileLabel')}</label>

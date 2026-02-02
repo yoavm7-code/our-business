@@ -86,7 +86,7 @@ export class InsightsService {
     const data = await this.getFinancialData(householdId);
     const client = this.getOpenAIClient();
     if (!client) {
-      return this.getFallbackInsights(data);
+      return this.getFallbackInsights(data, false);
     }
 
     const prompt = this.buildPrompt(data);
@@ -104,9 +104,9 @@ export class InsightsService {
         response_format: { type: 'json_object' },
       });
       const content = completion.choices[0]?.message?.content;
-      if (!content) return this.getFallbackInsights(data);
+      if (!content) return this.getFallbackInsights(data, true);
       const parsed = JSON.parse(content) as Record<string, unknown>;
-      const fallback = this.getFallbackInsights(data);
+      const fallback = this.getFallbackInsights(data, true);
       const toReadableString = (v: unknown, key: string): string => {
         if (typeof v === 'string' && v.trim()) return v;
         if (v != null && typeof v === 'object') {
@@ -145,7 +145,7 @@ export class InsightsService {
         investmentRecommendations: toReadableString(parsed.investmentRecommendations, 'investmentRecommendations') || fallback.investmentRecommendations,
       };
     } catch {
-      return this.getFallbackInsights(data);
+      return this.getFallbackInsights(data, true);
     }
   }
 
@@ -177,7 +177,7 @@ export class InsightsService {
     );
   }
 
-  private getFallbackInsights(data: Awaited<ReturnType<typeof this.getFinancialData>>): FinancialInsights {
+  private getFallbackInsights(data: Awaited<ReturnType<typeof this.getFinancialData>>, aiEnabled: boolean): FinancialInsights {
     const avgExpenses =
       data.monthlyData.length > 0
         ? data.monthlyData.reduce((s, m) => s + m.expenses, 0) / data.monthlyData.length
@@ -186,16 +186,50 @@ export class InsightsService {
       data.monthlyData.length > 0
         ? data.monthlyData.reduce((s, m) => s + m.income, 0) / data.monthlyData.length
         : 0;
-    const monthlySurplus = avgIncome - avgExpenses;
     const nextMonthStart = new Date(data.currentMonth + '-01');
     nextMonthStart.setMonth(nextMonthStart.getMonth() + 1);
-    const forecast = data.totalBalance + monthlySurplus;
+
+    // Build balance forecast message based on available data
+    let balanceForecast: string;
+    const hasIncome = avgIncome > 0;
+    const hasExpenses = avgExpenses > 0;
+    const hasBalance = data.totalBalance !== 0;
+
+    if (!hasIncome && !hasExpenses) {
+      balanceForecast = 'אין מספיק נתונים לצפי יתרה. הוסף תנועות (הכנסות והוצאות) כדי לקבל צפי מדויק.';
+    } else if (!hasIncome && hasExpenses) {
+      // Only expenses, no income recorded
+      balanceForecast = `על בסיס הוצאות ממוצעות של ${avgExpenses.toFixed(0)} ₪ לחודש. ` +
+        (hasBalance
+          ? `היתרה הנוכחית: ${data.totalBalance.toFixed(0)} ₪.`
+          : 'הוסף הכנסות כדי לקבל צפי מדויק יותר.');
+    } else {
+      // Have both income and expenses (or just income)
+      const monthlySurplus = avgIncome - avgExpenses;
+      const forecast = data.totalBalance + monthlySurplus;
+      balanceForecast = `על בסיס הממוצע של החודשים האחרונים: צפי ליתרה בתחילת החודש הקרוב (${nextMonthStart.toLocaleDateString('he-IL')}) בערך ${forecast.toFixed(0)} ₪.`;
+    }
+
+    // Savings recommendation
+    let savingsRecommendation: string;
+    if (avgIncome > 0) {
+      savingsRecommendation = `מומלץ להפריש 10-15% מההכנסה החודשית לחיסכון חירום. על בסיס הנתונים שלך: כ-${Math.round(avgIncome * 0.12)} ₪ לחודש.`;
+    } else if (avgExpenses > 0) {
+      // No income but has expenses - recommend based on expenses
+      savingsRecommendation = `מומלץ להפריש 10-15% מההכנסה החודשית לחיסכון חירום. על בסיס הנתונים שלך: כ-0 ₪ לחודש.`;
+    } else {
+      savingsRecommendation = 'הוסף נתוני הכנסות כדי לקבל המלצת חיסכון מותאמת אישית.';
+    }
+
+    // Investment recommendations
+    const investmentRecommendations = aiEnabled
+      ? 'אפיקים נפוצים בישראל: קרנות נאמנות, קופות גמל, קרנות השתלמות, אגרות חוב ממשלתיות.'
+      : 'להמלצות מותאמות אישית יש להפעיל את הבינה המלאכותית (OPENAI_API_KEY). אפיקים נפוצים בישראל: קרנות נאמנות, קופות גמל, קרנות השתלמות, אגרות חוב ממשלתיות.';
 
     return {
-      balanceForecast: `על בסיס הממוצע של החודשים האחרונים: צפי ליתרה בתחילת החודש הקרוב (${nextMonthStart.toLocaleDateString('he-IL')}) בערך ${forecast.toFixed(0)} ₪.`,
-      savingsRecommendation: `מומלץ להפריש 10-15% מההכנסה החודשית לחיסכון חירום. על בסיס הנתונים שלך: כ-${Math.round(avgIncome * 0.12)} ₪ לחודש.`,
-      investmentRecommendations:
-        'להמלצות מותאמות אישית יש להפעיל את הבינה המלאכותית (OPENAI_API_KEY). אפיקים נפוצים בישראל: קרנות נאמנות, קופות גמל, קרנות השתלמות, אגרות חוב ממשלתיות.',
+      balanceForecast,
+      savingsRecommendation,
+      investmentRecommendations,
     };
   }
 }
