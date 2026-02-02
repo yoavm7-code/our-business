@@ -213,7 +213,7 @@ export class TransactionsService {
   }
 
   /** For installments: compute displayDate (actual charge date of this installment) and firstPaymentDate. */
-  private addDisplayDates(tx: { date: unknown; installmentCurrent?: unknown; installmentTotal?: unknown; [k: string]: unknown }): Record<string, unknown> {
+  private addDisplayDates(tx: Record<string, unknown>): Record<string, unknown> {
     const cur = tx.installmentCurrent != null ? Math.max(1, Math.floor(this.toNum(tx.installmentCurrent))) : 0;
     const total = tx.installmentTotal != null ? Math.max(1, Math.floor(this.toNum(tx.installmentTotal))) : 0;
     const dateRaw = tx.date;

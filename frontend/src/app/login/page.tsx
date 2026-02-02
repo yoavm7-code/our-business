@@ -3,11 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { auth } from '@/lib/api';
+import { COUNTRY_CODES } from '@/lib/countries';
 import { useTranslation } from '@/i18n/context';
 
 const RECAPTCHA_SITE_KEY = typeof window !== 'undefined' ? (process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '') : '';
-
-const COUNTRY_OPTIONS = ['IL', 'US', 'GB', 'DE', 'FR', 'CA', 'AU'] as const;
 
 declare global {
   interface Window {
@@ -97,7 +96,7 @@ export default function LoginPage() {
                   required={isRegister}
                 >
                   <option value="">{t('login.countryPlaceholder')}</option>
-                  {COUNTRY_OPTIONS.map((code) => (
+                  {COUNTRY_CODES.map((code) => (
                     <option key={code} value={code}>
                       {t(`countries.${code}`)}
                     </option>

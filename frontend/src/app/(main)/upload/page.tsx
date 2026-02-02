@@ -4,17 +4,21 @@ import { useState, useEffect } from 'react';
 import { documents, accounts } from '@/lib/api';
 import { useTranslation } from '@/i18n/context';
 
+const MAX_FILES = 10;
+
 type ProgressState = {
   phase: 'idle' | 'upload' | 'processing' | 'done';
   uploadPercent: number;
   status: string;
   transactionsCount?: number;
   fileName?: string;
+  currentIndex?: number;
+  totalFiles?: number;
 };
 
 export default function UploadPage() {
   const { t } = useTranslation();
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [accountId, setAccountId] = useState('');
   const [accountsList, setAccountsList] = useState<Array<{ id: string; name: string }>>([]);
   const [uploading, setUploading] = useState(false);
@@ -29,48 +33,75 @@ export default function UploadPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!file || !accountId) {
+    const toUpload = files.slice(0, MAX_FILES);
+    if (toUpload.length === 0 || !accountId) {
       setMessage({ type: 'error', text: t('upload.selectFileAndAccount') });
       return;
     }
     setUploading(true);
     setMessage(null);
-    setProgress({ phase: 'upload', uploadPercent: 0, status: t('upload.uploading'), fileName: file.name });
-    let finalStatus: string | undefined;
+    let lastStatus: string | undefined;
+    let totalExtracted = 0;
     try {
-      await documents.uploadWithProgress(file, accountId, (state) => {
-        if (state.phase === 'upload') {
-          setProgress((p) => ({ ...p, phase: 'upload', uploadPercent: state.uploadPercent ?? 0, status: t('upload.uploadingPercent', { percent: state.uploadPercent ?? 0 }) }));
-        } else if (state.phase === 'processing') {
-          setProgress((p) => ({
-            ...p,
-            phase: 'processing',
-            status: state.status === 'PROCESSING' ? t('upload.processing') : (state.status ?? t('upload.processing')),
-          }));
-        } else {
-          const count = state.transactionsCount ?? state.document?._count?.transactions ?? 0;
-          finalStatus = state.document?.status;
-          setProgress((p) => ({
-            ...p,
-            phase: 'done',
-            status: state.document?.status === 'COMPLETED'
-              ? t('upload.doneCount', { count })
-              : state.document?.status === 'FAILED'
-                ? t('upload.doneFailed')
-                : (state.status ?? ''),
-            transactionsCount: state.transactionsCount ?? state.document?._count?.transactions,
-          }));
-        }
-      });
-      // Show message based on actual document status
-      if (finalStatus === 'FAILED') {
+      for (let i = 0; i < toUpload.length; i++) {
+        const file = toUpload[i];
+        setProgress({
+          phase: 'upload',
+          uploadPercent: 0,
+          status: t('upload.uploading'),
+          fileName: file.name,
+          currentIndex: i + 1,
+          totalFiles: toUpload.length,
+        });
+        await documents.uploadWithProgress(file, accountId, (state) => {
+          if (state.phase === 'upload') {
+            setProgress((p) => ({
+              ...p,
+              phase: 'upload',
+              uploadPercent: state.uploadPercent ?? 0,
+              status: t('upload.uploadingPercent', { percent: state.uploadPercent ?? 0 }),
+              fileName: file.name,
+              currentIndex: i + 1,
+              totalFiles: toUpload.length,
+            }));
+          } else if (state.phase === 'processing') {
+            setProgress((p) => ({
+              ...p,
+              phase: 'processing',
+              status: state.status === 'PROCESSING' ? t('upload.processing') : (state.status ?? t('upload.processing')),
+              fileName: file.name,
+              currentIndex: i + 1,
+              totalFiles: toUpload.length,
+            }));
+          } else {
+            lastStatus = state.document?.status;
+            const count = state.transactionsCount ?? state.document?._count?.transactions ?? 0;
+            totalExtracted += count;
+            setProgress((p) => ({
+              ...p,
+              phase: i < toUpload.length - 1 ? 'upload' : 'done',
+              status:
+                state.document?.status === 'COMPLETED'
+                  ? t('upload.doneCount', { count })
+                  : state.document?.status === 'FAILED'
+                    ? t('upload.doneFailed')
+                    : (state.status ?? ''),
+              transactionsCount: count,
+              fileName: file.name,
+              currentIndex: i + 1,
+              totalFiles: toUpload.length,
+            }));
+          }
+        });
+      }
+      if (lastStatus === 'FAILED') {
         setMessage({ type: 'error', text: t('upload.processingFailed') });
-      } else if (finalStatus === 'COMPLETED') {
-        setMessage({ type: 'success', text: t('upload.successMessage') });
-        setFile(null);
       } else {
-        // Still processing or unknown status - don't show message yet
-        setFile(null);
+        setMessage({
+          type: 'success',
+          text: toUpload.length > 1 ? t('upload.successMultiple', { count: toUpload.length, transactions: totalExtracted }) : t('upload.successMessage'),
+        });
+        setFiles([]);
       }
       documents.list().then((r) => setRecent(r)).catch(() => {});
     } catch (err) {
@@ -79,6 +110,10 @@ export default function UploadPage() {
       setUploading(false);
       setTimeout(() => setProgress({ phase: 'idle', uploadPercent: 0, status: '' }), 2500);
     }
+  }
+
+  function removeFile(index: number) {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
   }
 
   return (
@@ -123,10 +158,33 @@ export default function UploadPage() {
             <label className="block text-sm font-medium mb-1">{t('upload.fileLabel')}</label>
             <input
               type="file"
-              accept="image/jpeg,image/png,image/webp,application/pdf"
+              multiple
+              accept="image/jpeg,image/png,image/webp,application/pdf,text/csv,application/csv,.csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
               className="input"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              onChange={(e) => {
+                const chosen = Array.from(e.target.files ?? []);
+                setFiles((prev) => [...prev, ...chosen].slice(0, MAX_FILES));
+                e.target.value = '';
+              }}
             />
+            <p className="text-xs text-slate-500 mt-1.5">{t('upload.fileTypesHint')}</p>
+            {files.length > 0 && (
+              <ul className="mt-2 space-y-1 max-h-40 overflow-y-auto">
+                {files.map((f, i) => (
+                  <li key={`${f.name}-${i}`} className="flex items-center justify-between text-sm py-1 px-2 rounded bg-slate-100 dark:bg-slate-800">
+                    <span className="truncate">{f.name}</span>
+                    <button
+                      type="button"
+                      className="text-red-600 hover:underline shrink-0 ms-2"
+                      onClick={() => removeFile(i)}
+                      aria-label={t('common.delete')}
+                    >
+                      {t('common.delete')}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
           {message && (
             <p
@@ -142,7 +200,12 @@ export default function UploadPage() {
           </button>
           {(progress.phase === 'upload' || progress.phase === 'processing' || progress.phase === 'done') && (
             <div className="mt-4 p-4 rounded-lg bg-slate-100 dark:bg-slate-800 border border-[var(--border)]">
-              <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">{progress.fileName ?? t('common.file')}</p>
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                {progress.fileName ?? t('common.file')}
+                {progress.totalFiles != null && progress.totalFiles > 1 && (
+                  <span className="text-slate-500 font-normal"> ({t('upload.fileOf', { current: progress.currentIndex ?? 1, total: progress.totalFiles })})</span>
+                )}
+              </p>
               <div className="flex items-center gap-3">
                 <div className="flex-1 h-3 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
                   <div

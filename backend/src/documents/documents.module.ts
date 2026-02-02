@@ -7,6 +7,7 @@ import { TransactionsModule } from '../transactions/transactions.module';
 import { RulesModule } from '../rules/rules.module';
 import { OcrService } from './ocr.service';
 import { AiExtractService } from './ai-extract.service';
+import { DocumentParserService } from './document-parser.service';
 
 @Module({
   imports: [
@@ -17,7 +18,7 @@ import { AiExtractService } from './ai-extract.service';
       limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
     }),
   ],
-  providers: [DocumentsService, OcrService, AiExtractService],
+  providers: [DocumentsService, OcrService, AiExtractService, DocumentParserService],
   controllers: [DocumentsController],
   exports: [DocumentsService],
 })

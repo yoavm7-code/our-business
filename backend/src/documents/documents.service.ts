@@ -7,9 +7,21 @@ import { TransactionsService } from '../transactions/transactions.service';
 import { RulesService } from '../rules/rules.service';
 import { OcrService } from './ocr.service';
 import { AiExtractService } from './ai-extract.service';
+import { DocumentParserService, STRUCTURED_MIMES } from './document-parser.service';
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads');
-const ALLOWED_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+const ALLOWED_MIMES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'application/pdf',
+  'text/csv',
+  'application/csv',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+  'application/vnd.ms-excel', // .xls
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+  'application/msword', // .doc
+];
 
 @Injectable()
 export class DocumentsService {
@@ -19,6 +31,7 @@ export class DocumentsService {
     private rulesService: RulesService,
     private ocrService: OcrService,
     private aiExtractService: AiExtractService,
+    private documentParser: DocumentParserService,
   ) {}
 
   async createFromFile(
@@ -27,7 +40,9 @@ export class DocumentsService {
     file: Express.Multer.File,
   ) {
     if (!ALLOWED_MIMES.includes(file.mimetype)) {
-      throw new Error('Invalid file type. Allowed: JPEG, PNG, WebP, PDF');
+      throw new Error(
+        'Invalid file type. Allowed: JPEG, PNG, WebP, PDF, CSV, Excel (.xlsx, .xls), Word (.docx, .doc)',
+      );
     }
     const storagePath = path.join(UPLOAD_DIR, householdId, `${Date.now()}-${file.originalname}`);
     const dir = path.dirname(storagePath);
@@ -69,10 +84,12 @@ export class DocumentsService {
       let ocrText = '';
       if (doc.mimeType.startsWith('image/')) {
         ocrText = await this.ocrService.getTextFromImage(doc.storagePath);
+      } else if (STRUCTURED_MIMES.includes(doc.mimeType)) {
+        ocrText = await this.documentParser.getTextFromFile(doc.storagePath, doc.mimeType);
       } else if (doc.mimeType === 'application/pdf') {
         await this.prisma.document.updateMany({
           where: { id: documentId, householdId },
-          data: { status: 'FAILED', errorMessage: 'PDF extraction is not supported yet. Please upload an image (PNG/JPEG/WebP).' },
+          data: { status: 'FAILED', errorMessage: 'PDF extraction is not supported yet. Please upload an image (PNG/JPEG/WebP), CSV, Excel, or Word.' },
         });
         return;
       }

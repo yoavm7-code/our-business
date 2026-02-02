@@ -23,12 +23,14 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.0",
     "multer": "^1.4.5-lts.1",
+    "mammoth": "^1.6.0",
     "openai": "^4.24.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.1",
     "rxjs": "^7.8.1",
-    "tesseract.js": "^5.0.4"
+    "tesseract.js": "^5.0.4",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.2.1",

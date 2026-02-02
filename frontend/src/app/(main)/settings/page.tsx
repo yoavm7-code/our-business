@@ -2,11 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { users, accounts, categories } from '@/lib/api';
+import { COUNTRY_CODES } from '@/lib/countries';
 import { useTranslation } from '@/i18n/context';
 
 const KNOWN_CATEGORY_SLUGS = ['groceries', 'transport', 'utilities', 'rent', 'insurance', 'healthcare', 'dining', 'shopping', 'entertainment', 'other', 'salary'];
-
-const COUNTRY_OPTIONS = ['IL', 'US', 'GB', 'DE', 'FR', 'CA', 'AU'] as const;
 
 const ACCOUNT_TYPE_KEYS: Record<string, string> = {
   BANK: 'settings.bank',
@@ -261,7 +260,7 @@ export default function SettingsPage() {
                   onChange={(e) => setProfileForm((f) => ({ ...f, countryCode: e.target.value }))}
                 >
                   <option value="">–</option>
-                  {COUNTRY_OPTIONS.map((code) => (
+                  {COUNTRY_CODES.map((code) => (
                     <option key={code} value={code}>{t(`countries.${code}`)}</option>
                   ))}
                 </select>
