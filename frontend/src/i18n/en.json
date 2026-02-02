@@ -120,7 +120,8 @@
     "categoryName": "Category name",
     "categoryNamePlaceholder": "e.g. Supermarket",
     "addAndAssign": "Add and assign to transaction",
-    "adding": "Adding…"
+    "adding": "Adding…",
+    "firstChargeDate": "First charge date"
   },
   "upload": {
     "title": "Upload Documents",

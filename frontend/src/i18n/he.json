@@ -120,7 +120,8 @@
     "categoryName": "שם הקטגוריה",
     "categoryNamePlaceholder": "למשל: קניות סופרמרקט",
     "addAndAssign": "הוסף והקצה לתנועה",
-    "adding": "מוסיף…"
+    "adding": "מוסיף…",
+    "firstChargeDate": "תאריך חיוב ראשון"
   },
   "upload": {
     "title": "העלאת מסמכים",

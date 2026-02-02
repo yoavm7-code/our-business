@@ -190,7 +190,7 @@ export class TransactionsService {
       }),
       this.prisma.transaction.count({ where }),
     ]);
-    const items = rows.map((tx) => this.fixDisplayAmount(tx));
+    const items = rows.map((tx) => this.addDisplayDates(this.fixDisplayAmount(tx)));
     return { items, total, page, limit };
   }
 
@@ -202,6 +202,33 @@ export class TransactionsService {
     if (typeof o?.toNumber === 'function') return o.toNumber();
     const n = parseFloat(String(v));
     return Number.isNaN(n) ? 0 : n;
+  }
+
+  /** Add N calendar months to a date (for installment display date). */
+  private addMonths(d: Date, months: number): Date {
+    const out = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    out.setMonth(out.getMonth() + months);
+    return out;
+  }
+
+  /** For installments: compute displayDate (actual charge date of this installment) and firstPaymentDate. */
+  private addDisplayDates(tx: { date: unknown; installmentCurrent?: unknown; installmentTotal?: unknown; [k: string]: unknown }): Record<string, unknown> {
+    const cur = tx.installmentCurrent != null ? Math.max(1, Math.floor(this.toNum(tx.installmentCurrent))) : 0;
+    const total = tx.installmentTotal != null ? Math.max(1, Math.floor(this.toNum(tx.installmentTotal))) : 0;
+    const dateRaw = tx.date;
+    const firstDate = dateRaw instanceof Date ? dateRaw : new Date(String(dateRaw));
+    if (Number.isNaN(firstDate.getTime())) return tx as Record<string, unknown>;
+    const firstYMD = firstDate.toISOString().slice(0, 10);
+
+    if (cur >= 1 && total >= 1) {
+      const displayDate = this.addMonths(firstDate, cur - 1);
+      return {
+        ...tx,
+        displayDate: displayDate.toISOString().slice(0, 10),
+        firstPaymentDate: firstYMD,
+      };
+    }
+    return { ...tx, displayDate: firstYMD };
   }
 
   /** When amount was wrongly stored as total (full price), return the per-installment amount for display. */
@@ -234,7 +261,7 @@ export class TransactionsService {
       where: { id, householdId },
       include: { account: true, category: true, document: true },
     });
-    return tx ? this.fixDisplayAmount(tx) : null;
+    return tx ? this.addDisplayDates(this.fixDisplayAmount(tx)) : null;
   }
 
   async update(householdId: string, id: string, dto: UpdateTransactionDto) {

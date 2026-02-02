@@ -49,24 +49,28 @@ const initialSectionState: SectionState = {
   error: '',
 };
 
-function getCached(section: InsightSection): string | null {
+function cacheKey(section: InsightSection, locale: string) {
+  return `${CACHE_PREFIX}${section}_${locale}`;
+}
+
+function getCached(section: InsightSection, locale: string): string | null {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = sessionStorage.getItem(CACHE_PREFIX + section);
+    const raw = sessionStorage.getItem(cacheKey(section, locale));
     return raw ? (JSON.parse(raw) as string) : null;
   } catch {
     return null;
   }
 }
 
-function setCached(section: InsightSection, content: string) {
+function setCached(section: InsightSection, locale: string, content: string) {
   if (typeof window === 'undefined') return;
-  sessionStorage.setItem(CACHE_PREFIX + section, JSON.stringify(content));
+  sessionStorage.setItem(cacheKey(section, locale), JSON.stringify(content));
 }
 
-function clearCached(section: InsightSection) {
+function clearCached(section: InsightSection, locale: string) {
   if (typeof window === 'undefined') return;
-  sessionStorage.removeItem(CACHE_PREFIX + section);
+  sessionStorage.removeItem(cacheKey(section, locale));
 }
 
 const SECTIONS: Array<{
@@ -83,7 +87,7 @@ const SECTIONS: Array<{
 ];
 
 export default function InsightsPage() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const [sectionData, setSectionData] = useState<Record<InsightSection, SectionState>>(() =>
     SECTIONS.reduce(
       (acc, s) => {
@@ -103,7 +107,7 @@ export default function InsightsPage() {
   const loadSection = useCallback(
     async (section: InsightSection, forceRefresh = false) => {
       if (!forceRefresh) {
-        const cached = getCached(section);
+        const cached = getCached(section, locale);
         if (cached !== null) {
           setSectionData((prev) => ({
             ...prev,
@@ -112,7 +116,7 @@ export default function InsightsPage() {
           return;
         }
       } else {
-        clearCached(section);
+        clearCached(section, locale);
       }
 
       setSectionData((prev) => ({
@@ -121,9 +125,9 @@ export default function InsightsPage() {
       }));
 
       try {
-        const res = await insights.getSection(section);
+        const res = await insights.getSection(section, locale);
         const content = res.content ?? '';
-        setCached(section, content);
+        setCached(section, locale, content);
         setSectionData((prev) => ({
           ...prev,
           [section]: { content, loading: false, error: '' },
@@ -136,12 +140,25 @@ export default function InsightsPage() {
         }));
       }
     },
-    [t],
+    [t, locale],
   );
 
   const toggleExpanded = useCallback((section: InsightSection) => {
     setExpanded((prev) => ({ ...prev, [section]: !prev[section] }));
   }, []);
+
+  // When locale changes, clear section content so it reloads in the new language
+  useEffect(() => {
+    setSectionData((prev) =>
+      SECTIONS.reduce(
+        (acc, s) => {
+          acc[s.id] = { ...initialSectionState };
+          return acc;
+        },
+        {} as Record<InsightSection, SectionState>,
+      ),
+    );
+  }, [locale]);
 
   // When a section is expanded and has no content yet, load from cache or API
   useEffect(() => {
@@ -170,24 +187,8 @@ export default function InsightsPage() {
         </p>
       </div>
 
-      <div className="space-y-3">
-        {/* Main insights - first two in grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          {SECTIONS.slice(0, 2).map((sec) => (
-            <InsightBlock
-              key={sec.id}
-              section={sec}
-              state={sectionData[sec.id]}
-              isExpanded={expanded[sec.id]}
-              onToggle={() => toggleExpanded(sec.id)}
-              onRefresh={(e) => handleRefreshSection(e, sec.id)}
-              t={t}
-            />
-          ))}
-        </div>
-
-        {/* Investment - full width */}
-        {SECTIONS.slice(2, 3).map((sec) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {SECTIONS.map((sec) => (
           <InsightBlock
             key={sec.id}
             section={sec}
@@ -198,21 +199,6 @@ export default function InsightsPage() {
             t={t}
           />
         ))}
-
-        {/* Tax + Spending - grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          {SECTIONS.slice(3, 5).map((sec) => (
-            <InsightBlock
-              key={sec.id}
-              section={sec}
-              state={sectionData[sec.id]}
-              isExpanded={expanded[sec.id]}
-              onToggle={() => toggleExpanded(sec.id)}
-              onRefresh={(e) => handleRefreshSection(e, sec.id)}
-              t={t}
-            />
-          ))}
-        </div>
       </div>
 
       <p className="text-xs text-slate-400 dark:text-slate-500 text-center mt-8">

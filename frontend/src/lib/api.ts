@@ -243,16 +243,16 @@ export const INSIGHT_SECTIONS: InsightSection[] = [
 ];
 
 export const insights = {
-  get: () =>
+  get: (lang?: string) =>
     api<{
       balanceForecast: string;
       savingsRecommendation: string;
       investmentRecommendations: string;
       taxTips?: string;
       spendingInsights?: string;
-    }>('/api/insights'),
-  getSection: (section: InsightSection) =>
-    api<{ content: string }>(`/api/insights/${section}`),
+    }>('/api/insights', { params: lang ? { lang } : undefined }),
+  getSection: (section: InsightSection, lang?: string) =>
+    api<{ content: string }>(`/api/insights/${section}`, { params: lang ? { lang } : undefined }),
 };
 
 export const dashboard = {

@@ -12,6 +12,8 @@ function formatCurrency(n: number, locale: string) {
 type Tx = {
   id: string;
   date: string;
+  displayDate?: string;
+  firstPaymentDate?: string;
   description: string;
   amount: string;
   category?: { id: string; name: string; slug?: string } | null;
@@ -473,7 +475,18 @@ export default function TransactionsPage() {
                         className="rounded"
                       />
                     </td>
-                    <td className="py-2 px-2 text-end">{new Date(tx.date).toLocaleDateString()}</td>
+                    <td className="py-2 px-2 text-end">
+                      {(tx.displayDate ?? tx.date) && (
+                        <span className="block">
+                          {new Date(tx.displayDate ?? tx.date).toLocaleDateString()}
+                          {tx.firstPaymentDate && tx.firstPaymentDate !== (tx.displayDate ?? tx.date) && (
+                            <span className="block text-xs text-slate-500 dark:text-slate-400" title={t('transactions.firstChargeDate')}>
+                              {t('transactions.firstChargeDate')}: {new Date(tx.firstPaymentDate).toLocaleDateString()}
+                            </span>
+                          )}
+                        </span>
+                      )}
+                    </td>
                     <td className="py-2 px-2 text-end">{tx.description}</td>
                     <td className="py-2 px-2 text-end">
                       <div className="flex items-center gap-1 justify-end">
