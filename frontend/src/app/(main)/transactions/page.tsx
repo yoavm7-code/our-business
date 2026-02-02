@@ -24,7 +24,7 @@ type Tx = {
   isRecurring?: boolean;
 };
 
-const KNOWN_SLUGS = ['groceries', 'transport', 'utilities', 'rent', 'insurance', 'healthcare', 'dining', 'shopping', 'entertainment', 'other', 'salary'];
+const KNOWN_SLUGS = ['groceries', 'transport', 'utilities', 'rent', 'insurance', 'healthcare', 'dining', 'shopping', 'entertainment', 'other', 'salary', 'credit_charges'];
 
 function getCategoryDisplayName(name: string, slug: string | undefined, t: (k: string) => string): string {
   if (slug && KNOWN_SLUGS.includes(slug)) {

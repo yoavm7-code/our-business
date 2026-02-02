@@ -29,8 +29,8 @@ const INCOME_KEYWORDS = [
   'פמי פרימיום', 'פמי פרימיום בע', 'מ.א.', 'מ.א ', 'אפרויה', 'אפרויה בע',
 ];
 const EXPENSE_KEYWORDS = [
-  'חיוב', 'חיובי', 'משיכה', 'תשלום', 'העב\' לאחר', 'העברה לאחר', 'העב\' לאחר-נייד',
-  'עמ\'הקצאת אשראי', 'הקצאת אשראי', 'כאל', 'מקס איט פיננסי', 'לאומי קארד', 'CAL', 'דמי ניהול',
+  'חיוב', 'חיובי', 'משיכה', 'תשלום', 'העב\' לאחר', 'העברה לאחר', 'העב\' לאחר-נייד', 'לאחר-נייד',
+  'עמ\'הקצאת אשראי', 'עם הקצאת אשראי', 'הקצאת אשראי', 'כאל', 'מקס איט פיננסי', 'לאומי קארד', 'CAL', 'דמי ניהול',
   'On איט פיננסי', 'שיק', 'מקס איט',
 ];
 
@@ -157,13 +157,17 @@ Do NOT override our INCOME/EXPENSE annotations. If we marked INCOME, the amount 
 
 1) DATE – In each row use the date in that row (DD/MM/YY or DD.MM.YY). Convert to YYYY-MM-DD. If no date, use previous row's date.
 
-2) DESCRIPTION – Copy Hebrew EXACTLY. Preserve מ.א, בע"מ, ע"א. Never output Latin letters (xn, fe) in place of Hebrew.
+2) DESCRIPTION – Copy Hebrew EXACTLY. Preserve מ.א, בע"מ, ע"א. Never output Latin letters (a-z, A-Z) in description – if OCR produced Latin, replace with Hebrew (e.g. xn→מ.א) or remove it.
 
 3) CATEGORY – One of: groceries, transport, utilities, rent, insurance, healthcare, dining, shopping, entertainment, salary, credit_charges, other. Income → salary or other. credit_charges = כאל, מקס איט פיננסי, לאומי קארד, etc.
 
 4) INSTALLMENTS – "X מתוך Y" (money) and "N מתוך M" (payment index): amount = X (single payment, negative), totalAmount = Y, installmentCurrent = N, installmentTotal = M.
 
-Output: JSON with key "transactions": array of { date, description, amount (POSITIVE=income, NEGATIVE=expense), categorySlug, totalAmount?, installmentCurrent?, installmentTotal? }. Skip unparseable rows.`;
+5) COMPLETENESS – Extract EVERY row that has a date and at least one amount. Do NOT skip small amounts (e.g. 12.00, 12). Include all transactions. Missing even one row is a critical error.
+
+6) DESCRIPTION – Output ONLY Hebrew letters, digits, and punctuation. Never put Latin letters (a-z, A-Z) in the description. If the source has Latin/gibberish (e.g. "xn fe"), replace with the correct Hebrew (e.g. "מ.א") or remove the Latin part. Copy Hebrew exactly: מ.א, בע"מ, ע"א.
+
+Output: JSON with key "transactions": array of { date, description, amount (POSITIVE=income, NEGATIVE=expense), categorySlug, totalAmount?, installmentCurrent?, installmentTotal? }. Include every parseable row.`;
 
     try {
       const model = process.env.OPENAI_MODEL || 'gpt-4o';
@@ -205,10 +209,25 @@ Output: JSON with key "transactions": array of { date, description, amount (POSI
         };
       });
       const fixed = this.applySignHintsOverlay(mapped, ocrText, hints);
-      return this.fixInstallmentAmounts(fixed).filter((t: ExtractedTransaction) => Math.abs(t.amount) >= 5);
+      const withCleanDesc = fixed.map((t) => ({ ...t, description: this.sanitizeDescription(t.description) }));
+      return this.fixInstallmentAmounts(withCleanDesc).filter((t: ExtractedTransaction) => Math.abs(t.amount) >= 0.01);
     } catch {
       return this.fallbackExtractWithHints(ocrText, hints);
     }
+  }
+
+  /**
+   * Remove or fix OCR gibberish in description: Latin letters that shouldn't be there, common misreads.
+   */
+  private sanitizeDescription(desc: string): string {
+    if (!desc || !desc.trim()) return desc;
+    let s = desc.trim();
+    // Common OCR errors: Latin in place of Hebrew (no \b – Hebrew has no word boundaries)
+    s = s.replace(/xn\s*fe/gi, 'מ.א');
+    s = s.replace(/mawn\s*BE-?/gi, 'העברה-נייד').replace(/THANK\?\s*wn\s*\d*/gi, "העב' לאחר-נייד");
+    // Strip remaining Latin word sequences (2+ letters) so description is Hebrew-only
+    s = s.replace(/\s*[a-zA-Z]{2,}(?:\s+[a-zA-Z]*)*\s*/g, ' ').replace(/\s+/g, ' ').trim();
+    return s.slice(0, 300);
   }
 
   /**
@@ -223,12 +242,20 @@ Output: JSON with key "transactions": array of { date, description, amount (POSI
     const lines = ocrText.split(/\n/).filter((l) => l.trim().length > 0);
     const dateRe = /(\d{1,2})[\/.](\d{1,2})[\/.](\d{2,4})/;
     const amountPattern = /\d{1,3}(?:[,.]\d{3})*(?:[,.]\d{2})?/g;
+    let lastDate = '';
 
     for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const dateMatch = line.match(dateRe);
+      if (dateMatch) {
+        const [, d, m, y] = dateMatch;
+        const year = (y!.length === 2 ? `20${y}` : y!) as string;
+        lastDate = `${year}-${m!.padStart(2, '0')}-${d!.padStart(2, '0')}`;
+      }
+
       const two = hints.twoAmountsByLine.get(i);
       const signHint = hints.byLine.get(i);
       if (two) {
-        // For this line we expect two transactions: +income, -expense. Fix any that match amounts.
         for (const t of transactions) {
           const abs = Math.abs(t.amount);
           if (Math.abs(abs - two.income) < 0.02 && t.amount < 0) t.amount = two.income;
@@ -236,21 +263,18 @@ Output: JSON with key "transactions": array of { date, description, amount (POSI
         }
         continue;
       }
-      if (signHint === 'income' || signHint === 'expense') {
-        const lineWithoutDate = lines[i].replace(dateRe, ' ');
+      if ((signHint === 'income' || signHint === 'expense') && lastDate) {
+        const lineWithoutDate = line.replace(dateRe, ' ');
         const amountStrs = lineWithoutDate.match(amountPattern) || [];
         const amounts = amountStrs.map((s) => parseFloat(s.replace(/,/g, ''))).filter((n) => n >= 0.01 && n <= 100000);
         const priceLike = amounts.filter((n) => n > 100 || n !== Math.floor(n));
         const cand = priceLike.length >= 1 ? priceLike : amounts;
         if (cand.length === 1) {
           const expectedAbs = cand[0];
-          for (const t of transactions) {
-            if (Math.abs(Math.abs(t.amount) - expectedAbs) < 0.02) {
-              if (signHint === 'income' && t.amount < 0) t.amount = expectedAbs;
-              if (signHint === 'expense' && t.amount > 0) t.amount = -expectedAbs;
-              break;
-            }
-          }
+          const wrongSign = signHint === 'income' ? (t: ExtractedTransaction) => t.amount < 0 : (t: ExtractedTransaction) => t.amount > 0;
+          const fix = signHint === 'income' ? (t: ExtractedTransaction) => { t.amount = expectedAbs; } : (t: ExtractedTransaction) => { t.amount = -expectedAbs; };
+          const idx = transactions.findIndex((t) => t.date === lastDate && Math.abs(Math.abs(t.amount) - expectedAbs) < 0.02 && wrongSign(t));
+          if (idx >= 0) fix(transactions[idx]);
         }
       }
     }
@@ -277,13 +301,13 @@ Output: JSON with key "transactions": array of { date, description, amount (POSI
 
       const two = hints.twoAmountsByLine.get(i);
       if (two) {
-        if (two.income >= 5) {
-          const desc = line.replace(dateRe, ' ').replace(amountPattern, ' ').replace(/\s+/g, ' ').trim().slice(0, 200) || 'Unknown';
-          results.push({ date: lastDate, description: desc, amount: two.income, categorySlug: 'other' });
+        if (two.income >= 0.01) {
+          const rawDesc = line.replace(dateRe, ' ').replace(amountPattern, ' ').replace(/\s+/g, ' ').trim().slice(0, 200) || 'Unknown';
+          results.push({ date: lastDate, description: this.sanitizeDescription(rawDesc), amount: two.income, categorySlug: 'other' });
         }
-        if (two.expense >= 5) {
-          const desc = line.replace(dateRe, ' ').replace(amountPattern, ' ').replace(/\s+/g, ' ').trim().slice(0, 200) || 'Unknown';
-          results.push({ date: lastDate, description: desc, amount: -two.expense, categorySlug: 'other' });
+        if (two.expense >= 0.01) {
+          const rawDesc = line.replace(dateRe, ' ').replace(amountPattern, ' ').replace(/\s+/g, ' ').trim().slice(0, 200) || 'Unknown';
+          results.push({ date: lastDate, description: this.sanitizeDescription(rawDesc), amount: -two.expense, categorySlug: 'other' });
         }
         continue;
       }
@@ -296,11 +320,10 @@ Output: JSON with key "transactions": array of { date, description, amount (POSI
       const cand = priceLike.length >= 1 ? priceLike : amounts;
       if (cand.length === 0) continue;
       const amount = Math.max(...cand);
-      if (amount < 5) continue;
 
-      const desc = line.replace(dateRe, ' ').replace(amountPattern, ' ').replace(/\s+/g, ' ').trim().slice(0, 200) || 'Unknown';
+      const rawDesc = line.replace(dateRe, ' ').replace(amountPattern, ' ').replace(/\s+/g, ' ').trim().slice(0, 200) || 'Unknown';
       const sign = signHint === 'income' ? 1 : signHint === 'expense' ? -1 : -1; // unknown default expense
-      results.push({ date: lastDate, description: desc, amount: sign * amount, categorySlug: 'other' });
+      results.push({ date: lastDate, description: this.sanitizeDescription(rawDesc), amount: sign * amount, categorySlug: 'other' });
     }
     return this.fixInstallmentAmounts(results);
   }
