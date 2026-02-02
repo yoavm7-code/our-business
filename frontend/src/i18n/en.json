@@ -71,7 +71,20 @@
     "createAccount": "Create account",
     "alreadyHaveAccount": "Already have an account?",
     "dontHaveAccount": "Don't have an account?",
-    "pleaseWait": "Please wait…"
+    "pleaseWait": "Please wait…",
+    "country": "Country",
+    "countryPlaceholder": "Select country",
+    "countryWhy": "Selecting your country helps us provide financial recommendations, tax tips and investment options tailored to your market and regulations.",
+    "captchaRequired": "Please verify you are not a robot"
+  },
+  "countries": {
+    "IL": "Israel",
+    "US": "United States",
+    "GB": "United Kingdom",
+    "DE": "Germany",
+    "FR": "France",
+    "CA": "Canada",
+    "AU": "Australia"
   },
   "insightsPage": {
     "title": "Financial Insights",
@@ -96,7 +109,12 @@
     "income": "Income",
     "expenses": "Expenses",
     "noSpendingData": "No spending data in this period",
-    "noTrendData": "No trend data in this period"
+    "noTrendData": "No trend data in this period",
+    "fixedExpenses": "Fixed expenses",
+    "fixedIncome": "Fixed income",
+    "showDetail": "Show detail",
+    "installmentOf": "Payment {{current}} of {{total}}",
+    "expectedEnd": "Expected to end {{date}}"
   },
   "transactions": {
     "title": "Transactions",
@@ -121,7 +139,10 @@
     "categoryNamePlaceholder": "e.g. Supermarket",
     "addAndAssign": "Add and assign to transaction",
     "adding": "Adding…",
-    "firstChargeDate": "First charge date"
+    "firstChargeDate": "First charge date",
+    "recurring": "Recurring",
+    "recurringOn": "Fixed expense/income – click to clear",
+    "recurringOff": "Mark as fixed expense/income"
   },
   "upload": {
     "title": "Upload Documents",
@@ -179,6 +200,8 @@
     "newPasswordHint": "Leave empty to keep current",
     "profileUpdated": "Profile updated.",
     "emailInUse": "Email already in use.",
+    "country": "Country",
+    "countryWhy": "Selecting your country ensures financial insights, tax tips and investment recommendations are tailored to your market and regulations.",
     "accounts": "Accounts",
     "accountsDescription": "Add bank, credit card, insurance, pension, or investment accounts. Connect APIs later from here.",
     "name": "Name",

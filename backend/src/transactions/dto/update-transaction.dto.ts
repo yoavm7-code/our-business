@@ -1,4 +1,4 @@
-import { IsDateString, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsDateString, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class UpdateTransactionDto {
   @IsOptional()
@@ -20,4 +20,8 @@ export class UpdateTransactionDto {
   @IsOptional()
   @IsNumber()
   amount?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  isRecurring?: boolean;
 }

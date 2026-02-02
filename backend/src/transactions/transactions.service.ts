@@ -45,6 +45,7 @@ export class TransactionsService {
         totalAmount: dto.totalAmount ?? null,
         installmentCurrent: dto.installmentCurrent ?? null,
         installmentTotal: dto.installmentTotal ?? null,
+        isRecurring: dto.isRecurring ?? false,
       },
     });
   }
@@ -272,6 +273,7 @@ export class TransactionsService {
         data.date = new Date(s + 'T00:00:00.000Z');
       }
     }
+    if (dto.isRecurring !== undefined) data.isRecurring = dto.isRecurring;
     const result = await this.prisma.transaction.updateMany({
       where: { id, householdId },
       data,

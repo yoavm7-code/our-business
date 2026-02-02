@@ -36,4 +36,7 @@ export class CreateTransactionDto {
   @IsOptional()
   @IsInt()
   installmentTotal?: number;
+
+  @IsOptional()
+  isRecurring?: boolean;
 }

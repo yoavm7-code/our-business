@@ -32,4 +32,14 @@ export class DashboardController {
     const end = to || new Date().toISOString().slice(0, 10);
     return this.dashboardService.getTrends(householdId, start, end, groupBy || 'month', accountId, categoryId);
   }
+
+  @Get('fixed-expenses')
+  getFixedExpenses(@HouseholdId() householdId: string) {
+    return this.dashboardService.getFixedExpenses(householdId);
+  }
+
+  @Get('fixed-income')
+  getFixedIncome(@HouseholdId() householdId: string) {
+    return this.dashboardService.getFixedIncome(householdId);
+  }
 }

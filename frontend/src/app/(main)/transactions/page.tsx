@@ -21,6 +21,7 @@ type Tx = {
   totalAmount?: string | null;
   installmentCurrent?: number | null;
   installmentTotal?: number | null;
+  isRecurring?: boolean;
 };
 
 const KNOWN_SLUGS = ['groceries', 'transport', 'utilities', 'rent', 'insurance', 'healthcare', 'dining', 'shopping', 'entertainment', 'other', 'salary'];
@@ -61,6 +62,7 @@ export default function TransactionsPage() {
     date: new Date().toISOString().slice(0, 10),
     description: '',
     amount: '',
+    isRecurring: false,
   });
   const [addingTx, setAddingTx] = useState(false);
   const [suggestingCategory, setSuggestingCategory] = useState(false);
@@ -72,6 +74,7 @@ export default function TransactionsPage() {
     date: '',
     description: '',
     amount: '',
+    isRecurring: false,
   });
   const [updatingTx, setUpdatingTx] = useState(false);
   const [suggestingCategoryTxId, setSuggestingCategoryTxId] = useState<string | null>(null);
@@ -81,6 +84,7 @@ export default function TransactionsPage() {
   const [error, setError] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
+  const [updatingRecurringId, setUpdatingRecurringId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const fetchIdRef = useRef(0);
 
@@ -240,6 +244,7 @@ export default function TransactionsPage() {
       date: dateStr || new Date().toISOString().slice(0, 10),
       description: tx.description,
       amount: String(Math.abs(Number(tx.amount))),
+      isRecurring: tx.isRecurring ?? false,
     });
   }
 
@@ -258,6 +263,7 @@ export default function TransactionsPage() {
         date: editTxForm.date,
         description: editTxForm.description.trim(),
         amount,
+        isRecurring: editTxForm.isRecurring,
       });
       setEditingTxId(null);
       setRefreshKey((k) => k + 1);
@@ -284,6 +290,18 @@ export default function TransactionsPage() {
     }
   }
 
+  const handleToggleRecurring = useCallback(async (tx: Tx) => {
+    setUpdatingRecurringId(tx.id);
+    try {
+      await txApi.update(tx.id, { isRecurring: !tx.isRecurring });
+      setItems((prev) => prev.map((item) => (item.id === tx.id ? { ...item, isRecurring: !item.isRecurring } : item)));
+    } catch {
+      setError(t('common.failedToLoad'));
+    } finally {
+      setUpdatingRecurringId(null);
+    }
+  }, [t]);
+
   async function handleSuggestCategory() {
     if (!addTxForm.description.trim()) return;
     setSuggestingCategory(true);
@@ -309,9 +327,10 @@ export default function TransactionsPage() {
         date: addTxForm.date,
         description: addTxForm.description.trim(),
         amount,
+        isRecurring: addTxForm.isRecurring,
       });
       setShowAddTx(false);
-      setAddTxForm({ type: 'expense', accountId: '', categoryId: '', date: new Date().toISOString().slice(0, 10), description: '', amount: '' });
+      setAddTxForm({ type: 'expense', accountId: '', categoryId: '', date: new Date().toISOString().slice(0, 10), description: '', amount: '', isRecurring: false });
       setRefreshKey((k) => k + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('common.failedToLoad'));
@@ -461,6 +480,7 @@ export default function TransactionsPage() {
                   <th className="text-end py-3 px-2">{t('common.account')}</th>
                   <th className="text-end py-3 px-2 text-sm text-slate-600">{t('transactions.payments')}</th>
                   <th className="text-end py-3 px-2">{t('common.amount')}</th>
+                  <th className="text-center py-3 px-2 w-12" title={t('transactions.recurring')} aria-label={t('transactions.recurring')}></th>
                   <th className="text-center py-3 px-2 w-20" aria-label={t('common.delete')}></th>
                 </tr>
               </thead>
@@ -541,6 +561,26 @@ export default function TransactionsPage() {
                       }`}
                     >
                       {formatCurrency(Number(tx.amount), locale)}
+                    </td>
+                    <td className="py-2 px-2 w-12 text-center">
+                      <button
+                        type="button"
+                        className={`p-1.5 rounded border transition-colors ${
+                          tx.isRecurring ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-600' : 'border-[var(--border)] hover:bg-slate-100 dark:hover:bg-slate-800'
+                        }`}
+                        onClick={() => handleToggleRecurring(tx)}
+                        disabled={updatingRecurringId === tx.id}
+                        title={tx.isRecurring ? t('transactions.recurringOn') : t('transactions.recurringOff')}
+                        aria-label={tx.isRecurring ? t('transactions.recurringOn') : t('transactions.recurringOff')}
+                      >
+                        {updatingRecurringId === tx.id ? (
+                          <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+                          </svg>
+                        )}
+                      </button>
                     </td>
                     <td className="py-2 px-2 w-20 text-center">
                       <button
@@ -714,6 +754,16 @@ export default function TransactionsPage() {
                   required
                 />
               </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="add-tx-recurring"
+                  checked={addTxForm.isRecurring}
+                  onChange={(e) => setAddTxForm((f) => ({ ...f, isRecurring: e.target.checked }))}
+                  className="rounded"
+                />
+                <label htmlFor="add-tx-recurring" className="text-sm">{t('transactions.recurring')}</label>
+              </div>
               <div className="flex gap-2">
                 <button type="submit" className="btn-primary" disabled={addingTx}>
                   {addingTx ? t('common.loading') : t('common.save')}
@@ -801,6 +851,16 @@ export default function TransactionsPage() {
                   onChange={(e) => setEditTxForm((f) => ({ ...f, amount: e.target.value }))}
                   required
                 />
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="edit-tx-recurring"
+                  checked={editTxForm.isRecurring}
+                  onChange={(e) => setEditTxForm((f) => ({ ...f, isRecurring: e.target.checked }))}
+                  className="rounded"
+                />
+                <label htmlFor="edit-tx-recurring" className="text-sm">{t('transactions.recurring')}</label>
               </div>
               <div className="flex gap-2">
                 <button type="submit" className="btn-primary" disabled={updatingTx}>

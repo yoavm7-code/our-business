@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { dashboard, accounts, categories } from '@/lib/api';
+import { dashboard, accounts, categories, type FixedItem } from '@/lib/api';
 import { useTranslation } from '@/i18n/context';
 import DateRangePicker from '@/components/DateRangePicker';
 import {
@@ -38,6 +38,12 @@ export default function DashboardPage() {
   const [categoriesList, setCategoriesList] = useState<Array<{ id: string; name: string; slug?: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [fixedExpensesOpen, setFixedExpensesOpen] = useState(false);
+  const [fixedIncomeOpen, setFixedIncomeOpen] = useState(false);
+  const [fixedExpensesList, setFixedExpensesList] = useState<FixedItem[] | null>(null);
+  const [fixedIncomeList, setFixedIncomeList] = useState<FixedItem[] | null>(null);
+  const [fixedExpensesLoading, setFixedExpensesLoading] = useState(false);
+  const [fixedIncomeLoading, setFixedIncomeLoading] = useState(false);
 
   useEffect(() => {
     const now = new Date();
@@ -71,6 +77,24 @@ export default function DashboardPage() {
     setFrom(f);
     setTo(t2);
   }, []);
+
+  useEffect(() => {
+    if (!fixedExpensesOpen || fixedExpensesList !== null) return;
+    setFixedExpensesLoading(true);
+    dashboard.fixedExpenses()
+      .then(setFixedExpensesList)
+      .catch(() => {})
+      .finally(() => setFixedExpensesLoading(false));
+  }, [fixedExpensesOpen, fixedExpensesList]);
+
+  useEffect(() => {
+    if (!fixedIncomeOpen || fixedIncomeList !== null) return;
+    setFixedIncomeLoading(true);
+    dashboard.fixedIncome()
+      .then(setFixedIncomeList)
+      .catch(() => {})
+      .finally(() => setFixedIncomeLoading(false));
+  }, [fixedIncomeOpen, fixedIncomeList]);
 
   if (loading && !summary) {
     return (
@@ -155,6 +179,97 @@ export default function DashboardPage() {
               <p className="text-2xl font-semibold mt-1 text-red-600 dark:text-red-400">
                 {formatCurrency(summary.expenses, locale)}
               </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="card">
+              <button
+                type="button"
+                className="w-full flex items-center justify-between text-right"
+                onClick={() => setFixedExpensesOpen((o) => !o)}
+                aria-expanded={fixedExpensesOpen}
+              >
+                <div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{t('dashboard.fixedExpenses')}</p>
+                  <p className="text-xl font-semibold mt-1 text-red-600 dark:text-red-400">
+                    {formatCurrency(summary.fixedExpensesSum ?? 0, locale)}
+                  </p>
+                </div>
+                <span className={`shrink-0 transition-transform ${fixedExpensesOpen ? 'rotate-180' : ''}`}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
+                </span>
+              </button>
+              {fixedExpensesOpen && (
+                <div className="mt-4 pt-4 border-t border-[var(--border)]">
+                  {fixedExpensesLoading ? (
+                    <div className="flex items-center justify-center py-6 gap-2 text-slate-500">
+                      <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      <span>{t('common.loading')}</span>
+                    </div>
+                  ) : fixedExpensesList && fixedExpensesList.length > 0 ? (
+                    <ul className="space-y-2 max-h-60 overflow-y-auto">
+                      {fixedExpensesList.map((item) => (
+                        <li key={item.id} className="text-sm py-2 border-b border-[var(--border)] last:border-0">
+                          <span className="font-medium">{item.description}</span>
+                          {item.categoryName && <span className="text-slate-500 dark:text-slate-400"> · {item.categoryName}</span>}
+                          <span className="block text-slate-600 dark:text-slate-300 mt-0.5">
+                            {formatCurrency(item.amount, locale)}
+                            {item.installmentCurrent != null && item.installmentTotal != null && (
+                              <span className="text-slate-500 dark:text-slate-400">
+                                {' '}({t('dashboard.installmentOf', { current: item.installmentCurrent, total: item.installmentTotal })})
+                                {item.expectedEndDate && ` · ${t('dashboard.expectedEnd', { date: new Date(item.expectedEndDate).toLocaleDateString(locale === 'he' ? 'he-IL' : 'en-IL') })}`}
+                              </span>
+                            )}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-slate-500 text-sm py-2">{t('dashboard.noSpendingData')}</p>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="card">
+              <button
+                type="button"
+                className="w-full flex items-center justify-between text-right"
+                onClick={() => setFixedIncomeOpen((o) => !o)}
+                aria-expanded={fixedIncomeOpen}
+              >
+                <div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{t('dashboard.fixedIncome')}</p>
+                  <p className="text-xl font-semibold mt-1 text-green-600 dark:text-green-400">
+                    {formatCurrency(summary.fixedIncomeSum ?? 0, locale)}
+                  </p>
+                </div>
+                <span className={`shrink-0 transition-transform ${fixedIncomeOpen ? 'rotate-180' : ''}`}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
+                </span>
+              </button>
+              {fixedIncomeOpen && (
+                <div className="mt-4 pt-4 border-t border-[var(--border)]">
+                  {fixedIncomeLoading ? (
+                    <div className="flex items-center justify-center py-6 gap-2 text-slate-500">
+                      <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      <span>{t('common.loading')}</span>
+                    </div>
+                  ) : fixedIncomeList && fixedIncomeList.length > 0 ? (
+                    <ul className="space-y-2 max-h-60 overflow-y-auto">
+                      {fixedIncomeList.map((item) => (
+                        <li key={item.id} className="text-sm py-2 border-b border-[var(--border)] last:border-0">
+                          <span className="font-medium">{item.description}</span>
+                          {item.categoryName && <span className="text-slate-500 dark:text-slate-400"> · {item.categoryName}</span>}
+                          <span className="block text-slate-600 dark:text-slate-300 mt-0.5">{formatCurrency(item.amount, locale)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-slate-500 text-sm py-2">{t('dashboard.noSpendingData')}</p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

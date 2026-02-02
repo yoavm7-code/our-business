@@ -71,7 +71,20 @@
     "createAccount": "יצירת חשבון",
     "alreadyHaveAccount": "כבר יש לך חשבון?",
     "dontHaveAccount": "אין לך חשבון?",
-    "pleaseWait": "אנא המתן…"
+    "pleaseWait": "אנא המתן…",
+    "country": "מדינה",
+    "countryPlaceholder": "בחר מדינה",
+    "countryWhy": "בחירת מדינה נכונה מאפשרת למערכת להציע המלצות פיננסיות, טיפי מס ואפשרויות השקעה המותאמות לשוק ולחוקים במדינתך.",
+    "captchaRequired": "אנא אשר שאינך רובוט"
+  },
+  "countries": {
+    "IL": "ישראל",
+    "US": "ארצות הברית",
+    "GB": "בריטניה",
+    "DE": "גרמניה",
+    "FR": "צרפת",
+    "CA": "קנדה",
+    "AU": "אוסטרליה"
   },
   "insightsPage": {
     "title": "תובנות פיננסיות",
@@ -96,7 +109,12 @@
     "income": "הכנסות",
     "expenses": "הוצאות",
     "noSpendingData": "אין נתוני הוצאות בתקופה זו",
-    "noTrendData": "אין נתוני מגמות בתקופה זו"
+    "noTrendData": "אין נתוני מגמות בתקופה זו",
+    "fixedExpenses": "הוצאות קבועות",
+    "fixedIncome": "הכנסות קבועות",
+    "showDetail": "הצג פירוט",
+    "installmentOf": "תשלום {{current}} מתוך {{total}}",
+    "expectedEnd": "צפוי להסתיים ב־{{date}}"
   },
   "transactions": {
     "title": "תנועות",
@@ -121,7 +139,10 @@
     "categoryNamePlaceholder": "למשל: קניות סופרמרקט",
     "addAndAssign": "הוסף והקצה לתנועה",
     "adding": "מוסיף…",
-    "firstChargeDate": "תאריך חיוב ראשון"
+    "firstChargeDate": "תאריך חיוב ראשון",
+    "recurring": "קבוע",
+    "recurringOn": "הוצאה/הכנסה קבועה – לחץ לביטול",
+    "recurringOff": "סמן כהוצאה/הכנסה קבועה"
   },
   "upload": {
     "title": "העלאת מסמכים",
@@ -179,6 +200,8 @@
     "newPasswordHint": "השאר ריק כדי לא לשנות",
     "profileUpdated": "הפרופיל עודכן.",
     "emailInUse": "האימייל כבר בשימוש.",
+    "country": "מדינה",
+    "countryWhy": "בחירת מדינה נכונה מאפשרת לתובנות הפיננסיות (המלצות, טיפי מס, השקעות) להיות מותאמות לשוק ולחוקים במדינתך.",
     "accounts": "חשבונות",
     "accountsDescription": "הוסף חשבונות בנק, כרטיס אשראי, ביטוח, פנסיה או השקעות. חיבור API יגיע בהמשך.",
     "name": "שם",

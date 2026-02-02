@@ -19,6 +19,7 @@ export class UsersService {
         email: dto.email,
         passwordHash,
         name: dto.name ?? null,
+        countryCode: dto.countryCode ? dto.countryCode.toUpperCase().slice(0, 2) : null,
         householdId: household.id,
       },
     });
@@ -28,20 +29,20 @@ export class UsersService {
   async findByEmail(email: string) {
     return this.prisma.user.findUnique({
       where: { email },
-      select: { id: true, email: true, name: true, passwordHash: true, householdId: true },
+      select: { id: true, email: true, name: true, passwordHash: true, householdId: true, countryCode: true },
     });
   }
 
   async findById(id: string) {
     const u = await this.prisma.user.findUnique({
       where: { id },
-      select: { id: true, email: true, name: true, householdId: true },
+      select: { id: true, email: true, name: true, householdId: true, countryCode: true },
     });
     return u ?? null;
   }
 
-  async update(id: string, dto: { name?: string; email?: string; password?: string }) {
-    const data: { name?: string | null; email?: string; passwordHash?: string } = {};
+  async update(id: string, dto: { name?: string; email?: string; password?: string; countryCode?: string | null }) {
+    const data: { name?: string | null; email?: string; passwordHash?: string; countryCode?: string | null } = {};
     if (dto.name !== undefined) data.name = dto.name.trim() || null;
     if (dto.email !== undefined) {
       const email = dto.email.trim().toLowerCase();
@@ -54,11 +55,14 @@ export class UsersService {
     if (dto.password != null && dto.password.length >= 6) {
       data.passwordHash = await bcrypt.hash(dto.password, 10);
     }
+    if (dto.countryCode !== undefined) {
+      data.countryCode = dto.countryCode ? dto.countryCode.toUpperCase().slice(0, 2) : null;
+    }
     if (Object.keys(data).length === 0) return this.findById(id);
     const u = await this.prisma.user.update({
       where: { id },
       data,
-      select: { id: true, email: true, name: true, householdId: true },
+      select: { id: true, email: true, name: true, householdId: true, countryCode: true },
     });
     return u;
   }

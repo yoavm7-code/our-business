@@ -32,7 +32,7 @@ export class DashboardService {
       }),
       this.prisma.transaction.findMany({
         where: txWhere,
-        select: { amount: true, categoryId: true, accountId: true, date: true },
+        select: { amount: true, categoryId: true, accountId: true, date: true, isRecurring: true },
         orderBy: { date: 'asc' },
       }),
     ]);
@@ -97,10 +97,19 @@ export class DashboardService {
       }))
       .sort((a, b) => b.total - a.total);
 
+    const fixedExpensesSum = transactions
+      .filter((t) => Number(t.amount) < 0)
+      .reduce((sum, t) => sum + (t.isRecurring ? Math.abs(Number(t.amount)) : 0), 0);
+    const fixedIncomeSum = transactions
+      .filter((t) => Number(t.amount) > 0)
+      .reduce((sum, t) => sum + (t.isRecurring ? Number(t.amount) : 0), 0);
+
     return {
       totalBalance,
       income,
       expenses,
+      fixedExpensesSum,
+      fixedIncomeSum,
       period: { from: fromDate.toISOString().slice(0, 10), to: toDate.toISOString().slice(0, 10) },
       accounts,
       spendingByCategory,
@@ -145,8 +154,86 @@ export class DashboardService {
     const sorted = [...buckets.entries()].sort((a, b) => a[0].localeCompare(b[0]));
     return sorted.map(([period, data]) => ({ period, ...data }));
   }
+
+  async getFixedExpenses(householdId: string): Promise<FixedItem[]> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const rows = await this.prisma.transaction.findMany({
+      where: { householdId, isRecurring: true, amount: { lt: 0 } },
+      select: {
+        id: true,
+        description: true,
+        amount: true,
+        date: true,
+        installmentCurrent: true,
+        installmentTotal: true,
+        category: { select: { name: true } },
+      },
+      orderBy: { date: 'desc' },
+    });
+    const result: FixedItem[] = [];
+    for (const r of rows) {
+      const cur = r.installmentCurrent ?? 0;
+      const total = r.installmentTotal ?? 0;
+      let expectedEndDate: string | null = null;
+      if (total >= 1 && cur >= 1) {
+        const firstDate = new Date(r.date);
+        const endDate = addMonths(firstDate, total - 1);
+        expectedEndDate = endDate.toISOString().slice(0, 10);
+        if (endDate < today) continue; // installment plan ended, don't show
+      }
+      result.push({
+        id: r.id,
+        description: r.description,
+        amount: Math.abs(Number(r.amount)),
+        categoryName: r.category?.name ?? null,
+        installmentCurrent: cur >= 1 ? cur : null,
+        installmentTotal: total >= 1 ? total : null,
+        expectedEndDate,
+      });
+    }
+    return result;
+  }
+
+  async getFixedIncome(householdId: string): Promise<FixedItem[]> {
+    const rows = await this.prisma.transaction.findMany({
+      where: { householdId, isRecurring: true, amount: { gt: 0 } },
+      select: {
+        id: true,
+        description: true,
+        amount: true,
+        category: { select: { name: true } },
+      },
+      orderBy: { date: 'desc' },
+    });
+    return rows.map((r) => ({
+      id: r.id,
+      description: r.description,
+      amount: Number(r.amount),
+      categoryName: r.category?.name ?? null,
+      installmentCurrent: null,
+      installmentTotal: null,
+      expectedEndDate: null,
+    }));
+  }
 }
 
 function startOfMonth(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), 1);
+}
+
+function addMonths(d: Date, months: number): Date {
+  const out = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  out.setMonth(out.getMonth() + months);
+  return out;
+}
+
+export interface FixedItem {
+  id: string;
+  description: string;
+  amount: number;
+  categoryName: string | null;
+  installmentCurrent: number | null;
+  installmentTotal: number | null;
+  expectedEndDate: string | null; // YYYY-MM-DD, only for installments
 }

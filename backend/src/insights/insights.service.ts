@@ -46,7 +46,7 @@ export class InsightsService {
           householdId,
           date: { gte: sixMonthsAgo, lte: now },
         },
-        select: { date: true, amount: true, accountId: true },
+        select: { date: true, amount: true, accountId: true, isRecurring: true },
         orderBy: { date: 'asc' },
       }),
     ]);
@@ -91,11 +91,28 @@ export class InsightsService {
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([month, data]) => ({ month, ...data }));
 
+    // Fixed (recurring) expenses and income in the period (for insights)
+    let fixedExpensesSum = 0;
+    let fixedIncomeSum = 0;
+    for (const t of transactions) {
+      if (!t.isRecurring) continue;
+      const amt = Number(t.amount);
+      if (amt < 0) fixedExpensesSum += Math.abs(amt);
+      else fixedIncomeSum += amt;
+    }
+    const monthsInRange = Math.max(1, byMonth.size);
+    const fixedExpensesMonthly = fixedExpensesSum / monthsInRange;
+    const fixedIncomeMonthly = fixedIncomeSum / monthsInRange;
+
     return {
       totalBalance,
       accounts,
       monthlyData,
       currentMonth: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`,
+      fixedExpensesSum,
+      fixedIncomeSum,
+      fixedExpensesMonthly,
+      fixedIncomeMonthly,
     };
   }
 
@@ -103,7 +120,14 @@ export class InsightsService {
     return lang === 'en' ? 'en' : 'he';
   }
 
-  async getInsights(householdId: string, lang?: string): Promise<FinancialInsights> {
+  private getCountryContext(countryCode?: string): string {
+    if (!countryCode || typeof countryCode !== 'string') return '';
+    const code = countryCode.toUpperCase().slice(0, 2);
+    if (!code) return '';
+    return `\n\nUser's country (ISO 3166-1 alpha-2): ${code}. Tailor all recommendations to this country's market, regulations, tax rules, and currency where relevant.`;
+  }
+
+  async getInsights(householdId: string, lang?: string, countryCode?: string): Promise<FinancialInsights> {
     const data = await this.getFinancialData(householdId);
     const client = this.getOpenAIClient();
     const locale = this.normalizeLang(lang);
@@ -111,8 +135,8 @@ export class InsightsService {
       return this.getFallbackInsights(data, false, locale);
     }
 
-    const prompt = this.buildPrompt(data, locale);
-    const systemPrompt = this.buildSystemPrompt(locale);
+    const prompt = this.buildPrompt(data, locale, countryCode);
+    const systemPrompt = this.buildSystemPrompt(locale, countryCode);
     
     try {
       const completion = await client.chat.completions.create({
@@ -167,7 +191,7 @@ export class InsightsService {
     }
   }
 
-  async getInsightSection(householdId: string, section: InsightSection, lang?: string): Promise<{ content: string }> {
+  async getInsightSection(householdId: string, section: InsightSection, lang?: string, countryCode?: string): Promise<{ content: string }> {
     const data = await this.getFinancialData(householdId);
     const client = this.getOpenAIClient();
     const locale = this.normalizeLang(lang);
@@ -176,9 +200,9 @@ export class InsightsService {
       return { content: fallback };
     }
 
-    const prompt = this.buildPrompt(data, locale);
+    const prompt = this.buildPrompt(data, locale, countryCode);
     const sectionPrompt = this.buildSectionAsk(section, locale);
-    const systemPrompt = this.buildSectionSystemPrompt(section, locale);
+    const systemPrompt = this.buildSectionSystemPrompt(section, locale, countryCode);
 
     try {
       const completion = await client.chat.completions.create({
@@ -247,7 +271,7 @@ export class InsightsService {
     return asks[section];
   }
 
-  private buildSectionSystemPrompt(section: InsightSection, locale: 'he' | 'en'): string {
+  private buildSectionSystemPrompt(section: InsightSection, locale: 'he' | 'en', countryCode?: string): string {
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentDate = locale === 'en'
@@ -259,23 +283,23 @@ export class InsightsService {
     if (locale === 'en') {
       const base = `You are an expert financial advisor for the Israeli market. Today's date: ${currentDate}. Give one focused recommendation. Return JSON with a single key only. ${langInstruction}`;
       const sectionGuidance: Record<InsightSection, string> = {
-        balanceForecast: 'Calculate an accurate balance forecast from income and expenses. If there are only expenses, say so and recommend adding income. Give a 1-3 month forecast.',
-        savingsRecommendation: `Recommend a specific emergency fund amount (3-6 months of expenses). Reference Israeli rates (around 4.5% in ${currentYear}). Mention deposits, money market funds, Makam.`,
+        balanceForecast: 'Calculate an accurate balance forecast from income and expenses. Consider fixed (recurring) expenses and income when given; they repeat every month. If there are only expenses, say so and recommend adding income. Give a 1-3 month forecast.',
+        savingsRecommendation: `Recommend a specific emergency fund amount (3-6 months of expenses). Prefer at least 3-6 months of fixed (recurring) expenses when that data is provided. Reference Israeli rates (around 4.5% in ${currentYear}). Mention deposits, money market funds, Makam.`,
         investmentRecommendations: 'Detailed investment recommendations: provident funds, investment funds, mutual funds/ETFs, government bonds. Israeli product names, allocation percentages, expected returns.',
         taxTips: 'Tax credit points, tax benefits for pension/provident, advanced study fund, tax refunds.',
-        spendingInsights: 'Identify spending patterns, compare to average, give category-specific saving tips.',
+        spendingInsights: 'Identify spending patterns, including fixed vs variable expenses when fixed expenses are provided. Compare to average, give category-specific saving tips.',
       };
-      return `${base}\n\n${sectionGuidance[section]}`;
+      return `${base}\n\n${sectionGuidance[section]}${this.getCountryContext(countryCode)}`;
     }
     const base = `אתה יועץ פיננסי מומחה לשוק הישראלי. התאריך היום: ${currentDate}. תפקידך לתת המלצה אחת ממוקדת. החזר JSON עם מפתח אחד בלבד. ${langInstruction}`;
     const sectionGuidance: Record<InsightSection, string> = {
-      balanceForecast: 'חשב צפי יתרה מדויק על בסיס הכנסות והוצאות. אם יש רק הוצאות - ציין והמלץ להוסיף הכנסות. תן תחזית ל-1-3 חודשים.',
-      savingsRecommendation: `המלץ על סכום ספציפי לחיסכון חירום (3-6 חודשי הוצאות). התייחס לריביות בישראל (כ-4.5% ${currentYear}). הזכר פיקדון, קרן כספית, פק"מ.`,
+      balanceForecast: 'חשב צפי יתרה מדויק על בסיס הכנסות והוצאות. התחשב בהוצאות והכנסות קבועות כשמופיעות – הן חוזרות כל חודש. אם יש רק הוצאות - ציין והמלץ להוסיף הכנסות. תן תחזית ל-1-3 חודשים.',
+      savingsRecommendation: `המלץ על סכום ספציפי לחיסכון חירום (3-6 חודשי הוצאות). העדף לפחות 3-6 חודשי הוצאות קבועות כשהנתון קיים. התייחס לריביות בישראל (כ-4.5% ${currentYear}). הזכר פיקדון, קרן כספית, פק"מ.`,
       investmentRecommendations: 'המלצות השקעה מפורטות: קרנות השתלמות, קופות גמל, קרנות נאמנות/תעודות סל, אג"ח. שמות מוצרים ישראלים, אחוזי הקצאה, תשואות משוערות.',
       taxTips: 'נקודות זיכוי, הטבות מס על פנסיה/קופת גמל, קרן השתלמות, החזרי מס.',
-      spendingInsights: 'זהה דפוסי הוצאות, השווה לממוצע, תן טיפים לחיסכון בקטגוריות.',
+      spendingInsights: 'זהה דפוסי הוצאות, כולל הוצאות קבועות לעומת משתנות כשמופיעות. השווה לממוצע, תן טיפים לחיסכון בקטגוריות.',
     };
-    return `${base}\n\n${sectionGuidance[section]}`;
+    return `${base}\n\n${sectionGuidance[section]}${this.getCountryContext(countryCode)}`;
   }
 
   private getFallbackForSection(
@@ -309,7 +333,7 @@ export class InsightsService {
     return '';
   }
 
-  private buildSystemPrompt(locale: 'he' | 'en'): string {
+  private buildSystemPrompt(locale: 'he' | 'en', countryCode?: string): string {
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentDate = locale === 'en'
@@ -327,12 +351,12 @@ Your role is to give detailed, practical, and specific financial recommendations
 ## Key guidelines:
 
 ### Balance forecast (balanceForecast):
-- Calculate an accurate forecast from income and expenses
+- Calculate an accurate forecast from income and expenses; use fixed (recurring) expenses and income when provided
 - If there are only expenses and no income, state this and recommend adding income
 - Give a 1-3 month forecast
 
 ### Savings recommendation (savingsRecommendation):
-- Recommend a specific emergency fund amount (typically 3-6 months of expenses)
+- Recommend a specific emergency fund amount (typically 3-6 months of expenses; prefer 3-6 months of fixed expenses when provided)
 - Reference current Israeli deposit rates (Bank of Israel rate ~4.5% in ${currentYear})
 - Mention options such as: bank deposit, money market fund, Makam
 
@@ -346,10 +370,10 @@ Give specific, detailed recommendations:
 
 ### Tax tips (taxTips): credit points, pension tax benefits, study fund caps, refunds.
 
-### Spending insights (spendingInsights): identify patterns, compare to average, category-specific saving tips.
+### Spending insights (spendingInsights): identify patterns (including fixed vs variable when fixed data is given), compare to average, category-specific saving tips.
 
 ## Response format:
-Return JSON with keys: balanceForecast, savingsRecommendation, investmentRecommendations, taxTips (optional), spendingInsights (optional).${langInstruction}`;
+Return JSON with keys: balanceForecast, savingsRecommendation, investmentRecommendations, taxTips (optional), spendingInsights (optional).${langInstruction}${this.getCountryContext(countryCode)}`;
     }
 
     return `אתה יועץ פיננסי מומחה לשוק הישראלי. התאריך היום: ${currentDate}.
@@ -364,7 +388,7 @@ Return JSON with keys: balanceForecast, savingsRecommendation, investmentRecomme
 - תן תחזית ל-1-3 חודשים קדימה
 
 ### המלצות חיסכון (savingsRecommendation):
-- המלץ על סכום ספציפי לחיסכון חירום (בדרך כלל 3-6 חודשי הוצאות)
+- המלץ על סכום ספציפי לחיסכון חירום (בדרך כלל 3-6 חודשי הוצאות; העדף 3-6 חודשי הוצאות קבועות כשהנתון קיים)
 - התייחס לריביות הנוכחיות בפיקדונות בישראל (ריבית בנק ישראל כ-4.5% נכון ל-${currentYear})
 - הזכר אפשרויות כמו: פיקדון בנקאי, קרן כספית, פק"מ
 
@@ -402,7 +426,7 @@ Return JSON with keys: balanceForecast, savingsRecommendation, investmentRecomme
 - החזרי מס אפשריים
 
 ### תובנות הוצאות (spendingInsights):
-- זהה דפוסי הוצאות חריגים
+- זהה דפוסי הוצאות חריגים (כולל קבועות לעומת משתנות כשמופיעות)
 - השווה להוצאה ממוצעת במשק הישראלי
 - תן טיפים לחיסכון בקטגוריות ספציפיות
 
@@ -413,7 +437,7 @@ Return JSON with keys: balanceForecast, savingsRecommendation, investmentRecomme
 - investmentRecommendations: טקסט מפורט עם שמות קרנות/מוצרים ספציפיים, אחוזי הקצאה מומלצים
 - taxTips: טיפים למס (אופציונלי)
 - spendingInsights: תובנות על ההוצאות (אופציונלי)
-${langInstruction}`;
+${langInstruction}${this.getCountryContext(countryCode)}`;
   }
 
   private openai: OpenAI | null = null;
@@ -425,7 +449,7 @@ ${langInstruction}`;
     return this.openai;
   }
 
-  private buildPrompt(data: Awaited<ReturnType<typeof this.getFinancialData>>, locale: 'he' | 'en'): string {
+  private buildPrompt(data: Awaited<ReturnType<typeof this.getFinancialData>>, locale: 'he' | 'en', countryCode?: string): string {
     const isEn = locale === 'en';
     const monthly = data.monthlyData
       .map((m) => {
@@ -461,8 +485,13 @@ ${langInstruction}`;
       financialProfile = isEn ? 'Negative or zero balance - focus on cutting expenses' : 'יתרה שלילית או אפסית - יש להתמקד בצמצום הוצאות';
     }
 
+    const d = data as Awaited<ReturnType<typeof this.getFinancialData>> & { fixedExpensesMonthly?: number; fixedIncomeMonthly?: number };
+    const fixedExpMonthly = d.fixedExpensesMonthly ?? 0;
+    const fixedIncMonthly = d.fixedIncomeMonthly ?? 0;
+
+    const countryLine = countryCode ? `User's country (ISO): ${countryCode.toUpperCase().slice(0, 2)}\n\n` : '';
     if (isEn) {
-      return `## My household data (last 6 months)
+      return `${countryLine}## My household data (last 6 months)
 
 ### Financial summary:
 - Total current balance: ${data.totalBalance.toLocaleString('en-IL')} ILS
@@ -471,6 +500,8 @@ ${langInstruction}`;
 - Average surplus/deficit: ${avgMonthlySurplus >= 0 ? '+' : ''}${avgMonthlySurplus.toLocaleString('en-IL')} ILS
 - Savings rate: ${savingsRate}%
 - Financial profile: ${financialProfile}
+- Fixed (recurring) expenses per month: ${fixedExpMonthly.toFixed(0)} ILS (included in expenses above)
+- Fixed (recurring) income per month: ${fixedIncMonthly.toFixed(0)} ILS (included in income above)
 
 ### Accounts:
 ${accs || 'No accounts defined'}
@@ -483,7 +514,7 @@ ${monthly || 'No data'}
 Please provide the insights as requested (in English).`;
     }
 
-    return `## נתוני משק הבית שלי (6 חודשים אחרונים)
+    return `${countryLine}## נתוני משק הבית שלי (6 חודשים אחרונים)
 
 ### סיכום פיננסי:
 - יתרה נוכחית כוללת: ${data.totalBalance.toLocaleString('he-IL')} ₪
@@ -492,6 +523,8 @@ Please provide the insights as requested (in English).`;
 - עודף/גירעון ממוצע: ${avgMonthlySurplus >= 0 ? '+' : ''}${avgMonthlySurplus.toLocaleString('he-IL')} ₪
 - שיעור חיסכון: ${savingsRate}%
 - פרופיל פיננסי: ${financialProfile}
+- הוצאות קבועות (חודשי): ${fixedExpMonthly.toFixed(0)} ₪ (כלולות בהוצאות למעלה)
+- הכנסות קבועות (חודשי): ${fixedIncMonthly.toFixed(0)} ₪ (כלולות בהכנסות למעלה)
 
 ### חשבונות:
 ${accs || 'אין חשבונות מוגדרים'}

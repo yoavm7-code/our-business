@@ -31,13 +31,14 @@ model Household {
 // Users (two users per household)
 // --------------------------------------------
 model User {
-  id          String   @id @default(uuid())
-  email       String   @unique
-  passwordHash String  @map("password_hash")
-  name        String?
-  householdId String   @map("household_id")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String?
+  countryCode  String?  @map("country_code") // ISO 3166-1 alpha-2 (e.g. IL, US)
+  householdId  String   @map("household_id")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
 }
@@ -122,6 +123,7 @@ model Transaction {
   totalAmount       Decimal?  @map("total_amount") @db.Decimal(14, 2) // for installments: full price (e.g. 1950)
   installmentCurrent Int?     @map("installment_current") // e.g. 2 (payment 2 of 3)
   installmentTotal   Int?     @map("installment_total") // e.g. 3
+  isRecurring        Boolean  @default(false) @map("is_recurring") // fixed expense or fixed income
   metadata          Json?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt

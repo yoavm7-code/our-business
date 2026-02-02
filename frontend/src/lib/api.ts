@@ -44,22 +44,22 @@ export async function api<T>(
 }
 
 export const auth = {
-  login: (email: string, password: string) =>
-    api<{ accessToken: string; user: { id: string; email: string; name: string | null; householdId: string } }>(
+  login: (email: string, password: string, captchaToken?: string) =>
+    api<{ accessToken: string; user: { id: string; email: string; name: string | null; householdId: string; countryCode?: string } }>(
       '/api/auth/login',
-      { method: 'POST', body: JSON.stringify({ email, password }) },
+      { method: 'POST', body: JSON.stringify({ email, password, captchaToken }) },
     ),
-  register: (email: string, password: string, name?: string) =>
-    api<{ accessToken: string; user: unknown }>('/api/auth/register', {
+  register: (email: string, password: string, name?: string, countryCode?: string, captchaToken?: string) =>
+    api<{ accessToken: string; user: { id: string; email: string; name: string | null; householdId: string; countryCode?: string } }>('/api/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email, password, name }),
+      body: JSON.stringify({ email, password, name, countryCode, captchaToken }),
     }),
 };
 
 export const users = {
-  me: () => api<{ id: string; email: string; name: string | null; householdId: string }>('/api/users/me'),
-  update: (body: { name?: string; email?: string; password?: string }) =>
-    api<{ id: string; email: string; name: string | null; householdId: string }>('/api/users/me', {
+  me: () => api<{ id: string; email: string; name: string | null; householdId: string; countryCode?: string | null }>('/api/users/me'),
+  update: (body: { name?: string; email?: string; password?: string; countryCode?: string | null }) =>
+    api<{ id: string; email: string; name: string | null; householdId: string; countryCode?: string | null }>('/api/users/me', {
       method: 'PUT',
       body: JSON.stringify(body),
     }),
@@ -104,9 +104,9 @@ export const transactions = {
       `/api/transactions?${qs}`,
     );
   },
-  create: (body: { accountId: string; categoryId?: string; date: string; description: string; amount: number; currency?: string }) =>
+  create: (body: { accountId: string; categoryId?: string; date: string; description: string; amount: number; currency?: string; isRecurring?: boolean }) =>
     api<unknown>('/api/transactions', { method: 'POST', body: JSON.stringify(body) }),
-  update: (id: string, body: { accountId?: string; categoryId?: string | null; date?: string; description?: string; amount?: number }) =>
+  update: (id: string, body: { accountId?: string; categoryId?: string | null; date?: string; description?: string; amount?: number; isRecurring?: boolean }) =>
     api<unknown>(`/api/transactions/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   updateCategory: (id: string, categoryId: string | null) =>
     api<unknown>(`/api/transactions/${id}/category`, {
@@ -255,12 +255,24 @@ export const insights = {
     api<{ content: string }>(`/api/insights/${section}`, { params: lang ? { lang } : undefined }),
 };
 
+export type FixedItem = {
+  id: string;
+  description: string;
+  amount: number;
+  categoryName: string | null;
+  installmentCurrent: number | null;
+  installmentTotal: number | null;
+  expectedEndDate: string | null;
+};
+
 export const dashboard = {
   summary: (from?: string, to?: string, accountId?: string, categoryId?: string) =>
     api<{
       totalBalance: number;
       income: number;
       expenses: number;
+      fixedExpensesSum?: number;
+      fixedIncomeSum?: number;
       period: { from: string; to: string };
       accounts: Array<{ id: string; name: string; type: string; balance: string }>;
       spendingByCategory: Array<{ categoryId: string; category: { name: string; color: string | null }; total: number }>;
@@ -277,4 +289,6 @@ export const dashboard = {
     api<Array<{ period: string; income: number; expenses: number }>>('/api/dashboard/trends', {
       params: { from, to, ...(groupBy && { groupBy }), ...(accountId && { accountId }), ...(categoryId && { categoryId }) },
     }),
+  fixedExpenses: () => api<FixedItem[]>('/api/dashboard/fixed-expenses'),
+  fixedIncome: () => api<FixedItem[]>('/api/dashboard/fixed-income'),
 };

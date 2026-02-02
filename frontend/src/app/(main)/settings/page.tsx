@@ -6,6 +6,8 @@ import { useTranslation } from '@/i18n/context';
 
 const KNOWN_CATEGORY_SLUGS = ['groceries', 'transport', 'utilities', 'rent', 'insurance', 'healthcare', 'dining', 'shopping', 'entertainment', 'other', 'salary'];
 
+const COUNTRY_OPTIONS = ['IL', 'US', 'GB', 'DE', 'FR', 'CA', 'AU'] as const;
+
 const ACCOUNT_TYPE_KEYS: Record<string, string> = {
   BANK: 'settings.bank',
   CREDIT_CARD: 'settings.creditCard',
@@ -19,7 +21,7 @@ const BALANCE_TYPES = ['BANK', 'INVESTMENT', 'PENSION', 'INSURANCE', 'CASH'];
 
 export default function SettingsPage() {
   const { t } = useTranslation();
-  const [user, setUser] = useState<{ email: string; name: string | null } | null>(null);
+  const [user, setUser] = useState<{ email: string; name: string | null; countryCode?: string | null } | null>(null);
   const [accountsList, setAccountsList] = useState<Array<{ id: string; name: string; type: string; balance: string | null }>>([]);
   const [categoriesList, setCategoriesList] = useState<Array<{ id: string; name: string; slug?: string; isIncome: boolean; isDefault?: boolean }>>([]);
   const [loading, setLoading] = useState(true);
@@ -36,7 +38,7 @@ export default function SettingsPage() {
   const [removingCategoryId, setRemovingCategoryId] = useState<string | null>(null);
   const [deletingAccountId, setDeletingAccountId] = useState<string | null>(null);
   const [editingProfile, setEditingProfile] = useState(false);
-  const [profileForm, setProfileForm] = useState({ name: '', email: '', password: '' });
+  const [profileForm, setProfileForm] = useState({ name: '', email: '', password: '', countryCode: '' });
   const [updatingProfile, setUpdatingProfile] = useState(false);
 
   useEffect(() => {
@@ -141,13 +143,15 @@ export default function SettingsPage() {
         name: profileForm.name.trim() || undefined,
         email: profileForm.email.trim() || undefined,
         password: profileForm.password || undefined,
+        countryCode: profileForm.countryCode || null,
       });
       setUser((u) => (u ? {
         ...u,
         name: profileForm.name.trim() || null,
         email: profileForm.email.trim() || u.email,
+        countryCode: profileForm.countryCode || null,
       } : null));
-      setProfileForm({ name: '', email: '', password: '' });
+      setProfileForm({ name: '', email: '', password: '', countryCode: '' });
       setEditingProfile(false);
       setMsg(t('settings.profileUpdated'));
     } catch (err) {
@@ -159,7 +163,7 @@ export default function SettingsPage() {
   }
 
   function openEditProfile() {
-    setProfileForm({ name: user?.name ?? '', email: user?.email ?? '', password: '' });
+    setProfileForm({ name: user?.name ?? '', email: user?.email ?? '', password: '', countryCode: user?.countryCode ?? '' });
     setEditingProfile(true);
   }
 
@@ -207,7 +211,13 @@ export default function SettingsPage() {
         <h2 className="font-medium mb-4">{t('settings.profile')}</h2>
         <p className="text-slate-600 dark:text-slate-400 mb-2">
           {user?.email} {user?.name && `(${user.name})`}
+          {user?.countryCode && (
+            <span className="block mt-1">
+              {t('settings.country')}: {t(`countries.${user.countryCode}`)}
+            </span>
+          )}
         </p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">{t('settings.countryWhy')}</p>
         <button
           type="button"
           className="text-sm text-primary-600 hover:underline"
@@ -242,6 +252,19 @@ export default function SettingsPage() {
                   placeholder="user@example.com"
                   required
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">{t('settings.country')}</label>
+                <select
+                  className="input w-full"
+                  value={profileForm.countryCode}
+                  onChange={(e) => setProfileForm((f) => ({ ...f, countryCode: e.target.value }))}
+                >
+                  <option value="">–</option>
+                  {COUNTRY_OPTIONS.map((code) => (
+                    <option key={code} value={code}>{t(`countries.${code}`)}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">{t('settings.newPassword')}</label>

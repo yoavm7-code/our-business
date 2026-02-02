@@ -16,7 +16,7 @@ export class UsersController {
   @Put('me')
   async updateMe(
     @CurrentUser() user: { id: string },
-    @Body() body: { name?: string; email?: string; password?: string },
+    @Body() body: { name?: string; email?: string; password?: string; countryCode?: string | null },
   ) {
     return this.usersService.update(user.id, body);
   }
