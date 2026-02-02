@@ -121,9 +121,9 @@
   "upload": {
     "title": "Upload Documents",
     "description": "Upload screenshots or scans of bank statements, receipts, or invoices. We extract transactions with OCR and AI.",
-    "account": "Account",
+    "account": "Transaction source",
     "fileLabel": "File (image or PDF)",
-    "selectFileAndAccount": "Select a file and an account.",
+    "selectFileAndAccount": "Select a file and source.",
     "uploadFailed": "Upload failed",
     "processingFailed": "Processing failed. Check image quality or try again.",
     "upload": "Upload",
@@ -137,9 +137,10 @@
     "recentUploads": "Recent uploads",
     "noTransactionsExtracted": "No transactions extracted. Try widening the date range on Transactions, or upload a clearer image.",
     "ocrMayTakeMinute": "OCR + extraction may take a minute",
-    "noAccountsYet": "You haven't set up any accounts yet. To upload documents, first add at least one account (e.g. bank account, credit card).",
-    "goToSettings": "Go to Settings to add an account",
-    "accountHint": "Choose the account where the transactions in this document belong (e.g. if this is a Bank Leumi statement, select your Bank Leumi account)"
+    "noAccountsYet": "Before uploading, you need to add at least one source (bank account, credit card, etc.).",
+    "goToSettings": "Go to Settings to add a source",
+    "accountHint": "Where is this document from? (e.g. Bank Leumi statement, Visa details, store receipt)",
+    "chooseSource": "Choose source"
   },
   "income": {
     "title": "Income",

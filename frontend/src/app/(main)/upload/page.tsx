@@ -108,7 +108,7 @@ export default function UploadPage() {
                   onChange={(e) => setAccountId(e.target.value)}
                   required
                 >
-                  <option value="">{t('common.chooseAccount')}</option>
+                  <option value="">{t('upload.chooseSource')}</option>
                   {accountsList.map((a) => (
                     <option key={a.id} value={a.id}>{a.name}</option>
                   ))}
