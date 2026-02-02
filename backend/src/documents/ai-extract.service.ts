@@ -22,16 +22,25 @@ export interface SignHints {
   twoAmountsByLine: Map<number, { income: number; expense: number }>;
 }
 
-// Hebrew keywords: income vs expense (substring match, case-sensitive for Hebrew)
+// Hebrew keywords: income vs expense (substring match)
+// IMPORTANT: Be very selective about income – most bank transactions are expenses.
+// Only mark as INCOME if it's CLEARLY income (salary, refund, insurance payout).
 const INCOME_KEYWORDS = [
-  'משכורת', 'זיכוי', 'הכנסה', 'הפקדה', 'החזר', 'קצבה', 'קצבת', 'ביטוח לאומי', 'העברה-נייד',
-  'הוראת-קבע', 'פרימיום', 'העברת כסף', 'bit ', 'BIT ', 'בטוח לאומי', 'ביטוח לאומי ג', 'ביטוח לאומי חד',
-  'פמי פרימיום', 'פמי פרימיום בע', 'מ.א.', 'מ.א ', 'אפרויה', 'אפרויה בע',
+  'משכורת', 'שכר', 'זיכוי', 'הכנסה', 'החזר כספי', 'החזר מס', 
+  'קצבה', 'קצבת ילדים', 'קצבת זקנה', 
+  'ביטוח לאומי ג', 'ביטוח לאומי חד', 'בטוח לאומי ג', 'בטוח לאומי חד', // ג׳ימלה = payout
+  'מ.א.', 'מ.א ', 'אפרויה בע', // employer names for salary
 ];
+// Mark as EXPENSE: transfers out, standing orders, credit card charges, fees, etc.
 const EXPENSE_KEYWORDS = [
-  'חיוב', 'חיובי', 'משיכה', 'תשלום', 'העב\' לאחר', 'העברה לאחר', 'העב\' לאחר-נייד', 'לאחר-נייד',
-  'עמ\'הקצאת אשראי', 'עם הקצאת אשראי', 'הקצאת אשראי', 'כאל', 'מקס איט פיננסי', 'לאומי קארד', 'CAL', 'דמי ניהול',
-  'On איט פיננסי', 'שיק', 'מקס איט',
+  'חיוב', 'חיובי', 'משיכה', 'תשלום', 
+  'העב\' לאחר', 'העברה לאחר', 'העב\' לאחר-נייד', 'לאחר-נייד', 'העברה-נייד',
+  'הוראת קבע', 'הוראת-קבע', 'הו"ק', 'הו״ק',
+  'עמ\'הקצאת אשראי', 'עם הקצאת אשראי', 'הקצאת אשראי', 
+  'כאל', 'מקס איט פיננסי', 'לאומי קארד', 'CAL', 'ישראכרט', 'אמריקן אקספרס',
+  'דמי ניהול', 'עמלה', 'עמלת',
+  'On איט פיננסי', 'שיק', 'מקס איט', 'איט פיננסי',
+  'פמי פרימיום', 'מיטב דש', 'גמל', // pension/savings contributions = expense
 ];
 
 /**
@@ -152,20 +161,30 @@ CRITICAL – WE PRE-ANNOTATED EACH ROW WITH SIGN. USE IT STRICTLY.
 • [INCOME_AMT=X] [EXPENSE_AMT=Y] on a row: output TWO transactions – one with amount +X (income), one with amount -Y (expense). Use the same date and appropriate description for each.
 • [SIGN=INCOME AMT=X]: output ONE transaction with amount +X (positive = income). Never make it negative.
 • [SIGN=EXPENSE AMT=X]: output ONE transaction with amount -X (negative = expense). Never make it positive.
-• [SIGN=UNKNOWN AMT=X]: infer from description: salary/משכורת, deposit/הפקדה, refund/החזר, credit/זיכוי, ביטוח לאומי, העברה-נייד (incoming) → POSITIVE. Charge/חיוב, payment/תשלום, העב' לאחר → NEGATIVE.
+• [SIGN=UNKNOWN AMT=X]: DEFAULT TO EXPENSE (negative). Only use POSITIVE if it's CLEARLY income: salary/משכורת, ביטוח לאומי ג׳ימלה (payout).
+  Transfers (העברה, העברה-נייד, הוראת קבע) are usually EXPENSE. When in doubt, use NEGATIVE.
 Do NOT override our INCOME/EXPENSE annotations. If we marked INCOME, the amount must be positive.
 
 1) DATE – In each row use the date in that row (DD/MM/YY or DD.MM.YY). Convert to YYYY-MM-DD. If no date, use previous row's date.
 
-2) DESCRIPTION – Copy Hebrew EXACTLY. Preserve מ.א, בע"מ, ע"א. Never output Latin letters (a-z, A-Z) in description – if OCR produced Latin, replace with Hebrew (e.g. xn→מ.א) or remove it.
+2) DESCRIPTION – Copy Hebrew EXACTLY. Do NOT include dates (like "תאריך ערך: 01/01") in the description – only the business/merchant name and transaction type. Never output Latin letters (a-z, A-Z).
 
-3) CATEGORY – One of: groceries, transport, utilities, rent, insurance, healthcare, dining, shopping, entertainment, salary, credit_charges, other. Income → salary or other. credit_charges = כאל, מקס איט פיננסי, לאומי קארד, etc.
+3) CATEGORY – IMPORTANT: Categorize intelligently, do NOT default to "other".
+Known categories: groceries, transport, utilities, rent, insurance, healthcare, dining, shopping, entertainment, salary, credit_charges, transfers, fees, subscriptions, education, pets, gifts, childcare, savings, pension.
+• משכורת/שכר → salary
+• כאל/מקס איט/לאומי קארד/ישראכרט → credit_charges
+• העברה/העברה-נייד/הוראת קבע → transfers (העברות)
+• דמי ניהול/עמלה → fees (עמלות)
+• ביטוח → insurance
+• גז/חשמל/מים/ארנונה → utilities
+• סופר/רמי לוי/שופרסל → groceries
+• דלק/חניה/רכבת/אוטובוס → transport
+• מסעדה/קפה/פיצה → dining
+• If no existing category fits well, create a new slug (lowercase, a-z and underscores only, e.g. "bank_fees", "online_shopping"). The system will create it automatically.
 
 4) INSTALLMENTS – "X מתוך Y" (money) and "N מתוך M" (payment index): amount = X (single payment, negative), totalAmount = Y, installmentCurrent = N, installmentTotal = M.
 
-5) COMPLETENESS – Extract EVERY row that has a date and at least one amount. Do NOT skip small amounts (e.g. 12.00, 12). Include all transactions. Missing even one row is a critical error.
-
-6) DESCRIPTION – Output ONLY Hebrew letters, digits, and punctuation. Never put Latin letters (a-z, A-Z) in the description. If the source has Latin/gibberish (e.g. "xn fe"), replace with the correct Hebrew (e.g. "מ.א") or remove the Latin part. Copy Hebrew exactly: מ.א, בע"מ, ע"א.
+5) COMPLETENESS – Extract EVERY row that has a date and at least one amount. Do NOT skip small amounts (e.g. 12.00). Missing even one row is a critical error.
 
 Output: JSON with key "transactions": array of { date, description, amount (POSITIVE=income, NEGATIVE=expense), categorySlug, totalAmount?, installmentCurrent?, installmentTotal? }. Include every parseable row.`;
 
@@ -188,13 +207,15 @@ Output: JSON with key "transactions": array of { date, description, amount (POSI
       const parsed = JSON.parse(content);
       const list = Array.isArray(parsed.transactions) ? parsed.transactions : Array.isArray(parsed) ? parsed : [];
       const today = new Date().toISOString().slice(0, 10);
-      const validSlugs = new Set(['groceries', 'transport', 'utilities', 'rent', 'insurance', 'healthcare', 'dining', 'shopping', 'entertainment', 'other', 'salary', 'credit_charges']);
+      // Accept any slug that looks valid (lowercase, a-z, underscores) – the backend will create categories if needed
+      const isValidSlug = (s: string | undefined) => s && /^[a-z][a-z0-9_]*$/.test(s) && s.length <= 50;
       const mapped = list.map((t: Record<string, unknown>) => {
         let date = String(t.date || '').trim();
         if (!date || date === today) date = today;
         let amount = Number(t.amount) || 0;
         if (amount !== 0) amount = amount > 0 ? Math.abs(amount) : -Math.abs(amount);
-        const slug = t.categorySlug ? String(t.categorySlug).toLowerCase() : undefined;
+        const rawSlug = t.categorySlug ? String(t.categorySlug).toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '') : undefined;
+        const slug = isValidSlug(rawSlug) ? rawSlug : 'other';
         const totalAmount = t.totalAmount != null ? Number(t.totalAmount) : undefined;
         const installmentCurrent = t.installmentCurrent != null ? Math.max(1, Math.floor(Number(t.installmentCurrent))) : undefined;
         const installmentTotal = t.installmentTotal != null ? Math.max(1, Math.floor(Number(t.installmentTotal))) : undefined;
@@ -202,7 +223,7 @@ Output: JSON with key "transactions": array of { date, description, amount (POSI
           date,
           description: String(t.description || '').trim().slice(0, 300),
           amount,
-          categorySlug: slug && validSlugs.has(slug) ? slug : 'other',
+          categorySlug: slug,
           ...(totalAmount != null && totalAmount > 0 && { totalAmount }),
           ...(installmentCurrent != null && { installmentCurrent }),
           ...(installmentTotal != null && { installmentTotal }),
@@ -222,12 +243,18 @@ Output: JSON with key "transactions": array of { date, description, amount (POSI
   private sanitizeDescription(desc: string): string {
     if (!desc || !desc.trim()) return desc;
     let s = desc.trim();
-    // Common OCR errors: Latin in place of Hebrew (no \b – Hebrew has no word boundaries)
+    // Remove dates that shouldn't be in description (תאריך ערך: DD/MM, etc.)
+    s = s.replace(/\(?\s*תאריך\s*ערך[:\s]*\d{1,2}[\/\.]\d{1,2}\)?/gi, '');
+    s = s.replace(/\d{1,2}[\/\.]\d{1,2}[\/\.]\d{2,4}/g, ''); // DD/MM/YY or DD/MM/YYYY
+    s = s.replace(/\d{1,2}[\/\.]\d{1,2}(?!\d)/g, ''); // DD/MM without year
+    // Common OCR errors: Latin in place of Hebrew
     s = s.replace(/xn\s*fe/gi, 'מ.א');
     s = s.replace(/mawn\s*BE-?/gi, 'העברה-נייד').replace(/THANK\?\s*wn\s*\d*/gi, "העב' לאחר-נייד");
     // Strip remaining Latin word sequences (2+ letters) so description is Hebrew-only
-    s = s.replace(/\s*[a-zA-Z]{2,}(?:\s+[a-zA-Z]*)*\s*/g, ' ').replace(/\s+/g, ' ').trim();
-    return s.slice(0, 300);
+    s = s.replace(/\s*[a-zA-Z]{2,}(?:\s+[a-zA-Z]*)*\s*/g, ' ');
+    // Clean up extra whitespace and punctuation
+    s = s.replace(/\s+/g, ' ').replace(/^\s*[=\-:,]+\s*/, '').replace(/\s*[=\-:,]+\s*$/, '').trim();
+    return s.slice(0, 300) || 'Unknown';
   }
 
   /**

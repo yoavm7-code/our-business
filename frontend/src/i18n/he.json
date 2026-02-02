@@ -511,7 +511,19 @@
     "entertainment": "בידור",
     "other": "אחר",
     "salary": "משכורת",
-    "credit_charges": "חיובי אשראי"
+    "credit_charges": "חיובי אשראי",
+    "transfers": "העברות",
+    "fees": "עמלות",
+    "subscriptions": "מנויים",
+    "education": "חינוך",
+    "pets": "חיות מחמד",
+    "gifts": "מתנות",
+    "childcare": "טיפול בילדים",
+    "savings": "חסכונות",
+    "pension": "פנסיה",
+    "investment": "השקעות",
+    "bank_fees": "עמלות בנק",
+    "online_shopping": "קניות אונליין"
   },
   "insuranceFunds": {
     "title": "ביטוח וקופות",

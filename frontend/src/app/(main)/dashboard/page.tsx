@@ -112,7 +112,7 @@ export default function DashboardPage() {
     );
   }
 
-  const KNOWN_SLUGS = ['groceries', 'transport', 'utilities', 'rent', 'insurance', 'healthcare', 'dining', 'shopping', 'entertainment', 'other', 'salary'];
+  const KNOWN_SLUGS = ['groceries', 'transport', 'utilities', 'rent', 'insurance', 'healthcare', 'dining', 'shopping', 'entertainment', 'other', 'salary', 'credit_charges', 'transfers', 'fees', 'subscriptions', 'education', 'pets', 'gifts', 'childcare', 'savings', 'pension', 'investment', 'bank_fees', 'online_shopping'];
   const getCatName = (name: string | undefined, slug: string | undefined) => {
     if (!name) return t('common.other');
     if (slug && KNOWN_SLUGS.includes(slug)) {

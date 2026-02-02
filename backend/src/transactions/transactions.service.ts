@@ -63,7 +63,26 @@ export class TransactionsService {
     other: { name: 'Other', isIncome: false },
     salary: { name: 'Salary', isIncome: true },
     credit_charges: { name: 'Credit card charges', isIncome: false },
+    transfers: { name: 'Transfers', isIncome: false },
+    fees: { name: 'Fees', isIncome: false },
+    subscriptions: { name: 'Subscriptions', isIncome: false },
+    education: { name: 'Education', isIncome: false },
+    pets: { name: 'Pets', isIncome: false },
+    gifts: { name: 'Gifts', isIncome: false },
+    childcare: { name: 'Childcare', isIncome: false },
+    savings: { name: 'Savings', isIncome: false },
+    pension: { name: 'Pension', isIncome: false },
+investment: { name: 'Investment', isIncome: false },
+    bank_fees: { name: 'Bank fees', isIncome: false },
+    online_shopping: { name: 'Online shopping', isIncome: false },
   };
+
+  /** Generate a readable name from a slug (e.g. "bank_fees" → "Bank fees") */
+  private slugToName(slug: string): string {
+    return slug
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+  }
 
   async createMany(
     householdId: string,
@@ -84,17 +103,21 @@ export class TransactionsService {
     let bySlug = new Map(categories.map((c) => [c.slug, c.id]));
     const ensureCategory = async (slug: string) => {
       let id = bySlug.get(slug);
-      if (!id && this.KNOWN_SLUGS[slug]) {
+      if (!id) {
+        // Create category: use known definition or generate from slug
+        const def = this.KNOWN_SLUGS[slug];
+        const name = def?.name ?? this.slugToName(slug);
+        const isIncome = def?.isIncome ?? false;
         try {
-          const def = this.KNOWN_SLUGS[slug];
           const created = await this.categoriesService.create(householdId, {
-            name: def.name,
+            name,
             slug,
-            isIncome: def.isIncome,
+            isIncome,
           });
           id = (created as { id: string }).id;
           bySlug.set(slug, id);
         } catch {
+          // Might already exist (race condition) - refresh and get
           categories = await this.categoriesService.findAll(householdId);
           bySlug = new Map(categories.map((c) => [c.slug, c.id]));
           id = bySlug.get(slug);

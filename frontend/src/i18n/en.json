@@ -511,7 +511,19 @@
     "entertainment": "Entertainment",
     "other": "Other",
     "salary": "Salary",
-    "credit_charges": "Credit charges"
+    "credit_charges": "Credit charges",
+    "transfers": "Transfers",
+    "fees": "Fees",
+    "subscriptions": "Subscriptions",
+    "education": "Education",
+    "pets": "Pets",
+    "gifts": "Gifts",
+    "childcare": "Childcare",
+    "savings": "Savings",
+    "pension": "Pension",
+    "investment": "Investment",
+    "bank_fees": "Bank fees",
+    "online_shopping": "Online shopping"
   },
   "insuranceFunds": {
     "title": "Insurance & Funds",
