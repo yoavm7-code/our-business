@@ -11,8 +11,32 @@ export interface ExtractedTransaction {
   installmentTotal?: number; // e.g. 3
 }
 
+/** Sign hint from layout/keywords – used to force correct income vs expense. */
+export type SignHint = 'income' | 'expense' | 'unknown';
+
+/** Per-line sign hints from deterministic preprocessor (layout + Hebrew keywords). */
+export interface SignHints {
+  /** Line index in original text (or logical row) → suggested sign for that row's amount(s). */
+  byLine: Map<number, SignHint>;
+  /** When a line has TWO amounts: [incomeAmount, expenseAmount] – so we can assign sign by position. */
+  twoAmountsByLine: Map<number, { income: number; expense: number }>;
+}
+
+// Hebrew keywords: income vs expense (substring match, case-sensitive for Hebrew)
+const INCOME_KEYWORDS = [
+  'משכורת', 'זיכוי', 'הכנסה', 'הפקדה', 'החזר', 'קצבה', 'קצבת', 'ביטוח לאומי', 'העברה-נייד',
+  'הוראת-קבע', 'פרימיום', 'העברת כסף', 'bit ', 'BIT ', 'בטוח לאומי', 'ביטוח לאומי ג', 'ביטוח לאומי חד',
+  'פמי פרימיום', 'פמי פרימיום בע', 'מ.א.', 'מ.א ', 'אפרויה', 'אפרויה בע',
+];
+const EXPENSE_KEYWORDS = [
+  'חיוב', 'חיובי', 'משיכה', 'תשלום', 'העב\' לאחר', 'העברה לאחר', 'העב\' לאחר-נייד',
+  'עמ\'הקצאת אשראי', 'הקצאת אשראי', 'כאל', 'מקס איט פיננסי', 'לאומי קארד', 'CAL', 'דמי ניהול',
+  'On איט פיננסי', 'שיק', 'מקס איט',
+];
+
 /**
  * AI extraction: parse OCR text into structured transactions using OpenAI.
+ * Uses a deterministic preprocessor (layout + Hebrew keywords) to fix income vs expense before/after AI.
  */
 @Injectable()
 export class AiExtractService {
@@ -25,35 +49,127 @@ export class AiExtractService {
     return this.openai;
   }
 
+  /**
+   * Deterministic sign hints from layout and keywords.
+   * Israeli bank convention: two amount columns per row → first column = income (green), second = expense (red).
+   */
+  getSignHints(ocrText: string): SignHints {
+    const byLine = new Map<number, SignHint>();
+    const twoAmountsByLine = new Map<number, { income: number; expense: number }>();
+    const lines = ocrText.split(/\n/).filter((l) => l.trim().length > 0);
+    const dateRe = /(\d{1,2})[\/.](\d{1,2})[\/.](\d{2,4})/;
+    const amountPattern = /\d{1,3}(?:[,.]\d{3})*(?:[,.]\d{2})?/g;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const lineWithoutDate = line.replace(dateRe, ' ');
+      const amountStrs = lineWithoutDate.match(amountPattern) || [];
+      const amounts = amountStrs
+        .map((s) => parseFloat(s.replace(/,/g, '')))
+        .filter((n) => n >= 0.01 && n <= 100000);
+      const priceLike = amounts.filter((n) => n > 100 || (n !== Math.floor(n)));
+      const candidates = priceLike.length >= 1 ? priceLike : amounts;
+
+      if (candidates.length >= 2) {
+        // Two amounts on line → Israeli convention: usually first = income (green), second = expense (red).
+        // If line has only expense keywords (e.g. RTL: expense column read first), swap.
+        const desc = line.replace(dateRe, ' ').replace(amountPattern, ' ').replace(/\s+/g, ' ').trim();
+        const hasIncome = INCOME_KEYWORDS.some((k) => desc.includes(k));
+        const hasExpense = EXPENSE_KEYWORDS.some((k) => desc.includes(k));
+        let income = candidates[0];
+        let expense = candidates[1];
+        if (!hasIncome && hasExpense) {
+          income = candidates[1];
+          expense = candidates[0];
+        }
+        twoAmountsByLine.set(i, { income, expense });
+        byLine.set(i, 'unknown');
+        continue;
+      }
+
+      if (candidates.length === 1) {
+        const desc = line.replace(dateRe, ' ').replace(amountPattern, ' ').replace(/\s+/g, ' ').trim();
+        const hasIncome = INCOME_KEYWORDS.some((k) => desc.includes(k));
+        const hasExpense = EXPENSE_KEYWORDS.some((k) => desc.includes(k));
+        if (hasIncome && !hasExpense) byLine.set(i, 'income');
+        else if (hasExpense && !hasIncome) byLine.set(i, 'expense');
+        else byLine.set(i, 'unknown');
+      }
+    }
+    return { byLine, twoAmountsByLine };
+  }
+
+  /**
+   * Build annotated text for AI: add [INCOME_AMT=X] [EXPENSE_AMT=Y] or [SIGN=INCOME/EXPENSE/UNKNOWN] per line
+   * so the model does not have to guess from "green/red" (which it cannot see in plain text).
+   */
+  private buildAnnotatedText(ocrText: string, hints: SignHints): string {
+    const lines = ocrText.split(/\n/).filter((l) => l.trim().length > 0);
+    const dateRe = /(\d{1,2})[\/.](\d{1,2})[\/.](\d{2,4})/;
+    const amountPattern = /\d{1,3}(?:[,.]\d{3})*(?:[,.]\d{2})?/g;
+    const out: string[] = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const two = hints.twoAmountsByLine.get(i);
+      const signHint = hints.byLine.get(i);
+
+      if (two) {
+        const prefix = `[INCOME_AMT=${two.income}] [EXPENSE_AMT=${two.expense}]`;
+        out.push(`${prefix} | ${line}`);
+        continue;
+      }
+      const lineWithoutDate = line.replace(dateRe, ' ');
+      const amountStrs = lineWithoutDate.match(amountPattern) || [];
+      const amounts = amountStrs.map((s) => parseFloat(s.replace(/,/g, ''))).filter((n) => n >= 0.01 && n <= 100000);
+      const priceLike = amounts.filter((n) => n > 100 || n !== Math.floor(n));
+      const cand = priceLike.length >= 1 ? priceLike : amounts;
+      if (cand.length === 1) {
+        const sign = signHint === 'income' ? 'INCOME' : signHint === 'expense' ? 'EXPENSE' : 'UNKNOWN';
+        out.push(`[SIGN=${sign} AMT=${cand[0]}] | ${line}`);
+      } else {
+        out.push(line);
+      }
+    }
+    return out.join('\n');
+  }
+
   async extractTransactions(
     ocrText: string,
     userContext?: string,
   ): Promise<ExtractedTransaction[]> {
+    const hints = this.getSignHints(ocrText);
+    const annotated = this.buildAnnotatedText(ocrText, hints);
+
     const client = this.getClient();
     if (!client) {
-      return this.fallbackExtract(ocrText);
+      return this.fallbackExtractWithHints(ocrText, hints);
     }
-    const system = `You extract transactions from Israeli credit card/bank statement OCR text.
 
-RULES (strict):
-1) DATE - Each TRANSACTION ROW has its own charge date. Find the date IN THAT ROW only (format DD/MM/YY or DD.MM.YY, e.g. 28/01/26). Convert to YYYY-MM-DD (2026-01-28). IGNORE dates from page headers, filters, or "מ-... עד" (date range). If a row has no date, use the date from the PREVIOUS transaction row. Never use a single fixed date for all rows.
+    const system = `You extract transactions from Israeli bank/credit statement text.
 
-2) AMOUNT and INCOME vs EXPENSE - Use your judgment; it is usually intuitive. Extract both EXPENSES and INCOME. The number is in ILS, NOT part of the date. Use currency format XX.XX or XXX.XX.
-• EXPENSE (return NEGATIVE): חיוב, הוצאה, משיכה, תשלום, or when the row is clearly a charge (e.g. merchant payment). In many statements there is no minus sign – expenses appear in RED or in a "חיוב" column, and income in GREEN or "זיכוי". Use that visual/context cue: red or charge column → negative; green or credit column → positive.
-• INCOME (return POSITIVE): זיכוי, הפקדה, משכורת, החזר, הכנסה, or when the row is clearly a credit/deposit. When in doubt, consider layout (red vs green), column headers (חיוב vs זיכוי), and common sense (salary, refund = positive; store payment = negative).
-For INSTALLMENTS: "650.00 מתוך 1,950.00" and "2 מתוך 3" – amount = payment made (650, negative), totalAmount = 1950, installmentCurrent = 2, installmentTotal = 3.
+CRITICAL – WE PRE-ANNOTATED EACH ROW WITH SIGN. USE IT STRICTLY.
+• [INCOME_AMT=X] [EXPENSE_AMT=Y] on a row: output TWO transactions – one with amount +X (income), one with amount -Y (expense). Use the same date and appropriate description for each.
+• [SIGN=INCOME AMT=X]: output ONE transaction with amount +X (positive = income). Never make it negative.
+• [SIGN=EXPENSE AMT=X]: output ONE transaction with amount -X (negative = expense). Never make it positive.
+• [SIGN=UNKNOWN AMT=X]: infer from description: salary/משכורת, deposit/הפקדה, refund/החזר, credit/זיכוי, ביטוח לאומי, העברה-נייד (incoming) → POSITIVE. Charge/חיוב, payment/תשלום, העב' לאחר → NEGATIVE.
+Do NOT override our INCOME/EXPENSE annotations. If we marked INCOME, the amount must be positive.
 
-3) DESCRIPTION - The merchant/business name (בית עסק). Copy the Hebrew text exactly as it appears. Do not fix OCR errors. Keep Hebrew characters as-is.
+1) DATE – In each row use the date in that row (DD/MM/YY or DD.MM.YY). Convert to YYYY-MM-DD. If no date, use previous row's date.
 
-4) CATEGORY - Use your judgment for every transaction and assign a category that best fits. You MUST set categorySlug for every transaction. Use exactly one of these slugs (lowercase): groceries, transport, utilities, rent, insurance, healthcare, dining, shopping, entertainment, salary, other. For INCOME use salary or other. For expenses: ביטוח → insurance, פיצה/מסעדה → dining, סופרמרקט → groceries, דלק/חניה → transport, חשבונות → utilities, קניות → shopping, בריאות → healthcare, בידור → entertainment. Use "other" only if nothing fits. If the user provided "User preferences" below, PREFER those categorizations when the description matches.
+2) DESCRIPTION – Copy Hebrew EXACTLY. Preserve מ.א, בע"מ, ע"א. Never output Latin letters (xn, fe) in place of Hebrew.
 
-Output: JSON object with key "transactions": array of { date, description, amount (NEGATIVE for expenses, POSITIVE for income), categorySlug, totalAmount (optional), installmentCurrent (optional), installmentTotal (optional) }. For installments, amount = single payment (650), totalAmount = full price (1950). Skip rows you cannot parse.`;
+3) CATEGORY – One of: groceries, transport, utilities, rent, insurance, healthcare, dining, shopping, entertainment, salary, credit_charges, other. Income → salary or other. credit_charges = כאל, מקס איט פיננסי, לאומי קארד, etc.
+
+4) INSTALLMENTS – "X מתוך Y" (money) and "N מתוך M" (payment index): amount = X (single payment, negative), totalAmount = Y, installmentCurrent = N, installmentTotal = M.
+
+Output: JSON with key "transactions": array of { date, description, amount (POSITIVE=income, NEGATIVE=expense), categorySlug, totalAmount?, installmentCurrent?, installmentTotal? }. Skip unparseable rows.`;
 
     try {
       const model = process.env.OPENAI_MODEL || 'gpt-4o';
-      let userContent = `Extract transactions from this text:\n\n${ocrText.slice(0, 12000)}`;
+      let userContent = `Extract transactions. Each row is pre-annotated with [INCOME_AMT]/[EXPENSE_AMT] or [SIGN=... AMT=...]. Use these signs exactly.\n\n${annotated.slice(0, 14000)}`;
       if (userContext?.trim()) {
-        userContent += `\n\n---\nUser preferences and history (use when categorizing or deciding income vs expense):\n${userContext.trim().slice(0, 2000)}`;
+        userContent += `\n\n---\nUser preferences (if a description was categorized as "salary", use categorySlug "salary" and POSITIVE amount):\n${userContext.trim().slice(0, 2000)}`;
       }
       const completion = await client.chat.completions.create({
         model,
@@ -64,11 +180,11 @@ Output: JSON object with key "transactions": array of { date, description, amoun
         response_format: { type: 'json_object' },
       });
       const content = completion.choices[0]?.message?.content;
-      if (!content) return this.fallbackExtract(ocrText);
+      if (!content) return this.fallbackExtractWithHints(ocrText, hints);
       const parsed = JSON.parse(content);
       const list = Array.isArray(parsed.transactions) ? parsed.transactions : Array.isArray(parsed) ? parsed : [];
       const today = new Date().toISOString().slice(0, 10);
-      const validSlugs = new Set(['groceries', 'transport', 'utilities', 'rent', 'insurance', 'healthcare', 'dining', 'shopping', 'entertainment', 'other', 'salary']);
+      const validSlugs = new Set(['groceries', 'transport', 'utilities', 'rent', 'insurance', 'healthcare', 'dining', 'shopping', 'entertainment', 'other', 'salary', 'credit_charges']);
       const mapped = list.map((t: Record<string, unknown>) => {
         let date = String(t.date || '').trim();
         if (!date || date === today) date = today;
@@ -88,10 +204,105 @@ Output: JSON object with key "transactions": array of { date, description, amoun
           ...(installmentTotal != null && { installmentTotal }),
         };
       });
-      return this.fixInstallmentAmounts(mapped).filter((t: ExtractedTransaction) => Math.abs(t.amount) >= 5);
+      const fixed = this.applySignHintsOverlay(mapped, ocrText, hints);
+      return this.fixInstallmentAmounts(fixed).filter((t: ExtractedTransaction) => Math.abs(t.amount) >= 5);
     } catch {
-      return this.fallbackExtract(ocrText);
+      return this.fallbackExtractWithHints(ocrText, hints);
     }
+  }
+
+  /**
+   * Overlay sign hints on AI output: for each transaction, if we have a strong hint (income/expense from
+   * two-column layout or keyword), force the sign so we never end up with salary as expense.
+   */
+  private applySignHintsOverlay(
+    transactions: ExtractedTransaction[],
+    ocrText: string,
+    hints: SignHints,
+  ): ExtractedTransaction[] {
+    const lines = ocrText.split(/\n/).filter((l) => l.trim().length > 0);
+    const dateRe = /(\d{1,2})[\/.](\d{1,2})[\/.](\d{2,4})/;
+    const amountPattern = /\d{1,3}(?:[,.]\d{3})*(?:[,.]\d{2})?/g;
+
+    for (let i = 0; i < lines.length; i++) {
+      const two = hints.twoAmountsByLine.get(i);
+      const signHint = hints.byLine.get(i);
+      if (two) {
+        // For this line we expect two transactions: +income, -expense. Fix any that match amounts.
+        for (const t of transactions) {
+          const abs = Math.abs(t.amount);
+          if (Math.abs(abs - two.income) < 0.02 && t.amount < 0) t.amount = two.income;
+          if (Math.abs(abs - two.expense) < 0.02 && t.amount > 0) t.amount = -two.expense;
+        }
+        continue;
+      }
+      if (signHint === 'income' || signHint === 'expense') {
+        const lineWithoutDate = lines[i].replace(dateRe, ' ');
+        const amountStrs = lineWithoutDate.match(amountPattern) || [];
+        const amounts = amountStrs.map((s) => parseFloat(s.replace(/,/g, ''))).filter((n) => n >= 0.01 && n <= 100000);
+        const priceLike = amounts.filter((n) => n > 100 || n !== Math.floor(n));
+        const cand = priceLike.length >= 1 ? priceLike : amounts;
+        if (cand.length === 1) {
+          const expectedAbs = cand[0];
+          for (const t of transactions) {
+            if (Math.abs(Math.abs(t.amount) - expectedAbs) < 0.02) {
+              if (signHint === 'income' && t.amount < 0) t.amount = expectedAbs;
+              if (signHint === 'expense' && t.amount > 0) t.amount = -expectedAbs;
+              break;
+            }
+          }
+        }
+      }
+    }
+    return transactions;
+  }
+
+  /** Fallback extraction using only layout + keywords (no AI). */
+  private fallbackExtractWithHints(ocrText: string, hints: SignHints): ExtractedTransaction[] {
+    const lines = ocrText.split(/\n/).filter((l) => l.trim().length > 0);
+    const dateRe = /(\d{1,2})[\/.](\d{1,2})[\/.](\d{2,4})/;
+    const amountPattern = /\d{1,3}(?:[,.]\d{3})*(?:[,.]\d{2})?/g;
+    const today = new Date().toISOString().slice(0, 10);
+    const results: ExtractedTransaction[] = [];
+    let lastDate = today;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const dateMatch = line.match(dateRe);
+      if (dateMatch) {
+        const [, d, m, y] = dateMatch;
+        const year = (y!.length === 2 ? `20${y}` : y!) as string;
+        lastDate = `${year}-${m!.padStart(2, '0')}-${d!.padStart(2, '0')}`;
+      }
+
+      const two = hints.twoAmountsByLine.get(i);
+      if (two) {
+        if (two.income >= 5) {
+          const desc = line.replace(dateRe, ' ').replace(amountPattern, ' ').replace(/\s+/g, ' ').trim().slice(0, 200) || 'Unknown';
+          results.push({ date: lastDate, description: desc, amount: two.income, categorySlug: 'other' });
+        }
+        if (two.expense >= 5) {
+          const desc = line.replace(dateRe, ' ').replace(amountPattern, ' ').replace(/\s+/g, ' ').trim().slice(0, 200) || 'Unknown';
+          results.push({ date: lastDate, description: desc, amount: -two.expense, categorySlug: 'other' });
+        }
+        continue;
+      }
+
+      const signHint = hints.byLine.get(i);
+      const lineWithoutDate = line.replace(dateRe, ' ');
+      const amountStrs = lineWithoutDate.match(amountPattern) || [];
+      const amounts = amountStrs.map((s) => parseFloat(s.replace(/,/g, ''))).filter((n) => n >= 0.01 && n <= 100000);
+      const priceLike = amounts.filter((n) => n > 100 || n !== Math.floor(n));
+      const cand = priceLike.length >= 1 ? priceLike : amounts;
+      if (cand.length === 0) continue;
+      const amount = Math.max(...cand);
+      if (amount < 5) continue;
+
+      const desc = line.replace(dateRe, ' ').replace(amountPattern, ' ').replace(/\s+/g, ' ').trim().slice(0, 200) || 'Unknown';
+      const sign = signHint === 'income' ? 1 : signHint === 'expense' ? -1 : -1; // unknown default expense
+      results.push({ date: lastDate, description: desc, amount: sign * amount, categorySlug: 'other' });
+    }
+    return this.fixInstallmentAmounts(results);
   }
 
   /** If amount was wrongly set to total (full price), replace with the actual payment: totalAmount / installmentTotal. */

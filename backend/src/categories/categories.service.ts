@@ -4,17 +4,18 @@ import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 
 const DEFAULT_CATEGORIES = [
-  { name: 'Salary', slug: 'salary', isIncome: true, icon: '💰', color: '#22c55e' },
-  { name: 'Groceries', slug: 'groceries', isIncome: false, icon: '🛒', color: '#3b82f6' },
-  { name: 'Transport', slug: 'transport', isIncome: false, icon: '🚗', color: '#f59e0b' },
-  { name: 'Utilities', slug: 'utilities', isIncome: false, icon: '💡', color: '#8b5cf6' },
-  { name: 'Rent', slug: 'rent', isIncome: false, icon: '🏠', color: '#ec4899' },
-  { name: 'Insurance', slug: 'insurance', isIncome: false, icon: '🛡️', color: '#06b6d4' },
-  { name: 'Healthcare', slug: 'healthcare', isIncome: false, icon: '⚕️', color: '#ef4444' },
-  { name: 'Dining', slug: 'dining', isIncome: false, icon: '🍽️', color: '#f97316' },
-  { name: 'Shopping', slug: 'shopping', isIncome: false, icon: '🛍️', color: '#a855f7' },
-  { name: 'Entertainment', slug: 'entertainment', isIncome: false, icon: '🎬', color: '#eab308' },
-  { name: 'Other', slug: 'other', isIncome: false, icon: '📦', color: '#64748b' },
+  { name: 'Salary', slug: 'salary', isIncome: true, icon: '💰', color: '#22c55e', excludeFromExpenseTotal: false },
+  { name: 'Groceries', slug: 'groceries', isIncome: false, icon: '🛒', color: '#3b82f6', excludeFromExpenseTotal: false },
+  { name: 'Transport', slug: 'transport', isIncome: false, icon: '🚗', color: '#f59e0b', excludeFromExpenseTotal: false },
+  { name: 'Utilities', slug: 'utilities', isIncome: false, icon: '💡', color: '#8b5cf6', excludeFromExpenseTotal: false },
+  { name: 'Rent', slug: 'rent', isIncome: false, icon: '🏠', color: '#ec4899', excludeFromExpenseTotal: false },
+  { name: 'Insurance', slug: 'insurance', isIncome: false, icon: '🛡️', color: '#06b6d4', excludeFromExpenseTotal: false },
+  { name: 'Healthcare', slug: 'healthcare', isIncome: false, icon: '⚕️', color: '#ef4444', excludeFromExpenseTotal: false },
+  { name: 'Dining', slug: 'dining', isIncome: false, icon: '🍽️', color: '#f97316', excludeFromExpenseTotal: false },
+  { name: 'Shopping', slug: 'shopping', isIncome: false, icon: '🛍️', color: '#a855f7', excludeFromExpenseTotal: false },
+  { name: 'Entertainment', slug: 'entertainment', isIncome: false, icon: '🎬', color: '#eab308', excludeFromExpenseTotal: false },
+  { name: 'Credit charges', slug: 'credit_charges', isIncome: false, icon: '💳', color: '#64748b', excludeFromExpenseTotal: true },
+  { name: 'Other', slug: 'other', isIncome: false, icon: '📦', color: '#64748b', excludeFromExpenseTotal: false },
 ];
 
 @Injectable()
@@ -34,6 +35,7 @@ export class CategoriesService {
         color: c.color,
         isDefault: true,
         sortOrder: i,
+        excludeFromExpenseTotal: c.excludeFromExpenseTotal,
       })),
     });
   }
@@ -49,6 +51,7 @@ export class CategoriesService {
         icon: dto.icon ?? null,
         color: dto.color ?? null,
         isIncome: dto.isIncome ?? false,
+        excludeFromExpenseTotal: dto.excludeFromExpenseTotal ?? false,
         isDefault: false,
       },
     });

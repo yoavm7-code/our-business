@@ -109,7 +109,59 @@ export class DocumentsService {
         console.warn('[Documents] Document ' + documentId + ': No transactions extracted (OCR length=' + (ocrText?.length ?? 0) + '). Check image quality or try a different format.');
       }
 
-      // Save exactly what was extracted - no deduplication. Record what we see in the document.
+      // Check for duplicates: same account, date, amount, description
+      type EnrichedItem = (typeof extracted)[0] & {
+        isDuplicate?: boolean;
+        existingTransaction?: { id: string; date: string; amount: number; description: string };
+      };
+      const enriched: EnrichedItem[] = [];
+      let hasAnyDuplicate = false;
+      for (const e of extracted) {
+        const dateStr = String(e.date || '').trim().slice(0, 10);
+        if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+          enriched.push({ ...e });
+          continue;
+        }
+        const existing = await this.prisma.transaction.findFirst({
+          where: {
+            householdId,
+            accountId,
+            date: new Date(dateStr + 'T00:00:00.000Z'),
+            amount: e.amount,
+            description: e.description,
+          },
+          select: { id: true, date: true, amount: true, description: true },
+        });
+        if (existing) {
+          hasAnyDuplicate = true;
+          enriched.push({
+            ...e,
+            isDuplicate: true,
+            existingTransaction: {
+              id: existing.id,
+              date: existing.date instanceof Date ? existing.date.toISOString().slice(0, 10) : String(existing.date),
+              amount: Number(existing.amount),
+              description: String(existing.description || ''),
+            },
+          });
+        } else {
+          enriched.push({ ...e });
+        }
+      }
+
+      if (hasAnyDuplicate) {
+        await this.prisma.document.updateMany({
+          where: { id: documentId, householdId },
+          data: {
+            status: 'PENDING_REVIEW',
+            extractedJson: enriched as unknown as object,
+            processedAt: new Date(),
+          },
+        });
+        return;
+      }
+
+      // No duplicates – create all
       await this.transactionsService.createMany(
         householdId,
         accountId,
@@ -195,5 +247,68 @@ export class DocumentsService {
       where: { id, householdId },
       include: { transactions: true, _count: { select: { transactions: true } } },
     });
+  }
+
+  /** Confirm import after PENDING_REVIEW: create selected transactions and set COMPLETED. */
+  async confirmImport(
+    householdId: string,
+    documentId: string,
+    body: { accountId: string; action: 'add_all' | 'skip_duplicates' | 'add_none'; selectedIndices?: number[] },
+  ) {
+    const accountId = body.accountId;
+    const doc = await this.prisma.document.findFirst({
+      where: { id: documentId, householdId },
+    });
+    if (!doc || doc.status !== 'PENDING_REVIEW') {
+      throw new Error('Document not found or not pending review');
+    }
+    const raw = doc.extractedJson as Array<{
+      date: string;
+      description: string;
+      amount: number;
+      categorySlug?: string;
+      totalAmount?: number;
+      installmentCurrent?: number;
+      installmentTotal?: number;
+      isDuplicate?: boolean;
+    }> | null;
+    if (!Array.isArray(raw) || raw.length === 0 || body.action === 'add_none') {
+      await this.prisma.document.updateMany({
+        where: { id: documentId, householdId },
+        data: { status: 'COMPLETED', processedAt: new Date() },
+      });
+      return this.findOne(householdId, documentId);
+    }
+    let toCreate = raw;
+    if (body.action === 'skip_duplicates') {
+      toCreate = raw.filter((t) => !t.isDuplicate);
+    } else if (Array.isArray(body.selectedIndices) && body.selectedIndices.length > 0) {
+      toCreate = body.selectedIndices
+        .filter((i) => i >= 0 && i < raw.length)
+        .map((i) => raw[i]);
+    }
+    const items = toCreate.map((t) => ({
+      date: t.date,
+      description: t.description,
+      amount: t.amount,
+      categorySlug: t.categorySlug,
+      totalAmount: t.totalAmount,
+      installmentCurrent: t.installmentCurrent,
+      installmentTotal: t.installmentTotal,
+    }));
+    if (items.length > 0) {
+      await this.transactionsService.createMany(
+        householdId,
+        accountId,
+        items,
+        TransactionSource.UPLOAD,
+        documentId,
+      );
+    }
+    await this.prisma.document.updateMany({
+      where: { id: documentId, householdId },
+      data: { status: 'COMPLETED', processedAt: new Date() },
+    });
+    return this.findOne(householdId, documentId);
   }
 }

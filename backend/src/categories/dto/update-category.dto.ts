@@ -16,4 +16,8 @@ export class UpdateCategoryDto {
   @IsOptional()
   @IsBoolean()
   isIncome?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  excludeFromExpenseTotal?: boolean;
 }

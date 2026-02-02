@@ -5,7 +5,7 @@ import { users, accounts, categories } from '@/lib/api';
 import { COUNTRY_CODES } from '@/lib/countries';
 import { useTranslation } from '@/i18n/context';
 
-const KNOWN_CATEGORY_SLUGS = ['groceries', 'transport', 'utilities', 'rent', 'insurance', 'healthcare', 'dining', 'shopping', 'entertainment', 'other', 'salary'];
+const KNOWN_CATEGORY_SLUGS = ['groceries', 'transport', 'utilities', 'rent', 'insurance', 'healthcare', 'dining', 'shopping', 'entertainment', 'other', 'salary', 'credit_charges'];
 
 const ACCOUNT_TYPE_KEYS: Record<string, string> = {
   BANK: 'settings.bank',
@@ -22,14 +22,16 @@ export default function SettingsPage() {
   const { t } = useTranslation();
   const [user, setUser] = useState<{ email: string; name: string | null; countryCode?: string | null } | null>(null);
   const [accountsList, setAccountsList] = useState<Array<{ id: string; name: string; type: string; balance: string | null }>>([]);
-  const [categoriesList, setCategoriesList] = useState<Array<{ id: string; name: string; slug?: string; isIncome: boolean; isDefault?: boolean }>>([]);
+  const [categoriesList, setCategoriesList] = useState<Array<{ id: string; name: string; slug?: string; isIncome: boolean; isDefault?: boolean; excludeFromExpenseTotal?: boolean }>>([]);
   const [loading, setLoading] = useState(true);
   const [newAccount, setNewAccount] = useState({ name: '', type: 'BANK', balance: '', addBalance: false });
   const [adding, setAdding] = useState(false);
   const [msg, setMsg] = useState('');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryIsIncome, setNewCategoryIsIncome] = useState(false);
+  const [newCategoryExcludeFromExpense, setNewCategoryExcludeFromExpense] = useState(false);
   const [addingCategory, setAddingCategory] = useState(false);
+  const [updatingCategoryId, setUpdatingCategoryId] = useState<string | null>(null);
   const [msgCat, setMsgCat] = useState('');
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
   const [editAccount, setEditAccount] = useState({ name: '', type: 'BANK', balance: '', addBalance: false });
@@ -83,11 +85,13 @@ export default function SettingsPage() {
       const created = await categories.create({
         name: newCategoryName.trim(),
         isIncome: newCategoryIsIncome,
+        ...(!newCategoryIsIncome && { excludeFromExpenseTotal: newCategoryExcludeFromExpense }),
       });
-      setCategoriesList((prev) => [...prev, { id: (created as { id: string }).id, name: newCategoryName.trim(), slug: (created as { slug?: string }).slug ?? '', isIncome: newCategoryIsIncome }]);
+      setCategoriesList((prev) => [...prev, { id: (created as { id: string }).id, name: newCategoryName.trim(), slug: (created as { slug?: string }).slug ?? '', isIncome: newCategoryIsIncome, excludeFromExpenseTotal: newCategoryIsIncome ? undefined : newCategoryExcludeFromExpense }]);
       setMsgCat(t('settings.categoryAdded'));
       setNewCategoryName('');
       setNewCategoryIsIncome(false);
+      setNewCategoryExcludeFromExpense(false);
     } catch (err) {
       setMsgCat(err instanceof Error ? err.message : t('common.failedToLoad'));
     } finally {
@@ -177,6 +181,18 @@ export default function SettingsPage() {
       setMsg(err instanceof Error ? err.message : t('common.failedToLoad'));
     } finally {
       setDeletingAccountId(null);
+    }
+  }
+
+  async function handleToggleExcludeFromExpense(c: { id: string; excludeFromExpenseTotal?: boolean }) {
+    setUpdatingCategoryId(c.id);
+    try {
+      await categories.update(c.id, { excludeFromExpenseTotal: !c.excludeFromExpenseTotal });
+      setCategoriesList((prev) => prev.map((x) => (x.id === c.id ? { ...x, excludeFromExpenseTotal: !c.excludeFromExpenseTotal } : x)));
+    } catch {
+      setMsgCat(t('common.failedToLoad'));
+    } finally {
+      setUpdatingCategoryId(null);
     }
   }
 
@@ -483,12 +499,27 @@ export default function SettingsPage() {
               />
               <label htmlFor="cat-income" className="text-sm">{t('settings.incomeCategory')}</label>
             </div>
+            {!newCategoryIsIncome && (
+              <div className="flex items-center gap-2 w-full">
+                <input
+                  type="checkbox"
+                  id="cat-exclude-expense"
+                  checked={newCategoryExcludeFromExpense}
+                  onChange={(e) => setNewCategoryExcludeFromExpense(e.target.checked)}
+                  className="rounded"
+                />
+                <label htmlFor="cat-exclude-expense" className="text-sm" title={t('settings.excludeFromExpenseTotalHint')}>
+                  {t('settings.excludeFromExpenseTotal')}
+                </label>
+              </div>
+            )}
             <button type="submit" className="btn-primary" disabled={addingCategory}>
               {addingCategory ? t('settings.adding') : t('settings.addCategory')}
             </button>
           </div>
           {msgCat && <p className="text-sm text-slate-600">{msgCat}</p>}
         </form>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">{t('settings.excludeFromExpenseTotalHint')}</p>
         <ul className="flex flex-wrap gap-2">
           {categoriesList.map((c) => {
             const displayName = c.slug && KNOWN_CATEGORY_SLUGS.includes(c.slug)
@@ -497,9 +528,21 @@ export default function SettingsPage() {
             return (
               <li
                 key={c.id}
-                className="rounded-full bg-slate-100 dark:bg-slate-800 px-3 py-1 text-sm flex items-center gap-1"
+                className="rounded-full bg-slate-100 dark:bg-slate-800 px-3 py-1 text-sm flex items-center gap-2"
               >
                 <span>{displayName} {c.isIncome && `(${t('settings.income')})`}</span>
+                {!c.isIncome && (
+                  <label className="flex items-center gap-1 cursor-pointer" title={t('settings.excludeFromExpenseTotalHint')}>
+                    <input
+                      type="checkbox"
+                      checked={!!c.excludeFromExpenseTotal}
+                      onChange={() => handleToggleExcludeFromExpense(c)}
+                      disabled={updatingCategoryId === c.id}
+                      className="rounded"
+                    />
+                    <span className="text-xs whitespace-nowrap">{t('settings.excludeFromExpenseTotal')}</span>
+                  </label>
+                )}
                 <button
                     type="button"
                     className="text-red-600 hover:underline text-xs -mr-1"

@@ -410,7 +410,15 @@
     "goToSettings": "Go to Settings to add a source",
     "accountHint": "Where is this document from? (e.g. Bank Leumi statement, Visa details, store receipt)",
     "chooseSource": "Choose source",
-    "maxFiles": "Maximum {{max}} files"
+    "maxFiles": "Maximum {{max}} files",
+    "duplicatesFound": "Duplicate transactions found",
+    "duplicateReviewTitle": "Duplicate transactions – add anyway?",
+    "duplicateReviewIntro": "In {{file}} some transactions already exist. Choose how to proceed.",
+    "duplicateExisting": "Existing identical transaction:",
+    "addAll": "Add all",
+    "addOnlyNew": "Add only new",
+    "addNone": "Add none",
+    "importConfirmed": "Import confirmed."
   },
   "income": {
     "title": "Income",
@@ -475,6 +483,8 @@
     "confirmDeleteAccount": "Remove this account? Related transactions will remain without an active account.",
     "accountRemoved": "Account removed.",
     "removeCategory": "Remove",
+    "excludeFromExpenseTotal": "Exclude from expense total",
+    "excludeFromExpenseTotalHint": "Useful for credit card charges – avoids double-counting if you also upload card statements.",
     "categoryRemoved": "Category removed.",
     "confirmRemoveCategory": "Remove this category? Transactions will be set to 'No category'."
   },
@@ -500,7 +510,8 @@
     "shopping": "Shopping",
     "entertainment": "Entertainment",
     "other": "Other",
-    "salary": "Salary"
+    "salary": "Salary",
+    "credit_charges": "Credit charges"
   },
   "insuranceFunds": {
     "title": "Insurance & Funds",

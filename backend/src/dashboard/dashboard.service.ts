@@ -25,6 +25,13 @@ export class DashboardService {
       ...(categoryId && { categoryId }),
     };
 
+    const excludedExpenseCategoryIds = await this.prisma.category
+      .findMany({
+        where: { householdId, excludeFromExpenseTotal: true },
+        select: { id: true },
+      })
+      .then((rows) => rows.map((r) => r.id));
+
     const [accountsRaw, transactions] = await Promise.all([
       this.prisma.account.findMany({
         where: { householdId, isActive: true, ...(accountId && { id: accountId }) },
@@ -64,19 +71,28 @@ export class DashboardService {
     const income = transactions
       .filter((t) => Number(t.amount) > 0)
       .reduce((sum, t) => sum + Number(t.amount), 0);
+    const isExcludedExpense = (catId: string | null) =>
+      catId != null && excludedExpenseCategoryIds.includes(catId);
     const expenses = transactions
-      .filter((t) => Number(t.amount) < 0)
+      .filter((t) => Number(t.amount) < 0 && !isExcludedExpense(t.categoryId))
       .reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0);
 
+    const byCategoryWhere = {
+      householdId,
+      date: { gte: fromDate, lte: toDate },
+      amount: { lt: 0 },
+      ...(accountId && { accountId }),
+      ...(categoryId && { categoryId }),
+      ...(excludedExpenseCategoryIds.length > 0 && {
+        OR: [
+          { categoryId: null },
+          { categoryId: { notIn: excludedExpenseCategoryIds } },
+        ],
+      }),
+    };
     const byCategory = await this.prisma.transaction.groupBy({
       by: ['categoryId'],
-      where: {
-        householdId,
-        date: { gte: fromDate, lte: toDate },
-        amount: { lt: 0 },
-        ...(accountId && { accountId }),
-        ...(categoryId && { categoryId }),
-      },
+      where: byCategoryWhere,
       _sum: { amount: true },
     });
 
@@ -98,7 +114,7 @@ export class DashboardService {
       .sort((a, b) => b.total - a.total);
 
     const fixedExpensesSum = transactions
-      .filter((t) => Number(t.amount) < 0)
+      .filter((t) => Number(t.amount) < 0 && !isExcludedExpense(t.categoryId))
       .reduce((sum, t) => sum + (t.isRecurring ? Math.abs(Number(t.amount)) : 0), 0);
     const fixedIncomeSum = transactions
       .filter((t) => Number(t.amount) > 0)
@@ -127,15 +143,23 @@ export class DashboardService {
   ) {
     const fromDate = new Date(from);
     const toDate = new Date(to);
-    const transactions = await this.prisma.transaction.findMany({
-      where: {
-        householdId,
-        date: { gte: fromDate, lte: toDate },
-        ...(accountId && { accountId }),
-        ...(categoryId && { categoryId }),
-      },
-      select: { date: true, amount: true },
-    });
+    const [excludedIds, transactions] = await Promise.all([
+      this.prisma.category
+        .findMany({
+          where: { householdId, excludeFromExpenseTotal: true },
+          select: { id: true },
+        })
+        .then((rows) => new Set(rows.map((r) => r.id))),
+      this.prisma.transaction.findMany({
+        where: {
+          householdId,
+          date: { gte: fromDate, lte: toDate },
+          ...(accountId && { accountId }),
+          ...(categoryId && { categoryId }),
+        },
+        select: { date: true, amount: true, categoryId: true },
+      }),
+    ]);
 
     const buckets = new Map<string, { income: number; expenses: number }>();
     for (const t of transactions) {
@@ -148,7 +172,8 @@ export class DashboardService {
       const b = buckets.get(key)!;
       const amt = Number(t.amount);
       if (amt > 0) b.income += amt;
-      else b.expenses += Math.abs(amt);
+      else if (t.categoryId == null || !excludedIds.has(t.categoryId))
+        b.expenses += Math.abs(amt);
     }
 
     const sorted = [...buckets.entries()].sort((a, b) => a[0].localeCompare(b[0]));

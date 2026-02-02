@@ -19,4 +19,8 @@ export class CreateCategoryDto {
   @IsOptional()
   @IsBoolean()
   isIncome?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  excludeFromExpenseTotal?: boolean;
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { documents, accounts } from '@/lib/api';
+import { documents, accounts, type ExtractedItem } from '@/lib/api';
 import { useTranslation } from '@/i18n/context';
 
 const MAX_FILES = 10;
@@ -16,8 +16,14 @@ type ProgressState = {
   totalFiles?: number;
 };
 
+type PendingReviewDoc = { id: string; fileName: string; extractedJson?: ExtractedItem[] };
+
+function formatCurrency(n: number, locale: string) {
+  return new Intl.NumberFormat(locale === 'he' ? 'he-IL' : 'en-IL', { style: 'currency', currency: 'ILS' }).format(n);
+}
+
 export default function UploadPage() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const [files, setFiles] = useState<File[]>([]);
   const [accountId, setAccountId] = useState('');
   const [accountsList, setAccountsList] = useState<Array<{ id: string; name: string }>>([]);
@@ -25,6 +31,8 @@ export default function UploadPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [recent, setRecent] = useState<Array<{ id: string; fileName: string; status: string; uploadedAt: string; _count?: { transactions: number } }>>([]);
   const [progress, setProgress] = useState<ProgressState>({ phase: 'idle', uploadPercent: 0, status: '' });
+  const [pendingReview, setPendingReview] = useState<{ document: PendingReviewDoc; accountId: string } | null>(null);
+  const [confirmingImport, setConfirmingImport] = useState(false);
 
   useEffect(() => {
     accounts.list().then((a) => setAccountsList(a)).catch(() => {});
@@ -53,7 +61,7 @@ export default function UploadPage() {
           currentIndex: i + 1,
           totalFiles: toUpload.length,
         });
-        await documents.uploadWithProgress(file, accountId, (state) => {
+        const result = await documents.uploadWithProgress(file, accountId, (state) => {
           if (state.phase === 'upload') {
             setProgress((p) => ({
               ...p,
@@ -85,7 +93,9 @@ export default function UploadPage() {
                   ? t('upload.doneCount', { count })
                   : state.document?.status === 'FAILED'
                     ? t('upload.doneFailed')
-                    : (state.status ?? ''),
+                    : state.document?.status === 'PENDING_REVIEW'
+                      ? t('upload.duplicatesFound')
+                      : (state.status ?? ''),
               transactionsCount: count,
               fileName: file.name,
               currentIndex: i + 1,
@@ -93,6 +103,16 @@ export default function UploadPage() {
             }));
           }
         });
+        if (result.status === 'PENDING_REVIEW' && (result as { extractedJson?: ExtractedItem[] }).extractedJson) {
+          setPendingReview({
+            document: { id: result.id, fileName: result.fileName, extractedJson: (result as { extractedJson?: ExtractedItem[] }).extractedJson },
+            accountId,
+          });
+          setUploading(false);
+          setTimeout(() => setProgress({ phase: 'idle', uploadPercent: 0, status: '' }), 500);
+          documents.list().then((r) => setRecent(r)).catch(() => {});
+          return;
+        }
       }
       if (lastStatus === 'FAILED') {
         setMessage({ type: 'error', text: t('upload.processingFailed') });
@@ -115,6 +135,27 @@ export default function UploadPage() {
   function removeFile(index: number) {
     setFiles((prev) => prev.filter((_, i) => i !== index));
   }
+
+  async function handleConfirmImport(action: 'add_all' | 'skip_duplicates' | 'add_none') {
+    if (!pendingReview) return;
+    setConfirmingImport(true);
+    setMessage(null);
+    try {
+      await documents.confirmImport(pendingReview.document.id, {
+        accountId: pendingReview.accountId,
+        action,
+      });
+      setPendingReview(null);
+      setMessage({ type: 'success', text: t('upload.importConfirmed') });
+      documents.list().then((r) => setRecent(r)).catch(() => {});
+    } catch (e) {
+      setMessage({ type: 'error', text: e instanceof Error ? e.message : t('upload.uploadFailed') });
+    } finally {
+      setConfirmingImport(false);
+    }
+  }
+
+  const extractedList = pendingReview?.document?.extractedJson ?? [];
 
   return (
     <div className="space-y-8">
@@ -252,7 +293,9 @@ export default function UploadPage() {
                         ? t('upload.doneFailed')
                         : d.status === 'PROCESSING'
                           ? t('upload.processing')
-                          : d.status}
+                          : d.status === 'PENDING_REVIEW'
+                            ? t('upload.duplicatesFound')
+                            : d.status}
                   </span>
                 </div>
                 {d.status === 'COMPLETED' && (d._count?.transactions ?? 0) === 0 && (
@@ -263,6 +306,66 @@ export default function UploadPage() {
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {pendingReview && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-labelledby="duplicate-review-title">
+          <div className="bg-[var(--card)] rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <h2 id="duplicate-review-title" className="font-semibold text-lg p-4 border-b border-[var(--border)]">
+              {t('upload.duplicateReviewTitle')}
+            </h2>
+            <p className="text-sm text-slate-600 dark:text-slate-400 px-4 pb-2">
+              {t('upload.duplicateReviewIntro', { file: pendingReview.document.fileName })}
+            </p>
+            <ul className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
+              {extractedList.map((item, idx) => (
+                <li key={idx} className="border border-[var(--border)] rounded-lg p-3 text-sm">
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <span className="font-medium">{item.description}</span>
+                    <span className={Number(item.amount) >= 0 ? 'text-green-600' : 'text-red-600'}>
+                      {formatCurrency(item.amount, locale)}
+                    </span>
+                  </div>
+                  <div className="text-slate-500 mt-1">{item.date}</div>
+                  {item.isDuplicate && item.existingTransaction && (
+                    <div className="mt-2 p-2 rounded bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200">
+                      <span className="font-medium">{t('upload.duplicateExisting')}</span>
+                      <span className="block mt-1">
+                        {item.existingTransaction.date} · {item.existingTransaction.description} · {formatCurrency(item.existingTransaction.amount, locale)}
+                      </span>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <div className="p-4 border-t border-[var(--border)] flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={confirmingImport}
+                onClick={() => handleConfirmImport('add_all')}
+              >
+                {confirmingImport ? t('common.loading') : t('upload.addAll')}
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={confirmingImport}
+                onClick={() => handleConfirmImport('skip_duplicates')}
+              >
+                {t('upload.addOnlyNew')}
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={confirmingImport}
+                onClick={() => handleConfirmImport('add_none')}
+              >
+                {t('upload.addNone')}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

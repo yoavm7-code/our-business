@@ -62,6 +62,7 @@ export class TransactionsService {
     entertainment: { name: 'Entertainment', isIncome: false },
     other: { name: 'Other', isIncome: false },
     salary: { name: 'Salary', isIncome: true },
+    credit_charges: { name: 'Credit card charges', isIncome: false },
   };
 
   async createMany(
@@ -111,6 +112,7 @@ export class TransactionsService {
       if (!categoryId && item.description) {
         categoryId = await this.rulesService.suggestCategory(householdId, item.description);
       }
+      const isRecurringIncome = item.categorySlug === 'salary' && item.amount > 0;
       const t = await this.prisma.transaction.create({
         data: {
           householdId,
@@ -125,6 +127,7 @@ export class TransactionsService {
           totalAmount: item.totalAmount ?? null,
           installmentCurrent: item.installmentCurrent ?? null,
           installmentTotal: item.installmentTotal ?? null,
+          isRecurring: isRecurringIncome,
         },
       });
       created.push(t);

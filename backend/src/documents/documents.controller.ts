@@ -38,4 +38,16 @@ export class DocumentsController {
   findOne(@HouseholdId() householdId: string, @Param('id') id: string) {
     return this.documentsService.findOne(householdId, id);
   }
+
+  @Post(':id/confirm-import')
+  confirmImport(
+    @HouseholdId() householdId: string,
+    @Param('id') id: string,
+    @Body() body: { accountId: string; action: 'add_all' | 'skip_duplicates' | 'add_none'; selectedIndices?: number[] },
+  ) {
+    if (!body?.accountId || !body?.action) {
+      throw new Error('accountId and action are required');
+    }
+    return this.documentsService.confirmImport(householdId, id, body);
+  }
 }

@@ -80,11 +80,13 @@ export const accounts = {
 
 export const categories = {
   list: (incomeOnly?: boolean) =>
-    api<Array<{ id: string; name: string; slug: string; icon: string | null; color: string | null; isIncome: boolean }>>(
+    api<Array<{ id: string; name: string; slug: string; icon: string | null; color: string | null; isIncome: boolean; excludeFromExpenseTotal?: boolean }>>(
       '/api/categories' + (incomeOnly !== undefined ? `?incomeOnly=${incomeOnly}` : ''),
     ),
-  create: (body: { name: string; slug?: string; icon?: string; color?: string; isIncome?: boolean }) =>
+  create: (body: { name: string; slug?: string; icon?: string; color?: string; isIncome?: boolean; excludeFromExpenseTotal?: boolean }) =>
     api<unknown>('/api/categories', { method: 'POST', body: JSON.stringify(body) }),
+  update: (id: string, body: { name?: string; icon?: string; color?: string; isIncome?: boolean; excludeFromExpenseTotal?: boolean }) =>
+    api<unknown>(`/api/categories/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   delete: (id: string) => api<unknown>(`/api/categories/${id}`, { method: 'DELETE' }),
 };
 
@@ -196,17 +198,17 @@ export const documents = {
             cache: 'no-store',
           })
             .then((r) => (r.ok ? r.json() : Promise.reject(new Error('Failed to fetch status'))))
-            .then((d: DocumentWithCount & { _count?: { transactions: number } }) => {
+            .then((d: DocumentWithCount & { _count?: { transactions: number }; extractedJson?: unknown }) => {
               const status = d.status;
               const count = d._count?.transactions;
               onProgress({
-                phase: status === 'COMPLETED' || status === 'FAILED' ? 'done' : 'processing',
+                phase: status === 'COMPLETED' || status === 'FAILED' || status === 'PENDING_REVIEW' ? 'done' : 'processing',
                 status,
                 transactionsCount: count,
                 document: d as DocumentWithCount,
               });
-              if (status === 'COMPLETED' || status === 'FAILED') {
-                resolve(d as DocumentWithCount);
+              if (status === 'COMPLETED' || status === 'FAILED' || status === 'PENDING_REVIEW') {
+                resolve(d as DocumentWithCount & { extractedJson?: unknown });
                 return;
               }
               setTimeout(poll, pollInterval);
@@ -224,7 +226,27 @@ export const documents = {
   },
 
   list: () => api<DocumentWithCount[]>('/api/documents'),
-  get: (id: string) => api<DocumentWithCount & { _count?: { transactions: number } }>(`/api/documents/${id}`),
+  get: (id: string) => api<DocumentWithCount & { _count?: { transactions: number }; extractedJson?: ExtractedItem[] }>(`/api/documents/${id}`),
+  confirmImport: (
+    documentId: string,
+    body: { accountId: string; action: 'add_all' | 'skip_duplicates' | 'add_none'; selectedIndices?: number[] },
+  ) =>
+    api<DocumentWithCount & { _count?: { transactions: number } }>(`/api/documents/${documentId}/confirm-import`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+};
+
+export type ExtractedItem = {
+  date: string;
+  description: string;
+  amount: number;
+  categorySlug?: string;
+  totalAmount?: number;
+  installmentCurrent?: number;
+  installmentTotal?: number;
+  isDuplicate?: boolean;
+  existingTransaction?: { id: string; date: string; amount: number; description: string };
 };
 
 export type InsightSection =

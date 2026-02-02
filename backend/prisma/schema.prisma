@@ -89,6 +89,7 @@ model Category {
   color        String?  // hex
   isDefault    Boolean  @default(false) @map("is_default")
   isIncome     Boolean  @default(false) @map("is_income")
+  excludeFromExpenseTotal Boolean @default(false) @map("exclude_from_expense_total") // e.g. credit card charges – avoid double-count when also uploading card statements
   parentId     String?  @map("parent_id")
   sortOrder    Int      @default(0) @map("sort_order")
   createdAt    DateTime @default(now())
@@ -174,6 +175,7 @@ enum DocumentStatus {
   PROCESSING
   COMPLETED
   FAILED
+  PENDING_REVIEW  // duplicates found – waiting for user to confirm which to import
 }
 
 // --------------------------------------------
