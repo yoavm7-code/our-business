@@ -9,6 +9,8 @@ export interface FinancialInsights {
   balanceForecast: string;
   savingsRecommendation: string;
   investmentRecommendations: string;
+  taxTips?: string;
+  spendingInsights?: string;
 }
 
 @Injectable()
@@ -90,15 +92,13 @@ export class InsightsService {
     }
 
     const prompt = this.buildPrompt(data);
+    const systemPrompt = this.buildSystemPrompt();
+    
     try {
       const completion = await client.chat.completions.create({
         model: process.env.OPENAI_MODEL || 'gpt-4o',
         messages: [
-          {
-            role: 'system',
-            content:
-              'You are a financial advisor for Israeli users. Respond in Hebrew (or English if user prefers). Be concise and practical. Use ILS currency. For investment recommendations, base on current market research and common Israeli investment channels (קרנות נאמנות, מניות, אגרות חוב, קופות גמל, קרנות השתלמות, תעודות סל). Return JSON with keys: balanceForecast, savingsRecommendation, investmentRecommendations.',
-          },
+          { role: 'system', content: systemPrompt },
           { role: 'user', content: prompt },
         ],
         response_format: { type: 'json_object' },
@@ -107,7 +107,8 @@ export class InsightsService {
       if (!content) return this.getFallbackInsights(data, true);
       const parsed = JSON.parse(content) as Record<string, unknown>;
       const fallback = this.getFallbackInsights(data, true);
-      const toReadableString = (v: unknown, key: string): string => {
+      
+      const toReadableString = (v: unknown): string => {
         if (typeof v === 'string' && v.trim()) return v;
         if (v != null && typeof v === 'object') {
           const o = v as Record<string, unknown>;
@@ -116,37 +117,104 @@ export class InsightsService {
               .map((item) => {
                 if (typeof item === 'string') return '• ' + item;
                 if (item != null && typeof item === 'object') {
-                  const t = (item as Record<string, unknown>).type ?? (item as Record<string, unknown>).name;
-                  const d = (item as Record<string, unknown>).description ?? (item as Record<string, unknown>).desc;
-                  if (t && d) return '• ' + String(t) + ': ' + String(d);
-                  if (t) return '• ' + String(t);
+                  const t = (item as Record<string, unknown>).type ?? (item as Record<string, unknown>).name ?? (item as Record<string, unknown>).title;
+                  const d = (item as Record<string, unknown>).description ?? (item as Record<string, unknown>).desc ?? (item as Record<string, unknown>).details;
+                  const p = (item as Record<string, unknown>).percentage ?? (item as Record<string, unknown>).allocation;
+                  let line = '• ';
+                  if (t) line += String(t);
+                  if (p) line += ` (${p}%)`;
+                  if (d) line += ': ' + String(d);
+                  return line.trim() === '•' ? '• ' + JSON.stringify(item) : line;
                 }
                 return '• ' + JSON.stringify(item);
               })
               .join('\n');
           }
-          const nextMonth = o.nextMonthStart ?? o.nextMonthStartBalance ?? o.forecast ?? o.balance;
-          if (key === 'balanceForecast' && nextMonth != null) {
-            const nextMonthStart = new Date(data.currentMonth + '-01');
-            nextMonthStart.setMonth(nextMonthStart.getMonth() + 1);
-            return `צפי ליתרה בתחילת החודש הקרוב (${nextMonthStart.toLocaleDateString('he-IL')}): כ־${Number(nextMonth).toLocaleString('he-IL')} ₪.`;
-          }
-          const emergencyFund = o.emergencyFund ?? o.savings ?? o.amount;
-          if (key === 'savingsRecommendation' && emergencyFund != null) {
-            return `מומלץ לחסוך לחירום: כ־${Number(emergencyFund).toLocaleString('he-IL')} ₪.`;
-          }
         }
         if (typeof v === 'number') return String(v);
         return '';
       };
+      
       return {
-        balanceForecast: toReadableString(parsed.balanceForecast ?? parsed.nextMonthStartBalance ?? parsed.nextMonthStart, 'balanceForecast') || fallback.balanceForecast,
-        savingsRecommendation: toReadableString(parsed.savingsRecommendation ?? parsed.emergencyFund, 'savingsRecommendation') || fallback.savingsRecommendation,
-        investmentRecommendations: toReadableString(parsed.investmentRecommendations, 'investmentRecommendations') || fallback.investmentRecommendations,
+        balanceForecast: toReadableString(parsed.balanceForecast) || fallback.balanceForecast,
+        savingsRecommendation: toReadableString(parsed.savingsRecommendation) || fallback.savingsRecommendation,
+        investmentRecommendations: toReadableString(parsed.investmentRecommendations) || fallback.investmentRecommendations,
+        taxTips: toReadableString(parsed.taxTips) || undefined,
+        spendingInsights: toReadableString(parsed.spendingInsights) || undefined,
       };
     } catch {
       return this.getFallbackInsights(data, true);
     }
+  }
+  
+  private buildSystemPrompt(): string {
+    const now = new Date();
+    const currentDate = now.toLocaleDateString('he-IL', { year: 'numeric', month: 'long', day: 'numeric' });
+    const currentYear = now.getFullYear();
+    
+    return `אתה יועץ פיננסי מומחה לשוק הישראלי. התאריך היום: ${currentDate}.
+
+תפקידך לתת המלצות פיננסיות מפורטות, מעשיות וספציפיות למשתמש ישראלי.
+
+## הנחיות חשובות:
+
+### צפי יתרה (balanceForecast):
+- חשב צפי מדויק על בסיס ההכנסות וההוצאות
+- אם יש רק הוצאות ואין הכנסות - ציין זאת והמלץ להוסיף הכנסות
+- תן תחזית ל-1-3 חודשים קדימה
+
+### המלצות חיסכון (savingsRecommendation):
+- המלץ על סכום ספציפי לחיסכון חירום (בדרך כלל 3-6 חודשי הוצאות)
+- התייחס לריביות הנוכחיות בפיקדונות בישראל (ריבית בנק ישראל כ-4.5% נכון ל-${currentYear})
+- הזכר אפשרויות כמו: פיקדון בנקאי, קרן כספית, פק"מ
+
+### המלצות השקעה (investmentRecommendations):
+זה החלק הכי חשוב - תן המלצות ספציפיות ומפורטות:
+
+1. **קרנות השתלמות** - ההטבה הכי טובה בישראל:
+   - פטור ממס רווחי הון אחרי 6 שנים
+   - תקרת הפקדה שנתית: כ-20,520 ₪ לשכיר, כ-37,500 ₪ לעצמאי
+   - המלץ על בתי השקעות ספציפיים (מור, אלטשולר שחם, מיטב, הראל, פסגות)
+
+2. **קופות גמל להשקעה**:
+   - מס רווחי הון מופחת (25% במקום 25%+)
+   - גמישות במשיכה
+   - המלץ על מסלולים (מנייתי, אג"ח, משולב)
+
+3. **קרנות נאמנות ותעודות סל**:
+   - קרנות מחקות מדד (ת"א 125, S&P 500)
+   - המלץ על קרנות ספציפיות פופולריות בישראל
+   - ציין דמי ניהול משוערים
+
+4. **אג"ח ממשלתיות**:
+   - אג"ח מדינת ישראל (גילון, שחר)
+   - מק"מ לטווח קצר
+   - ציין תשואות משוערות
+
+5. **התאמה לפרופיל סיכון**:
+   - על בסיס היתרה והגיל המשוער - המלץ על חלוקת תיק
+   - למשל: 60% מניות, 30% אג"ח, 10% מזומן
+
+### טיפים למס (taxTips):
+- נקודות זיכוי רלוונטיות
+- הטבות מס על חיסכון פנסיוני
+- תקרות הפקדה לקרן השתלמות
+- החזרי מס אפשריים
+
+### תובנות הוצאות (spendingInsights):
+- זהה דפוסי הוצאות חריגים
+- השווה להוצאה ממוצעת במשק הישראלי
+- תן טיפים לחיסכון בקטגוריות ספציפיות
+
+## פורמט התשובה:
+החזר JSON עם המפתחות:
+- balanceForecast: טקסט מפורט
+- savingsRecommendation: טקסט מפורט עם סכומים ספציפיים
+- investmentRecommendations: טקסט מפורט עם שמות קרנות/מוצרים ספציפיים, אחוזי הקצאה מומלצים
+- taxTips: טיפים למס (אופציונלי)
+- spendingInsights: תובנות על ההוצאות (אופציונלי)
+
+כתוב בעברית, בצורה ברורה ומעשית. השתמש בנתונים עדכניים על השוק הישראלי.`;
   }
 
   private openai: OpenAI | null = null;
@@ -160,21 +228,75 @@ export class InsightsService {
 
   private buildPrompt(data: Awaited<ReturnType<typeof this.getFinancialData>>): string {
     const monthly = data.monthlyData
-      .map((m) => `  ${m.month}: הכנסות ${m.income.toFixed(0)} ILS, הוצאות ${m.expenses.toFixed(0)} ILS`)
+      .map((m) => {
+        const surplus = m.income - m.expenses;
+        return `  ${m.month}: הכנסות ${m.income.toFixed(0)} ₪, הוצאות ${m.expenses.toFixed(0)} ₪, עודף/גירעון: ${surplus >= 0 ? '+' : ''}${surplus.toFixed(0)} ₪`;
+      })
       .join('\n');
+    
     const accs = data.accounts
-      .map((a) => `  ${a.name} (${a.type}): ${a.balance != null ? a.balance.toFixed(0) + ' ILS' : '–'}`)
+      .map((a) => {
+        const typeHeb = this.getAccountTypeHebrew(a.type);
+        return `  • ${a.name} (${typeHeb}): ${a.balance != null ? a.balance.toLocaleString('he-IL') + ' ₪' : 'לא צוין'}`;
+      })
       .join('\n');
 
-    return (
-      'נתוני משק בית (6 חודשים אחרונים):\n' +
-      `יתרה נוכחית כוללת: ${data.totalBalance.toFixed(0)} ILS\n` +
-      'חשבונות:\n' +
-      accs +
-      '\n\nתנועות לפי חודש:\n' +
-      (monthly || 'אין נתונים') +
-      '\n\nתבסס על הנתונים: 1) תן צפי ליתרה בתחילת החודש הקרוב. 2) כמה כסף לחסוך בצד (חיסכון חירום). 3) המלצות להשקעה באילו אפיקים (תבסס על מחקר שוק עדכני, התאם לישראל).'
-    );
+    // Calculate statistics
+    const totalIncome = data.monthlyData.reduce((s, m) => s + m.income, 0);
+    const totalExpenses = data.monthlyData.reduce((s, m) => s + m.expenses, 0);
+    const avgMonthlyIncome = data.monthlyData.length > 0 ? totalIncome / data.monthlyData.length : 0;
+    const avgMonthlyExpenses = data.monthlyData.length > 0 ? totalExpenses / data.monthlyData.length : 0;
+    const avgMonthlySurplus = avgMonthlyIncome - avgMonthlyExpenses;
+    const savingsRate = avgMonthlyIncome > 0 ? ((avgMonthlySurplus / avgMonthlyIncome) * 100).toFixed(1) : 0;
+
+    // Determine financial profile
+    let financialProfile = '';
+    if (data.totalBalance > 100000) {
+      financialProfile = 'יתרה גבוהה - מתאים להשקעות מגוונות';
+    } else if (data.totalBalance > 30000) {
+      financialProfile = 'יתרה בינונית - יש מקום להתחיל להשקיע';
+    } else if (data.totalBalance > 0) {
+      financialProfile = 'יתרה נמוכה - כדאי להתמקד בבניית חיסכון חירום';
+    } else {
+      financialProfile = 'יתרה שלילית או אפסית - יש להתמקד בצמצום הוצאות';
+    }
+
+    return `## נתוני משק הבית שלי (6 חודשים אחרונים)
+
+### סיכום פיננסי:
+- יתרה נוכחית כוללת: ${data.totalBalance.toLocaleString('he-IL')} ₪
+- הכנסה חודשית ממוצעת: ${avgMonthlyIncome.toLocaleString('he-IL')} ₪
+- הוצאה חודשית ממוצעת: ${avgMonthlyExpenses.toLocaleString('he-IL')} ₪
+- עודף/גירעון ממוצע: ${avgMonthlySurplus >= 0 ? '+' : ''}${avgMonthlySurplus.toLocaleString('he-IL')} ₪
+- שיעור חיסכון: ${savingsRate}%
+- פרופיל פיננסי: ${financialProfile}
+
+### חשבונות:
+${accs || 'אין חשבונות מוגדרים'}
+
+### פירוט חודשי:
+${monthly || 'אין נתונים'}
+
+---
+
+בבקשה תן לי:
+1. צפי יתרה מפורט לחודשים הקרובים
+2. המלצות חיסכון עם סכומים ספציפיים ואפשרויות השקעה לחיסכון (פק"מ, קרן כספית, וכו')
+3. המלצות השקעה מפורטות ומותאמות לפרופיל שלי - כולל שמות של קרנות/מוצרים ספציפיים בשוק הישראלי, אחוזי הקצאה מומלצים, ותשואות צפויות
+4. טיפים למס והטבות שאני עשוי לפספס
+5. תובנות על דפוסי ההוצאות שלי והמלצות לשיפור`;
+  }
+
+  private getAccountTypeHebrew(type: string): string {
+    const types: Record<string, string> = {
+      BANK: 'בנק',
+      CREDIT_CARD: 'כרטיס אשראי',
+      INVESTMENT: 'השקעות',
+      PENSION: 'פנסיה',
+      INSURANCE: 'ביטוח',
+      CASH: 'מזומן',
+    };
+    return types[type] || type;
   }
 
   private getFallbackInsights(data: Awaited<ReturnType<typeof this.getFinancialData>>, aiEnabled: boolean): FinancialInsights {

@@ -75,12 +75,16 @@
   },
   "insightsPage": {
     "title": "Financial Insights",
-    "subtitle": "The system learns from your data and offers forecasts and recommendations",
-    "balanceForecast": "Balance forecast for start of next month",
-    "savingsRecommendation": "Savings recommendation",
-    "investmentRecommendations": "Investment recommendations",
-    "refresh": "Refresh recommendations",
-    "loading": "Computing recommendations…"
+    "subtitle": "The system analyzes your data and offers personalized recommendations",
+    "balanceForecast": "Balance Forecast",
+    "savingsRecommendation": "Savings Recommendations",
+    "investmentRecommendations": "Investment Recommendations",
+    "taxTips": "Tax Tips",
+    "spendingInsights": "Spending Insights",
+    "refresh": "Refresh",
+    "loading": "Analyzing data...",
+    "analyzingData": "Analyzing your financial data and preparing personalized recommendations...",
+    "disclaimer": "These recommendations are based on analysis of your data and do not constitute professional financial advice. Please consult with a licensed advisor before making investment decisions."
   },
   "dashboard": {
     "title": "Dashboard",

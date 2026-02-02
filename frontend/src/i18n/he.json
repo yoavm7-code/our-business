@@ -75,12 +75,16 @@
   },
   "insightsPage": {
     "title": "תובנות פיננסיות",
-    "subtitle": "המערכת לומדת מהנתונים שלך ומציעה צפי והמלצות",
-    "balanceForecast": "צפי יתרה בתחילת החודש הקרוב",
-    "savingsRecommendation": "המלצה לחיסכון בצד",
-    "investmentRecommendations": "המלצות להשקעה",
+    "subtitle": "המערכת מנתחת את הנתונים שלך ומציעה המלצות מותאמות אישית",
+    "balanceForecast": "צפי יתרה",
+    "savingsRecommendation": "המלצות חיסכון",
+    "investmentRecommendations": "המלצות השקעה",
+    "taxTips": "טיפים למס",
+    "spendingInsights": "תובנות על ההוצאות",
     "refresh": "רענן המלצות",
-    "loading": "מחשב המלצות…"
+    "loading": "מנתח נתונים...",
+    "analyzingData": "מנתח את הנתונים הפיננסיים שלך ומכין המלצות מותאמות אישית...",
+    "disclaimer": "ההמלצות מבוססות על ניתוח הנתונים שלך ואינן מהוות ייעוץ פיננסי מקצועי. מומלץ להתייעץ עם יועץ מוסמך לפני קבלת החלטות השקעה."
   },
   "dashboard": {
     "title": "לוח בקרה",
