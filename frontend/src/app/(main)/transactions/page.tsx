@@ -307,6 +307,21 @@ export default function TransactionsPage() {
     }
   }, [t]);
 
+  const [flippingTxId, setFlippingTxId] = useState<string | null>(null);
+  async function handleFlipSign(tx: Tx) {
+    const num = Number(tx.amount);
+    if (Number.isNaN(num) || num === 0) return;
+    setFlippingTxId(tx.id);
+    try {
+      await txApi.update(tx.id, { amount: -num });
+      setItems((prev) => prev.map((item) => (item.id === tx.id ? { ...item, amount: String(-num) } : item)));
+    } catch {
+      setError(t('common.failedToLoad'));
+    } finally {
+      setFlippingTxId(null);
+    }
+  }
+
   async function handleSuggestCategory() {
     if (!addTxForm.description.trim()) return;
     setSuggestingCategory(true);
@@ -596,6 +611,15 @@ export default function TransactionsPage() {
                         title={t('transactionsPage.editTransaction')}
                       >
                         {t('transactionsPage.edit')}
+                      </button>
+                      <button
+                        type="button"
+                        className="text-slate-600 hover:underline text-xs me-2"
+                        disabled={!!flippingTxId}
+                        onClick={() => handleFlipSign(tx)}
+                        title={t('transactionsPage.flipSign')}
+                      >
+                        {flippingTxId === tx.id ? '...' : t('transactionsPage.flipSignShort')}
                       </button>
                       <button
                         type="button"

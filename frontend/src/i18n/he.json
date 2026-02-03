@@ -497,7 +497,9 @@
     "suggestCategory": "הצע קטגוריה",
     "editTransaction": "עריכת תנועה",
     "edit": "ערוך",
-    "aiSuggestCategory": "הצע קטגוריה לפי תיאור"
+    "aiSuggestCategory": "הצע קטגוריה לפי תיאור",
+    "flipSign": "הפוך להכנסה/הוצאה",
+    "flipSignShort": "הפוך"
   },
   "categories": {
     "groceries": "מכולת",

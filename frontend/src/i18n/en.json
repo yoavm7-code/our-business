@@ -497,7 +497,9 @@
     "suggestCategory": "Suggest category",
     "editTransaction": "Edit transaction",
     "edit": "Edit",
-    "aiSuggestCategory": "Suggest category from description"
+    "aiSuggestCategory": "Suggest category from description",
+    "flipSign": "Flip to income/expense",
+    "flipSignShort": "Flip"
   },
   "categories": {
     "groceries": "Groceries",
