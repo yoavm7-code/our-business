@@ -289,12 +289,14 @@ Extract EVERY transaction row. Never skip.`;
 
     const systemPrompt = `You are an expert Israeli bank statement parser. Extract ALL transactions from this bank statement image.
 
-CRITICAL RULE – INCOME vs EXPENSE (COLOR OVERRIDES TEXT):
-   - Amount in GREEN or in the "זכות" (credit) column → ALWAYS INCOME. Return amount as POSITIVE (e.g. 8000).
-   - Amount in RED or in the "חובה" (debit) column → ALWAYS EXPENSE. Return amount as NEGATIVE (e.g. -8000).
-   - The COLUMN and COLOR are the source of truth. Ignore the description text for sign.
-   - Example: "הוראת קבע" (standing order) in the GREEN/זכות column = INCOME (+). Same text in RED/חובה = EXPENSE (-).
-   - Never classify a green/זכות amount as expense. Never classify a red/חובה amount as income.
+CRITICAL RULE – INCOME vs EXPENSE (COLUMN AND COLOR ARE THE ONLY SOURCE OF TRUTH):
+   - Amount appears in the "זכות" column OR in GREEN → INCOME. You MUST output a POSITIVE number (e.g. 8000, 6000, 356).
+   - Amount appears in the "חובה" column OR in RED → EXPENSE. You MUST output a NEGATIVE number (e.g. -8000, -1200).
+   - IGNORE the description text when deciding sign. "הוראת קבע", "העברה", "קצבת ילדים" can be EITHER – the column tells you which.
+   - CONCRETE EXAMPLE: 8,000 in the זכות column with description "הוראת-קבע (תאריך ערך: 01/02)" → output amount: 8000 (positive, income). Same 8,000 in חובה → output -8000.
+   - WRONG: outputting -8000 when 8000 is in green/זכות. RIGHT: output 8000 when in green/זכות.
+   - For each row, look at which column the number is in (זכות vs חובה) or its color (green vs red), then set amount sign accordingly.
+   - Israeli bank tables: column headers are "זכות" and "חובה". Amounts under "זכות" or in green = income (positive). Amounts under "חובה" or in red = expense (negative).
 
 2) DESCRIPTION - Copy the FULL Hebrew text exactly:
    - Include the complete transaction description
@@ -326,13 +328,13 @@ CRITICAL RULE – INCOME vs EXPENSE (COLOR OVERRIDES TEXT):
 
 5) COMPLETENESS - Extract EVERY visible transaction. Never skip rows. Never invent transactions that aren't visible.
 
-Output JSON: { "transactions": [{ "date": "YYYY-MM-DD", "description": "full Hebrew description", "amount": number, "categorySlug": "slug" }] }
-
-For installments include: totalAmount, installmentCurrent, installmentTotal`;
+Output JSON: { "transactions": [{ "date": "YYYY-MM-DD", "description": "full Hebrew description", "amount": number (POSITIVE if from זכות/green, NEGATIVE if from חובה/red), "categorySlug": "slug" }] }
+For installments include: totalAmount, installmentCurrent, installmentTotal.
+REMINDER: amount sign = column/color only. זכות/green → positive. חובה/red → negative.`;
 
     try {
       const model = process.env.OPENAI_MODEL || 'gpt-4o';
-      let userMessage = 'Extract all transactions. CRITICAL: If an amount appears in green or in the זכות column, output it as a POSITIVE number (income). If in red or in the חובה column, output NEGATIVE (expense). Do not use the description (e.g. הוראת קבע) to decide sign – only the color/column.';
+      let userMessage = 'Extract all transactions. For each row: look at which COLUMN the amount is in (זכות = credit = income → positive number; חובה = debit = expense → negative number). Color (green/red) matches: green=positive, red=negative. Example: 8,000 in זכות column even with description "הוראת-קבע" → output amount 8000 (positive).';
       if (userContext?.trim()) {
         userMessage += `\n\nUser preferences:\n${userContext.trim().slice(0, 2000)}`;
       }
