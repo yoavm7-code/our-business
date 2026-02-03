@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { transactions as txApi, accounts, categories } from '@/lib/api';
 import { useTranslation } from '@/i18n/context';
 import DateRangePicker from '@/components/DateRangePicker';
@@ -98,6 +98,20 @@ export default function TransactionsPage() {
     categories.list().then((c) => setCategoriesList(c)).catch(() => {});
   }, []);
 
+  const categoriesForSelect = useMemo(() => {
+    const listIds = new Set(categoriesList.map((c) => c.id));
+    const fromTxs = items
+      .map((tx) => tx.category as { id: string; name: string; slug?: string } | undefined)
+      .filter((c): c is { id: string; name: string; slug?: string } => !!c?.id && !listIds.has(c.id));
+    const seen = new Set<string>();
+    const extra = fromTxs.filter((c) => {
+      if (seen.has(c.id)) return false;
+      seen.add(c.id);
+      return true;
+    });
+    return [...categoriesList, ...extra.map((c) => ({ id: c.id, name: c.name, slug: c.slug, isIncome: false }))];
+  }, [categoriesList, items]);
+
   useEffect(() => {
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     searchTimeoutRef.current = setTimeout(() => {
@@ -126,14 +140,14 @@ export default function TransactionsPage() {
       page,
       limit,
     };
-    txApi
-      .list(params)
-      .then((res) => {
+    Promise.all([txApi.list(params), categories.list()])
+      .then(([res, cats]) => {
         if (currentId !== fetchIdRef.current) return;
         const list = (res.items as Tx[]) ?? [];
         const totalCount = res.total ?? 0;
         setItems(list);
         setTotal(totalCount);
+        setCategoriesList(cats);
         if (list.length === 0 && page > 1) setPage(1);
       })
       .catch((e) => {
@@ -538,7 +552,7 @@ export default function TransactionsPage() {
                           title={t('transactions.changeCategory')}
                         >
                           <option value="">{t('common.noCategory')}</option>
-                          {categoriesList.map((c) => (
+                          {categoriesForSelect.map((c) => (
                             <option key={c.id} value={c.id}>{getCategoryDisplayName(c.name, c.slug, t)}</option>
                           ))}
                           <option value="__add__">{t('transactions.addNewCategory')}</option>
