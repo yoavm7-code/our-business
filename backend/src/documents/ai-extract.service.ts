@@ -285,64 +285,43 @@ Extract EVERY transaction row. Never skip.`;
     const mimeType = imagePath.toLowerCase().endsWith('.png') ? 'image/png' : 
                      imagePath.toLowerCase().endsWith('.webp') ? 'image/webp' : 'image/jpeg';
 
-    const systemPrompt = `You are an expert Israeli bank statement parser. Extract ALL transactions from this bank statement image.
+    const systemPrompt = `You are an expert at reading Israeli bank statement tables from screenshots.
 
-=== STEP 1: UNDERSTAND THE TABLE ===
-Israeli bank statements have a table with these columns: תאריך (date), הפעולה (operation), חובה (debit), זכות (credit).
-The two amount columns are "חובה" (debit = expense) and "זכות" (credit = income).
-Each row has the amount in ONLY ONE of these two columns (the other is empty).
+=== YOUR TASK ===
+Read the table in the image and transcribe each row into structured JSON.
+The table has these columns (in Hebrew, right-to-left):
+- תאריך (date)
+- הפעולה (operation/description)
+- חובה (debit column – money going OUT)
+- זכות (credit column – money coming IN)
 
-=== STEP 2: HOW TO TELL זכות FROM חובה (MOST IMPORTANT) ===
-The MOST RELIABLE way to determine income vs expense is the TEXT COLOR of the amount number:
-- GREEN colored amount numbers → זכות (credit) = INCOME
-- RED colored amount numbers → חובה (debit) = EXPENSE
-Look at the actual rendered color of each number in the image. This is the PRIMARY indicator.
-As a secondary check, verify which column header the number is positioned under.
+IMPORTANT: Each row has a number in EITHER the חובה column OR the זכות column, but NOT both.
+You must report BOTH fields for each row: put the number where it appears, and null for the empty column.
 
-=== STEP 3: FOR EACH ROW ===
-1) DATE: Read the date. Ignore Hebrew weekday prefix (ב', ה', א' = weekday abbreviation, NOT part of the date). Convert DD/MM/YY to YYYY-MM-DD (assume 20xx).
-2) DESCRIPTION: Copy the operation text in Hebrew only (e.g. הוראת קבע, הו"ק הלואה קרן, מ.א. אפרויה בע).
-   - Do NOT include amounts, value dates (תאריך ערך: ...), or "Income"/"Expense".
-   - "מ.א." + company = employer (salary). "הו"ק הלוי רבית" = loan interest. "הו"ק הלואה קרן" = loan principal.
-3) AMOUNT: Read as a positive number (e.g. 8000.00, 712, 136.34). Always positive.
-4) COLUMN: Set based on the amount's text color:
-   - Green text → "column": "זכות"
-   - Red text → "column": "חובה"
-   This field determines income vs expense. Double-check the color for every row.
-5) COLOR: Output the observed text color of the amount as "green" or "red" (for debugging).
-6) CATEGORY: Assign a category slug.
+=== FOR EACH ROW, OUTPUT ===
+1) "date": Convert DD/MM/YY to "YYYY-MM-DD". Ignore Hebrew weekday prefix (ב', ה', א').
+2) "description": The operation text in Hebrew. Do NOT include amounts or value dates (תאריך ערך: ...).
+   "מ.א." + company = employer (salary). "הו"ק הלוי רבית" = loan interest. "הו"ק הלואה קרן" = loan principal.
+3) "debit": The number from the חובה column as a positive number, or null if that cell is empty.
+4) "credit": The number from the זכות column as a positive number, or null if that cell is empty.
+5) "categorySlug": A category from the list below.
 
-=== STEP 4: CATEGORY SLUGS ===
-INCOME: salary (משכורת, שכר, מ.א. [company name]), income (קצבת ילדים, ביטוח לאומי ג, and other generic income)
-EXPENSES:
-- loan_payment (הלואה, קרן הלואה, הו"ק הלואה קרן)
-- loan_interest (ריבית, הלוי רבית, הו"ק הלוי רבית)
-- credit_charges (כאל, מקס איט, לאומי קארד, ישראכרט, מקס איט פיננסי)
-- bank_fees (דמי ניהול, עמלה, הקצאת אשראי)
-- transfers (העברה, העברה-נייד, העב' לאחר-נייד, bit, פייבוקס)
-- standing_order (הוראת קבע, הו"ק - when not a loan or specific bill)
-- utilities (חשמל, גז, מים, ארנונה)
-- insurance (ביטוח)
-- pension (פנסיה, גמל, מיטב דש)
-- groceries (סופרמרקט)
-- transport (דלק, רכבת)
-- dining (מסעדה, קפה)
-- shopping (קניות, חנות)
-- healthcare (קופת חולים, רופא)
+=== CATEGORY SLUGS ===
+INCOME: salary (משכורת, שכר, מ.א. [company]), income (קצבת ילדים, ביטוח לאומי ג, other)
+EXPENSES: loan_payment (הלואה, קרן הלואה), loan_interest (ריבית, הלוי רבית), credit_charges (כאל, מקס איט, לאומי קארד, ישראכרט), bank_fees (דמי ניהול, עמלה), transfers (העברה, העברה-נייד, העב' לאחר-נייד, bit, פייבוקס), standing_order (הוראת קבע), utilities (חשמל, גז, מים), insurance (ביטוח), pension (פנסיה, גמל, מיטב דש), groceries (סופרמרקט), transport (דלק, רכבת), dining (מסעדה, קפה), shopping (קניות), healthcare (קופת חולים)
 
-=== STEP 5: COMPLETENESS ===
-Extract EVERY visible transaction row. Never skip rows. Never merge two rows into one. Never invent rows.
-Each row in the bank table = exactly one object in your output array.
+=== RULES ===
+- Extract EVERY visible row. Never skip. Never merge two rows. Never invent rows.
+- Each table row = exactly one JSON object.
+- For each row, exactly ONE of debit/credit should be a number, the other should be null.
 
 === OUTPUT FORMAT ===
-Output valid JSON:
-{ "transactions": [{ "date": "YYYY-MM-DD", "description": "Hebrew text only", "amount": <positive number>, "column": "זכות" or "חובה", "color": "green" or "red", "categorySlug": "slug" }] }
-For installments include: totalAmount, installmentCurrent, installmentTotal.
-The "column" and "color" fields are MANDATORY for every transaction.`;
+{ "transactions": [{ "date": "YYYY-MM-DD", "description": "Hebrew text", "debit": <number or null>, "credit": <number or null>, "categorySlug": "slug" }] }
+For installments add: totalAmount, installmentCurrent, installmentTotal.`;
 
     try {
       const model = process.env.OPENAI_MODEL || 'gpt-4o';
-      let userMessage = 'Extract all transactions from this bank statement image. For EACH row: 1) Read the date (ignore Hebrew weekday prefix). 2) Read the description. 3) Read the amount as a POSITIVE number. 4) Look at the TEXT COLOR of the amount number: GREEN = זכות (income), RED = חובה (expense). Set "column" and "color" accordingly. Color detection is the most important part – do not guess from the description, look at the actual color of each number in the image.';
+      let userMessage = 'Transcribe this bank statement table. For each row output: date, description, debit (number from חובה column or null), credit (number from זכות column or null), and categorySlug. Each row has a number in exactly one of the two amount columns – report it in the correct field and set the other to null.';
       if (userContext?.trim()) {
         userMessage += `\n\nUser preferences:\n${userContext.trim().slice(0, 2000)}`;
       }
@@ -382,11 +361,11 @@ The "column" and "color" fields are MANDATORY for every transaction.`;
       const list = Array.isArray(parsed.transactions) ? parsed.transactions : Array.isArray(parsed) ? parsed : [];
       console.log('[AI-Extract] Vision parsed transaction count:', list.length);
 
-      // Log each transaction's column and color fields for debugging sign issues
+      // Log each transaction's debit/credit fields for debugging
       list.forEach((t: Record<string, unknown>, i: number) => {
-        console.log(`[AI-Extract] Row ${i}: date=${t.date}, desc="${String(t.description || '').slice(0, 30)}", amount=${t.amount}, column=${t.column}, color=${t.color}, cat=${t.categorySlug}`);
+        console.log(`[AI-Extract] Row ${i}: date=${t.date}, desc="${String(t.description || '').slice(0, 30)}", debit=${t.debit}, credit=${t.credit}, cat=${t.categorySlug}`);
       });
-      
+
       const today = new Date().toISOString().slice(0, 10);
       const isValidSlug = (s: string | undefined) => s && /^[a-z][a-z0-9_]*$/.test(s) && s.length <= 50;
 
@@ -400,34 +379,33 @@ The "column" and "color" fields are MANDATORY for every transaction.`;
         const rawSlug = t.categorySlug ? String(t.categorySlug).toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '') : undefined;
         const slug: string = isValidSlug(rawSlug) ? (rawSlug as string) : 'other';
 
-        const absAmount = Math.abs(Number(t.amount) || 0);
-        const col = String(t.column || '').trim();
-        const color = String(t.color || '').trim().toLowerCase();
-        const isCredit = /זכות|credit/i.test(col);
-        const isDebit = /חובה|debit/i.test(col);
-        // Use color as additional signal: green = income, red = expense
-        const isGreen = /green|ירוק/i.test(color);
-        const isRed = /red|אדום/i.test(color);
+        // New approach: use debit/credit fields directly
+        const debitVal = t.debit != null ? Number(t.debit) : null;
+        const creditVal = t.credit != null ? Number(t.credit) : null;
+        const hasDebit = debitVal != null && debitVal > 0;
+        const hasCredit = creditVal != null && creditVal > 0;
+
         let amount: number;
-        // Color takes priority if column and color disagree (color is more reliable from Vision)
-        if (isGreen && isDebit) {
-          // Color says income but column says expense → trust color
-          console.warn(`[AI-Extract] Color/column mismatch for "${String(t.description || '').slice(0, 30)}": color=green but column=חובה → using green (income)`);
-          amount = absAmount;
-        } else if (isRed && isCredit) {
-          // Color says expense but column says income → trust color
-          console.warn(`[AI-Extract] Color/column mismatch for "${String(t.description || '').slice(0, 30)}": color=red but column=זכות → using red (expense)`);
-          amount = -absAmount;
-        } else if (isCredit || isGreen) {
-          amount = absAmount;
-        } else if (isDebit || isRed) {
-          amount = -absAmount;
-        } else if (INCOME_SLUGS.has(slug)) {
-          amount = absAmount;
-        } else if (EXPENSE_SLUGS.has(slug)) {
-          amount = -absAmount;
+        if (hasCredit && !hasDebit) {
+          // Amount was in the credit (זכות) column → income (positive)
+          amount = Math.abs(creditVal);
+        } else if (hasDebit && !hasCredit) {
+          // Amount was in the debit (חובה) column → expense (negative)
+          amount = -Math.abs(debitVal);
+        } else if (hasCredit && hasDebit) {
+          // Both columns have values (unusual) - use the larger one, credit = positive
+          console.warn(`[AI-Extract] Both debit and credit set for "${String(t.description || '').slice(0, 30)}": debit=${debitVal}, credit=${creditVal}`);
+          amount = creditVal > debitVal ? Math.abs(creditVal) : -Math.abs(debitVal);
         } else {
-          amount = Number(t.amount) ?? 0;
+          // Fallback: neither field set, try legacy 'amount' field
+          const fallbackAmount = Math.abs(Number(t.amount) || 0);
+          // Also check for legacy 'column' field
+          const col = String(t.column || '').trim();
+          if (/זכות|credit/i.test(col)) amount = fallbackAmount;
+          else if (/חובה|debit/i.test(col)) amount = -fallbackAmount;
+          else if (INCOME_SLUGS.has(slug)) amount = fallbackAmount;
+          else if (EXPENSE_SLUGS.has(slug)) amount = -fallbackAmount;
+          else amount = -fallbackAmount; // default to expense
         }
 
         const totalAmount = t.totalAmount != null ? Number(t.totalAmount) : undefined;
