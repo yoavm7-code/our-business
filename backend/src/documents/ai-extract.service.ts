@@ -391,7 +391,16 @@ Return a JSON object: { "transactions": [{ "date": "YYYY-MM-DD", "description": 
       // === STEP 2: Programmatic color analysis – scan image pixels for green/red ===
       // This replaces the unreliable AI-based column/color detection.
       const colorSignals = await this.analyzeAmountColors(imagePath);
-      console.log('[AI-Extract] Color signals:', colorSignals.length, 'rows detected vs', list.length, 'transactions extracted');
+      const colorCountMatch = colorSignals.length === list.length;
+      console.log(`[AI-Extract] Color signals: ${colorSignals.length} rows detected vs ${list.length} transactions. Match=${colorCountMatch}`);
+
+      // If counts don't match, color analysis may be unreliable (header/footer rows detected, or missing rows).
+      // In that case, default to expense (safer) and rely on safety net for income keywords.
+      const useColors = colorCountMatch || (colorSignals.length > 0 && Math.abs(colorSignals.length - list.length) <= 2);
+
+      if (!useColors && colorSignals.length > 0) {
+        console.warn(`[AI-Extract] Color count mismatch (${colorSignals.length} vs ${list.length}). Falling back to keyword-based sign detection.`);
+      }
 
       const today = new Date().toISOString().slice(0, 10);
       const isValidSlug = (s: string | undefined) => s && /^[a-z][a-z0-9_]*$/.test(s) && s.length <= 50;
@@ -407,12 +416,13 @@ Return a JSON object: { "transactions": [{ "date": "YYYY-MM-DD", "description": 
 
         // Use programmatic color detection to determine sign
         let isIncome = false;
-        if (index < colorSignals.length) {
+        if (useColors && index < colorSignals.length) {
           isIncome = colorSignals[index] === 'income';
         }
+        // When color analysis unavailable, default to expense (safety net will fix income keywords)
         const amount = isIncome ? absAmount : -absAmount;
 
-        console.log(`[AI-Extract] Row ${index}: ${String(t.description || '').slice(0, 25)} → color=${index < colorSignals.length ? colorSignals[index] : 'N/A'} → ${isIncome ? 'INCOME' : 'EXPENSE'} ${amount}`);
+        console.log(`[AI-Extract] Row ${index}: ${String(t.description || '').slice(0, 30)} | amt=${absAmount} | color=${useColors && index < colorSignals.length ? colorSignals[index] : 'N/A'} → ${isIncome ? '+INCOME' : '-EXPENSE'}`);
 
         const totalAmount = t.totalAmount != null ? Number(t.totalAmount) : undefined;
         const installmentCurrent = t.installmentCurrent != null ? Math.max(1, Math.floor(Number(t.installmentCurrent))) : undefined;
@@ -467,13 +477,20 @@ Return a JSON object: { "transactions": [{ "date": "YYYY-MM-DD", "description": 
         height = decoded.height;
       }
 
-      console.log(`[AI-Extract] Color analysis: image ${width}x${height}, ${pixelData.length} bytes`);
+      console.log(`[AI-Extract] Color analysis: image ${width}x${height}, format=${lowerPath.endsWith('.png') ? 'PNG' : 'JPEG'}`);
 
-      // Scan each horizontal band for green/red colored text pixels
-      // Amount columns are in the left ~40% of the image (RTL bank statements)
-      const amountAreaEnd = Math.floor(width * 0.4);
-      const bandHeight = 3;
+      // Scan the left ~45% of the image (amount columns in RTL bank statements).
+      // Skip leftmost 2% to avoid border artifacts.
+      const scanStart = Math.floor(width * 0.02);
+      const scanEnd = Math.floor(width * 0.45);
       const channels = 4; // RGBA
+
+      // Adaptive parameters based on image resolution
+      const bandHeight = Math.max(2, Math.floor(height * 0.003));  // ~0.3% of height per band
+      const minPixelsPerBand = Math.max(8, Math.floor((scanEnd - scanStart) * bandHeight * 0.003)); // 0.3% of scanned area
+      const rowGap = Math.max(8, Math.floor(height * 0.012));  // ~1.2% of height between rows
+
+      console.log(`[AI-Extract] Color scan: x=${scanStart}-${scanEnd}, bandH=${bandHeight}, minPx=${minPixelsPerBand}, rowGap=${rowGap}`);
 
       const bands: Array<{ greenPixels: number; redPixels: number; y: number }> = [];
 
@@ -481,18 +498,29 @@ Return a JSON object: { "transactions": [{ "date": "YYYY-MM-DD", "description": 
         let greenCount = 0;
         let redCount = 0;
         for (let dy = 0; dy < bandHeight && y + dy < height; dy++) {
-          for (let x = 0; x < amountAreaEnd; x++) {
+          for (let x = scanStart; x < scanEnd; x++) {
             const idx = ((y + dy) * width + x) * channels;
             const r = pixelData[idx];
             const g = pixelData[idx + 1];
             const b = pixelData[idx + 2];
-            // Green text: G channel dominant (allow dark green like #006400)
-            if (g > 60 && g > r * 1.3 && g > b) greenCount++;
-            // Red text: R channel dominant (allow dark red like #CC0000)
-            if (r > 60 && r > g * 1.3 && r > b) redCount++;
+            const sum = r + g + b;
+
+            // Skip near-white (background), near-black (borders), and gray pixels
+            if (sum > 600 || sum < 60) continue;              // too bright or too dark
+            const maxC = Math.max(r, g, b);
+            const minC = Math.min(r, g, b);
+            if (maxC - minC < 25) continue;                   // too gray / unsaturated
+
+            // Green text: G channel clearly dominant
+            // Matches: #008000 (green), #006400 (darkgreen), #228B22, etc.
+            if (g > 70 && g > r + 25 && g > b + 15) greenCount++;
+
+            // Red text: R channel clearly dominant
+            // Matches: #FF0000 (red), #CC0000, #B22222, etc.
+            if (r > 70 && r > g + 25 && r > b + 15) redCount++;
           }
         }
-        if (greenCount > 5 || redCount > 5) {
+        if (greenCount >= minPixelsPerBand || redCount >= minPixelsPerBand) {
           bands.push({ greenPixels: greenCount, redPixels: redCount, y });
         }
       }
@@ -500,29 +528,43 @@ Return a JSON object: { "transactions": [{ "date": "YYYY-MM-DD", "description": 
       console.log(`[AI-Extract] Color analysis: ${bands.length} colored bands found`);
 
       // Merge adjacent bands into row clusters (each cluster = one table row)
-      const rows: Array<'income' | 'expense'> = [];
-      let prevY = -100;
-      let clusterGreen = 0;
-      let clusterRed = 0;
+      const rowClusters: Array<{ green: number; red: number; yStart: number; yEnd: number }> = [];
+      let cluster: { green: number; red: number; yStart: number; yEnd: number } | null = null;
 
       for (const band of bands) {
-        if (band.y - prevY > 15) {
-          if (clusterGreen > 0 || clusterRed > 0) {
-            rows.push(clusterGreen > clusterRed ? 'income' : 'expense');
-          }
-          clusterGreen = band.greenPixels;
-          clusterRed = band.redPixels;
+        if (!cluster || band.y - cluster.yEnd > rowGap) {
+          if (cluster) rowClusters.push(cluster);
+          cluster = { green: band.greenPixels, red: band.redPixels, yStart: band.y, yEnd: band.y + bandHeight };
         } else {
-          clusterGreen += band.greenPixels;
-          clusterRed += band.redPixels;
+          cluster.green += band.greenPixels;
+          cluster.red += band.redPixels;
+          cluster.yEnd = band.y + bandHeight;
         }
-        prevY = band.y;
       }
-      if (clusterGreen > 0 || clusterRed > 0) {
-        rows.push(clusterGreen > clusterRed ? 'income' : 'expense');
+      if (cluster) rowClusters.push(cluster);
+
+      // Skip first row if it looks like a header (has BOTH green and red strongly)
+      if (rowClusters.length > 1) {
+        const first = rowClusters[0];
+        const minColor = Math.min(first.green, first.red);
+        const maxColor = Math.max(first.green, first.red);
+        if (minColor > maxColor * 0.3 && minColor > minPixelsPerBand) {
+          console.log(`[AI-Extract] Skipping first row as header (green=${first.green}, red=${first.red})`);
+          rowClusters.shift();
+        }
       }
 
-      console.log(`[AI-Extract] Color analysis found ${rows.length} colored rows:`, rows);
+      const rows: Array<'income' | 'expense'> = rowClusters.map((c) => {
+        const type = c.green > c.red ? 'income' : 'expense';
+        return type;
+      });
+
+      // Log each detected row for debugging
+      rowClusters.forEach((c, i) => {
+        console.log(`[AI-Extract] Color row ${i}: y=${c.yStart}-${c.yEnd}, green=${c.green}, red=${c.red} → ${rows[i]}`);
+      });
+
+      console.log(`[AI-Extract] Color analysis: ${rows.length} data rows detected`);
       return rows;
     } catch (err) {
       console.error('[AI-Extract] Color analysis failed:', err);
@@ -578,7 +620,14 @@ Return a JSON object: { "transactions": [{ "date": "YYYY-MM-DD", "description": 
   /** Safety net: fix sign ONLY for UNAMBIGUOUS descriptions. Do NOT flip "הוראת קבע" or "העברה" – they can be income OR expense; Vision/column decides. */
   private applySignCorrectionSafetyNet(transactions: ExtractedTransaction[]): ExtractedTransaction[] {
     const INCOME_MARKERS = ['קצבת ילדים', 'קצבת זקנה', 'ביטוח לאומי ג', 'בטוח לאומי ג', 'משכורת', 'שכר', 'זיכוי', 'מ.א.', 'מ.א '];
-    const EXPENSE_MARKERS = ['חיוב', 'משיכה', 'כאל', 'מקס איט', 'לאומי קארד', 'ישראכרט', "הו\"ק הלו' רבית", 'הו"ק הלואה קרן', 'עמלת', 'דמי ניהול', 'הקצאת אשראי'];
+    const EXPENSE_MARKERS = [
+      'חיוב', 'משיכה',
+      'כאל', 'מקס איט', 'לאומי קארד', 'ישראכרט', 'אמריקן אקספרס',
+      "הו\"ק הלו' רבית", 'הו"ק הלואה קרן', "הו\"ק הלוי רבית",
+      'עמלת', 'דמי ניהול', 'הקצאת אשראי',
+      "העב' לאחר", 'העברה לאחר',   // transfer TO another = always expense
+      'בטוח לאומי חד', 'ביטוח לאומי חד', // National insurance PAYMENT (not payout)
+    ];
     return transactions.map((t) => {
       const d = (t.description || '').trim();
       const abs = Math.abs(t.amount);
