@@ -78,7 +78,12 @@
     "country": "מדינה",
     "countryPlaceholder": "בחר מדינה",
     "countryWhy": "בחירת מדינה נכונה מאפשרת למערכת להציע המלצות פיננסיות, טיפי מס ואפשרויות השקעה המותאמות לשוק ולחוקים במדינתך.",
-    "captchaRequired": "אנא אשר שאינך רובוט"
+    "captchaRequired": "אנא אשר שאינך רובוט",
+    "twoFactorRequired": "נדרש קוד אימות דו-שלבי",
+    "twoFactorCode": "קוד אימות",
+    "twoFactorCodePlaceholder": "הזן קוד 6 ספרות",
+    "verify": "אימות",
+    "backToLogin": "חזרה להתחברות"
   },
   "countries": {
   "IL": "ישראל",
@@ -536,7 +541,21 @@
     "confirmRemoveCategory": "להסיר את הקטגוריה? תנועות ששויכו אליה יעברו ל'ללא קטגוריה'.",
     "linkedBankAccount": "חשבון בנק מקושר",
     "noLinkedAccount": "ללא קישור",
-    "linkedBankAccountHint": "מאיזה חשבון בנק יורדים חיובי הכרטיס? קישור זה מאפשר לחבר בין הוצאות אשראי ליתרה הכוללת."
+    "linkedBankAccountHint": "מאיזה חשבון בנק יורדים חיובי הכרטיס? קישור זה מאפשר לחבר בין הוצאות אשראי ליתרה הכוללת.",
+    "twoFactorAuth": "אימות דו-שלבי (2FA)",
+    "twoFactorDescription": "הוסף שכבת אבטחה נוספת לחשבונך עם אימות דו-שלבי.",
+    "twoFactorEnabled": "אימות דו-שלבי מופעל",
+    "twoFactorDisabled": "אימות דו-שלבי כבוי",
+    "twoFactorEnable": "הפעלת 2FA",
+    "twoFactorDisable": "ביטול 2FA",
+    "twoFactorSetupTitle": "הגדרת אימות דו-שלבי",
+    "twoFactorScanQR": "סרוק את קוד ה-QR באפליקציית האימות שלך (Google Authenticator, Authy וכו')",
+    "twoFactorManualKey": "מפתח ידני",
+    "twoFactorVerifyCode": "הזן את הקוד מהאפליקציה כדי לאמת",
+    "twoFactorActivated": "אימות דו-שלבי הופעל בהצלחה!",
+    "twoFactorDeactivated": "אימות דו-שלבי בוטל.",
+    "twoFactorDisablePrompt": "הזן קוד מהאפליקציה כדי לבטל את האימות הדו-שלבי",
+    "twoFactorInvalidCode": "קוד אימות שגוי"
   },
   "transactionsPage": {
     "search": "חיפוש תנועות…",

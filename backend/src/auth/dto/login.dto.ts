@@ -11,4 +11,8 @@ export class LoginDto {
   @IsOptional()
   @IsString()
   captchaToken?: string;
+
+  @IsOptional()
+  @IsString()
+  twoFactorToken?: string;
 }

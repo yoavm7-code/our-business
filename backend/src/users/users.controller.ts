@@ -1,4 +1,6 @@
-import { Body, Controller, Get, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Put, Res, UseGuards, UseInterceptors, UploadedFile, BadRequestException, NotFoundException } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UsersService } from './users.service';
@@ -19,6 +21,29 @@ export class UsersController {
     @Body() body: { name?: string; email?: string; password?: string; countryCode?: string | null },
   ) {
     return this.usersService.update(user.id, body);
+  }
+
+  @Get('me/avatar')
+  async getAvatar(
+    @CurrentUser() user: { id: string },
+    @Res() res: Response,
+  ) {
+    const filePath = await this.usersService.getAvatarPath(user.id);
+    if (!filePath) throw new NotFoundException('No avatar');
+    res.sendFile(filePath);
+  }
+
+  @Post('me/avatar')
+  @UseInterceptors(FileInterceptor('avatar'))
+  async uploadAvatar(
+    @CurrentUser() user: { id: string },
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) throw new BadRequestException('No file uploaded');
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowed.includes(file.mimetype)) throw new BadRequestException('Only JPEG, PNG, WebP, and GIF images are allowed');
+    if (file.size > 2 * 1024 * 1024) throw new BadRequestException('File must be under 2MB');
+    return this.usersService.uploadAvatar(user.id, file);
   }
 
   @Get('me/dashboard-config')

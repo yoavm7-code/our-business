@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { users, accounts, categories } from '@/lib/api';
+import { users, accounts, categories, twoFactor } from '@/lib/api';
 import { COUNTRY_CODES } from '@/lib/countries';
 import { useTranslation } from '@/i18n/context';
 
@@ -42,12 +42,22 @@ export default function SettingsPage() {
   const [profileForm, setProfileForm] = useState({ name: '', email: '', password: '', countryCode: '' });
   const [updatingProfile, setUpdatingProfile] = useState(false);
 
+  // 2FA state
+  const [twoFAEnabled, setTwoFAEnabled] = useState(false);
+  const [twoFALoading, setTwoFALoading] = useState(false);
+  const [twoFASetup, setTwoFASetup] = useState<{ secret: string; qrCode: string } | null>(null);
+  const [twoFACode, setTwoFACode] = useState('');
+  const [twoFAMsg, setTwoFAMsg] = useState('');
+  const [twoFADisabling, setTwoFADisabling] = useState(false);
+  const [twoFADisableCode, setTwoFADisableCode] = useState('');
+
   useEffect(() => {
-    Promise.all([users.me(), accounts.list(), categories.list()])
-      .then(([u, a, c]) => {
+    Promise.all([users.me(), accounts.list(), categories.list(), twoFactor.status()])
+      .then(([u, a, c, tfa]) => {
         setUser(u);
         setAccountsList(a);
         setCategoriesList(c);
+        setTwoFAEnabled(tfa.enabled);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -171,6 +181,53 @@ export default function SettingsPage() {
       setMsg(msgText.includes('already in use') || msgText.includes('Email already') ? t('settings.emailInUse') : msgText);
     } finally {
       setUpdatingProfile(false);
+    }
+  }
+
+  async function handleSetup2FA() {
+    setTwoFALoading(true);
+    setTwoFAMsg('');
+    try {
+      const data = await twoFactor.generate();
+      setTwoFASetup(data);
+    } catch (err) {
+      setTwoFAMsg(err instanceof Error ? err.message : t('common.failedToLoad'));
+    } finally {
+      setTwoFALoading(false);
+    }
+  }
+
+  async function handleEnable2FA(e: React.FormEvent) {
+    e.preventDefault();
+    setTwoFALoading(true);
+    setTwoFAMsg('');
+    try {
+      await twoFactor.enable(twoFACode);
+      setTwoFAEnabled(true);
+      setTwoFASetup(null);
+      setTwoFACode('');
+      setTwoFAMsg(t('settings.twoFactorActivated'));
+    } catch (err) {
+      setTwoFAMsg(err instanceof Error ? err.message : t('settings.twoFactorInvalidCode'));
+    } finally {
+      setTwoFALoading(false);
+    }
+  }
+
+  async function handleDisable2FA(e: React.FormEvent) {
+    e.preventDefault();
+    setTwoFALoading(true);
+    setTwoFAMsg('');
+    try {
+      await twoFactor.disable(twoFADisableCode);
+      setTwoFAEnabled(false);
+      setTwoFADisabling(false);
+      setTwoFADisableCode('');
+      setTwoFAMsg(t('settings.twoFactorDeactivated'));
+    } catch (err) {
+      setTwoFAMsg(err instanceof Error ? err.message : t('settings.twoFactorInvalidCode'));
+    } finally {
+      setTwoFALoading(false);
     }
   }
 
@@ -314,6 +371,97 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
+
+      {/* 2FA Section */}
+      <div className="card max-w-md">
+        <h2 className="font-medium mb-2">{t('settings.twoFactorAuth')}</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{t('settings.twoFactorDescription')}</p>
+
+        {twoFAEnabled ? (
+          <div>
+            <p className="text-sm text-green-600 dark:text-green-400 font-medium mb-3">{t('settings.twoFactorEnabled')}</p>
+            {!twoFADisabling ? (
+              <button
+                type="button"
+                className="text-sm text-red-600 hover:underline"
+                onClick={() => { setTwoFADisabling(true); setTwoFAMsg(''); }}
+              >
+                {t('settings.twoFactorDisable')}
+              </button>
+            ) : (
+              <form onSubmit={handleDisable2FA} className="space-y-3">
+                <p className="text-sm text-slate-600 dark:text-slate-400">{t('settings.twoFactorDisablePrompt')}</p>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={6}
+                  className="input text-center text-lg tracking-widest w-40"
+                  value={twoFADisableCode}
+                  onChange={(e) => setTwoFADisableCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="000000"
+                  autoFocus
+                />
+                <div className="flex gap-2">
+                  <button type="submit" className="btn-primary text-sm" disabled={twoFALoading || twoFADisableCode.length < 6}>
+                    {twoFALoading ? t('common.loading') : t('settings.twoFactorDisable')}
+                  </button>
+                  <button type="button" className="btn-secondary text-sm" onClick={() => { setTwoFADisabling(false); setTwoFADisableCode(''); }}>
+                    {t('common.cancel')}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        ) : twoFASetup ? (
+          <div className="space-y-4">
+            <p className="text-sm">{t('settings.twoFactorScanQR')}</p>
+            <div className="flex justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={twoFASetup.qrCode} alt="QR Code" className="w-48 h-48 rounded-lg" />
+            </div>
+            <div>
+              <p className="text-xs text-slate-500 mb-1">{t('settings.twoFactorManualKey')}:</p>
+              <code className="block bg-slate-100 dark:bg-slate-800 px-3 py-2 rounded text-xs break-all select-all">{twoFASetup.secret}</code>
+            </div>
+            <form onSubmit={handleEnable2FA} className="space-y-3">
+              <p className="text-sm">{t('settings.twoFactorVerifyCode')}</p>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                className="input text-center text-lg tracking-widest w-40"
+                value={twoFACode}
+                onChange={(e) => setTwoFACode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="000000"
+                autoFocus
+              />
+              <div className="flex gap-2">
+                <button type="submit" className="btn-primary text-sm" disabled={twoFALoading || twoFACode.length < 6}>
+                  {twoFALoading ? t('common.loading') : t('settings.twoFactorEnable')}
+                </button>
+                <button type="button" className="btn-secondary text-sm" onClick={() => { setTwoFASetup(null); setTwoFACode(''); }}>
+                  {t('common.cancel')}
+                </button>
+              </div>
+            </form>
+          </div>
+        ) : (
+          <div>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">{t('settings.twoFactorDisabled')}</p>
+            <button
+              type="button"
+              className="btn-primary text-sm"
+              onClick={handleSetup2FA}
+              disabled={twoFALoading}
+            >
+              {twoFALoading ? t('common.loading') : t('settings.twoFactorEnable')}
+            </button>
+          </div>
+        )}
+        {twoFAMsg && <p className="text-sm text-slate-600 mt-3">{twoFAMsg}</p>}
+      </div>
 
       <div className="card max-w-lg">
         <h2 className="font-medium mb-4">{t('settings.accounts')}</h2>

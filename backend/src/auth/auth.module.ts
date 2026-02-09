@@ -7,11 +7,13 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { UsersModule } from '../users/users.module';
 import { CaptchaModule } from '../captcha/captcha.module';
+import { TwoFactorModule } from '../two-factor/two-factor.module';
 
 @Module({
   imports: [
     UsersModule,
     CaptchaModule,
+    TwoFactorModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],

@@ -1,5 +1,7 @@
 import { Injectable, ConflictException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+import * as fs from 'fs';
+import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from '../auth/dto/register.dto';
 
@@ -36,9 +38,10 @@ export class UsersService {
   async findById(id: string) {
     const u = await this.prisma.user.findUnique({
       where: { id },
-      select: { id: true, email: true, name: true, householdId: true, countryCode: true },
+      select: { id: true, email: true, name: true, householdId: true, countryCode: true, avatarPath: true },
     });
-    return u ?? null;
+    if (!u) return null;
+    return { ...u, avatarUrl: u.avatarPath ? `/api/users/me/avatar?v=${Date.now()}` : null };
   }
 
   async getDashboardConfig(id: string) {
@@ -78,8 +81,33 @@ export class UsersService {
     const u = await this.prisma.user.update({
       where: { id },
       data,
-      select: { id: true, email: true, name: true, householdId: true, countryCode: true },
+      select: { id: true, email: true, name: true, householdId: true, countryCode: true, avatarPath: true },
     });
-    return u;
+    return { ...u, avatarUrl: u.avatarPath ? `/api/users/me/avatar?v=${Date.now()}` : null };
+  }
+
+  async uploadAvatar(userId: string, file: Express.Multer.File) {
+    const uploadDir = path.resolve(process.env.UPLOAD_DIR || './uploads', 'avatars');
+    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+    const ext = file.originalname.split('.').pop()?.toLowerCase() || 'jpg';
+    const fileName = `${userId}.${ext}`;
+    const filePath = path.join(uploadDir, fileName);
+    // Remove old avatar if different extension
+    const existing = await this.prisma.user.findUnique({ where: { id: userId }, select: { avatarPath: true } });
+    if (existing?.avatarPath && fs.existsSync(existing.avatarPath) && existing.avatarPath !== filePath) {
+      fs.unlinkSync(existing.avatarPath);
+    }
+    fs.writeFileSync(filePath, file.buffer);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { avatarPath: filePath },
+    });
+    return { avatarUrl: `/api/users/me/avatar?v=${Date.now()}` };
+  }
+
+  async getAvatarPath(userId: string): Promise<string | null> {
+    const u = await this.prisma.user.findUnique({ where: { id: userId }, select: { avatarPath: true } });
+    if (!u?.avatarPath || !fs.existsSync(u.avatarPath)) return null;
+    return u.avatarPath;
   }
 }

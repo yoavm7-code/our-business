@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
 import { CaptchaService } from '../captcha/captcha.service';
+import { TwoFactorService } from '../two-factor/two-factor.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
@@ -12,6 +13,7 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
     private captchaService: CaptchaService,
+    private twoFactorService: TwoFactorService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -28,6 +30,18 @@ export class AuthService {
     if (!user) throw new UnauthorizedException('Invalid email or password');
     const valid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!valid) throw new UnauthorizedException('Invalid email or password');
+
+    // Check if 2FA is enabled
+    const has2FA = await this.twoFactorService.isTwoFactorEnabled(user.id);
+    if (has2FA) {
+      if (!dto.twoFactorToken) {
+        // Return a signal that 2FA is required (no token yet)
+        return { requiresTwoFactor: true, accessToken: null, user: null };
+      }
+      const tokenValid = await this.twoFactorService.verifyToken(user.id, dto.twoFactorToken);
+      if (!tokenValid) throw new UnauthorizedException('Invalid 2FA code');
+    }
+
     return this.loginResponse(user);
   }
 

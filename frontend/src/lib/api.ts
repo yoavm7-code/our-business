@@ -44,10 +44,10 @@ export async function api<T>(
 }
 
 export const auth = {
-  login: (email: string, password: string, captchaToken?: string) =>
-    api<{ accessToken: string; user: { id: string; email: string; name: string | null; householdId: string; countryCode?: string } }>(
+  login: (email: string, password: string, captchaToken?: string, twoFactorToken?: string) =>
+    api<{ accessToken: string | null; user: { id: string; email: string; name: string | null; householdId: string; countryCode?: string } | null; requiresTwoFactor?: boolean }>(
       '/api/auth/login',
-      { method: 'POST', body: JSON.stringify({ email, password, captchaToken }) },
+      { method: 'POST', body: JSON.stringify({ email, password, captchaToken, twoFactorToken }) },
     ),
   register: (email: string, password: string, name?: string, countryCode?: string, captchaToken?: string) =>
     api<{ accessToken: string; user: { id: string; email: string; name: string | null; householdId: string; countryCode?: string } }>('/api/auth/register', {
@@ -57,12 +57,25 @@ export const auth = {
 };
 
 export const users = {
-  me: () => api<{ id: string; email: string; name: string | null; householdId: string; countryCode?: string | null }>('/api/users/me'),
+  me: () => api<{ id: string; email: string; name: string | null; householdId: string; countryCode?: string | null; avatarUrl?: string | null }>('/api/users/me'),
   update: (body: { name?: string; email?: string; password?: string; countryCode?: string | null }) =>
-    api<{ id: string; email: string; name: string | null; householdId: string; countryCode?: string | null }>('/api/users/me', {
+    api<{ id: string; email: string; name: string | null; householdId: string; countryCode?: string | null; avatarUrl?: string | null }>('/api/users/me', {
       method: 'PUT',
       body: JSON.stringify(body),
     }),
+  uploadAvatar: (file: File) => {
+    const form = new FormData();
+    form.append('avatar', file);
+    const token = getToken();
+    return fetch(`${API_URL}/api/users/me/avatar`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    }).then((res) => {
+      if (!res.ok) return res.json().then((e) => { throw new Error((e as { message?: string }).message || 'Upload failed'); });
+      return res.json() as Promise<{ avatarUrl: string }>;
+    });
+  },
   getDashboardConfig: () =>
     api<{ widgets: WidgetConfig[] } | null>('/api/users/me/dashboard-config'),
   saveDashboardConfig: (config: { widgets: WidgetConfig[] }) =>
@@ -70,6 +83,13 @@ export const users = {
       method: 'PUT',
       body: JSON.stringify(config),
     }),
+};
+
+export const twoFactor = {
+  status: () => api<{ enabled: boolean }>('/api/2fa/status'),
+  generate: () => api<{ secret: string; qrCode: string }>('/api/2fa/generate', { method: 'POST' }),
+  enable: (token: string) => api<{ enabled: boolean }>('/api/2fa/enable', { method: 'POST', body: JSON.stringify({ token }) }),
+  disable: (token: string) => api<{ enabled: boolean }>('/api/2fa/disable', { method: 'POST', body: JSON.stringify({ token }) }),
 };
 
 export type WidgetConfig = {
