@@ -78,7 +78,12 @@
     "country": "Country",
     "countryPlaceholder": "Select country",
     "countryWhy": "Selecting your country helps us provide financial recommendations, tax tips and investment options tailored to your market and regulations.",
-    "captchaRequired": "Please verify you are not a robot"
+    "captchaRequired": "Please verify you are not a robot",
+    "twoFactorRequired": "Two-factor authentication required",
+    "twoFactorCode": "Verification code",
+    "twoFactorCodePlaceholder": "Enter 6-digit code",
+    "verify": "Verify",
+    "backToLogin": "Back to login"
   },
   "countries": {
   "IL": "Israel",
@@ -536,7 +541,21 @@
     "confirmRemoveCategory": "Remove this category? Transactions will be set to 'No category'.",
     "linkedBankAccount": "Linked bank account",
     "noLinkedAccount": "No linked account",
-    "linkedBankAccountHint": "Which bank account does this credit card charge from? Linking helps connect card expenses to total balance."
+    "linkedBankAccountHint": "Which bank account does this credit card charge from? Linking helps connect card expenses to total balance.",
+    "twoFactorAuth": "Two-Factor Authentication (2FA)",
+    "twoFactorDescription": "Add an extra layer of security to your account with two-factor authentication.",
+    "twoFactorEnabled": "Two-factor authentication is enabled",
+    "twoFactorDisabled": "Two-factor authentication is off",
+    "twoFactorEnable": "Enable 2FA",
+    "twoFactorDisable": "Disable 2FA",
+    "twoFactorSetupTitle": "Set up two-factor authentication",
+    "twoFactorScanQR": "Scan the QR code with your authenticator app (Google Authenticator, Authy, etc.)",
+    "twoFactorManualKey": "Manual key",
+    "twoFactorVerifyCode": "Enter the code from the app to verify",
+    "twoFactorActivated": "Two-factor authentication enabled successfully!",
+    "twoFactorDeactivated": "Two-factor authentication disabled.",
+    "twoFactorDisablePrompt": "Enter a code from the app to disable two-factor authentication",
+    "twoFactorInvalidCode": "Invalid verification code"
   },
   "transactionsPage": {
     "search": "Search transactions…",

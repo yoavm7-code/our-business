@@ -27,6 +27,11 @@ export default function LoginPage() {
   const [isRegister, setIsRegister] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // 2FA state
+  const [needs2FA, setNeeds2FA] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+
   useEffect(() => {
     if (!RECAPTCHA_SITE_KEY) return;
     if (document.querySelector('script[src*="google.com/recaptcha"]')) return;
@@ -51,6 +56,11 @@ export default function LoginPage() {
       const res = isRegister
         ? await auth.register(email, password, name || undefined, countryCode || undefined, captchaToken)
         : await auth.login(email, password, captchaToken);
+      if ('requiresTwoFactor' in res && res.requiresTwoFactor) {
+        setNeeds2FA(true);
+        setLoading(false);
+        return;
+      }
       if (typeof window !== 'undefined' && res.accessToken) {
         localStorage.setItem('accessToken', res.accessToken);
         router.push('/dashboard');
@@ -61,6 +71,71 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handle2FASubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const res = await auth.login(email, password, undefined, twoFactorCode);
+      if (typeof window !== 'undefined' && res.accessToken) {
+        localStorage.setItem('accessToken', res.accessToken);
+        router.push('/dashboard');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('common.somethingWentWrong'));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (needs2FA) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-900 px-4">
+        <div className="card w-full max-w-md relative animate-scaleIn">
+          <button
+            type="button"
+            onClick={() => setLocale(locale === 'he' ? 'en' : 'he')}
+            className="absolute top-4 end-4 text-xs font-medium px-2 py-1 rounded border border-[var(--border)] hover:bg-slate-100 dark:hover:bg-slate-800"
+          >
+            {locale === 'he' ? 'EN' : 'HE'}
+          </button>
+          <h1 className="text-2xl font-semibold text-center mb-2">{t('login.title')}</h1>
+          <p className="text-center text-sm text-slate-500 mb-6">{t('login.twoFactorRequired')}</p>
+          <form onSubmit={handle2FASubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">{t('login.twoFactorCode')}</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                className="input text-center text-2xl tracking-widest"
+                value={twoFactorCode}
+                onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder={t('login.twoFactorCodePlaceholder')}
+                autoFocus
+                required
+              />
+            </div>
+            {error && <p className="text-sm text-red-600">{error}</p>}
+            <button type="submit" className="btn-primary w-full" disabled={loading || twoFactorCode.length < 6}>
+              {loading ? t('login.pleaseWait') : t('login.verify')}
+            </button>
+          </form>
+          <p className="mt-4 text-center text-sm">
+            <button
+              type="button"
+              className="text-primary-600 hover:underline"
+              onClick={() => { setNeeds2FA(false); setTwoFactorCode(''); setError(''); }}
+            >
+              {t('login.backToLogin')}
+            </button>
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (

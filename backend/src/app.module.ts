@@ -12,6 +12,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { InsightsModule } from './insights/insights.module';
 import { LoansModule } from './loans/loans.module';
 import { SavingsModule } from './savings/savings.module';
+import { TwoFactorModule } from './two-factor/two-factor.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { SavingsModule } from './savings/savings.module';
     InsightsModule,
     LoansModule,
     SavingsModule,
+    TwoFactorModule,
   ],
 })
 export class AppModule {}
