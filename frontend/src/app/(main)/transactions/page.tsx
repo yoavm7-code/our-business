@@ -68,6 +68,9 @@ export default function TransactionsPage() {
     description: '',
     amount: '',
     isRecurring: false,
+    installmentCurrent: '',
+    installmentTotal: '',
+    totalAmount: '',
   });
   const [addingTx, setAddingTx] = useState(false);
   const [suggestingCategory, setSuggestingCategory] = useState(false);
@@ -80,6 +83,9 @@ export default function TransactionsPage() {
     description: '',
     amount: '',
     isRecurring: false,
+    installmentCurrent: '',
+    installmentTotal: '',
+    totalAmount: '',
   });
   const [updatingTx, setUpdatingTx] = useState(false);
   const [suggestingCategoryTxId, setSuggestingCategoryTxId] = useState<string | null>(null);
@@ -271,6 +277,9 @@ export default function TransactionsPage() {
       description: tx.description,
       amount: String(Math.abs(Number(tx.amount))),
       isRecurring: tx.isRecurring ?? false,
+      installmentCurrent: tx.installmentCurrent != null ? String(tx.installmentCurrent) : '',
+      installmentTotal: tx.installmentTotal != null ? String(tx.installmentTotal) : '',
+      totalAmount: tx.totalAmount != null && Number(tx.totalAmount) > 0 ? String(Number(tx.totalAmount)) : '',
     });
   }
 
@@ -282,6 +291,9 @@ export default function TransactionsPage() {
     const amountNum = parseFloat(editTxForm.amount);
     const isIncome = editTxForm.type === 'income';
     const amount = isIncome ? amountNum : -amountNum;
+    const instCurrent = editTxForm.installmentCurrent ? parseInt(editTxForm.installmentCurrent, 10) : null;
+    const instTotal = editTxForm.installmentTotal ? parseInt(editTxForm.installmentTotal, 10) : null;
+    const totalAmt = editTxForm.totalAmount ? parseFloat(editTxForm.totalAmount) : null;
     try {
       await txApi.update(editingTxId, {
         accountId: editTxForm.accountId,
@@ -290,9 +302,28 @@ export default function TransactionsPage() {
         description: editTxForm.description.trim(),
         amount,
         isRecurring: editTxForm.isRecurring,
+        installmentCurrent: instCurrent,
+        installmentTotal: instTotal,
+        totalAmount: totalAmt,
       });
+      // Update local state
+      const cat = editTxForm.categoryId ? categoriesForSelect.find((c) => c.id === editTxForm.categoryId) : null;
+      setItems((prev) => prev.map((item) =>
+        item.id === editingTxId
+          ? {
+              ...item,
+              amount: String(amount),
+              description: editTxForm.description.trim(),
+              date: editTxForm.date,
+              category: cat ? { id: cat.id, name: cat.name, slug: cat.slug } : null,
+              isRecurring: editTxForm.isRecurring,
+              installmentCurrent: instCurrent,
+              installmentTotal: instTotal,
+              totalAmount: totalAmt != null ? String(totalAmt) : null,
+            }
+          : item,
+      ));
       setEditingTxId(null);
-      setRefreshKey((k) => k + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('common.failedToLoad'));
     } finally {
@@ -436,6 +467,9 @@ export default function TransactionsPage() {
     try {
       const amountNum = parseFloat(addTxForm.amount);
       const amount = addTxForm.type === 'income' ? Math.abs(amountNum) : -Math.abs(amountNum);
+      const instCurrent = addTxForm.installmentCurrent ? parseInt(addTxForm.installmentCurrent, 10) : undefined;
+      const instTotal = addTxForm.installmentTotal ? parseInt(addTxForm.installmentTotal, 10) : undefined;
+      const totalAmt = addTxForm.totalAmount ? parseFloat(addTxForm.totalAmount) : undefined;
       await txApi.create({
         accountId: addTxForm.accountId,
         categoryId: addTxForm.categoryId || undefined,
@@ -443,9 +477,12 @@ export default function TransactionsPage() {
         description: addTxForm.description.trim(),
         amount,
         isRecurring: addTxForm.isRecurring,
+        ...(instCurrent && { installmentCurrent: instCurrent }),
+        ...(instTotal && { installmentTotal: instTotal }),
+        ...(totalAmt && { totalAmount: totalAmt }),
       });
       setShowAddTx(false);
-      setAddTxForm({ type: 'expense', accountId: '', categoryId: '', date: new Date().toISOString().slice(0, 10), description: '', amount: '', isRecurring: false });
+      setAddTxForm({ type: 'expense', accountId: '', categoryId: '', date: new Date().toISOString().slice(0, 10), description: '', amount: '', isRecurring: false, installmentCurrent: '', installmentTotal: '', totalAmount: '' });
       setRefreshKey((k) => k + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('common.failedToLoad'));
@@ -926,6 +963,48 @@ export default function TransactionsPage() {
                   required
                 />
               </div>
+              {/* Installment fields */}
+              <div className="pt-3 border-t border-[var(--border)]">
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">{t('transactions.installments')}</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="block text-xs text-slate-500 mb-1">{t('transactions.installmentCurrentShort')}</label>
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      className="input w-full py-1.5 text-sm"
+                      value={addTxForm.installmentCurrent}
+                      onChange={(e) => setAddTxForm((f) => ({ ...f, installmentCurrent: e.target.value.replace(/\D/g, '') }))}
+                      placeholder="2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-500 mb-1">{t('transactions.installmentTotalShort')}</label>
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      className="input w-full py-1.5 text-sm"
+                      value={addTxForm.installmentTotal}
+                      onChange={(e) => setAddTxForm((f) => ({ ...f, installmentTotal: e.target.value.replace(/\D/g, '') }))}
+                      placeholder="3"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-500 mb-1">{t('transactions.totalAmountShort')}</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="input w-full py-1.5 text-sm"
+                      value={addTxForm.totalAmount}
+                      onChange={(e) => setAddTxForm((f) => ({ ...f, totalAmount: e.target.value }))}
+                      placeholder="1,950"
+                    />
+                  </div>
+                </div>
+              </div>
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
@@ -1023,6 +1102,48 @@ export default function TransactionsPage() {
                   onChange={(e) => setEditTxForm((f) => ({ ...f, amount: e.target.value }))}
                   required
                 />
+              </div>
+              {/* Installment fields */}
+              <div className="pt-3 border-t border-[var(--border)]">
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">{t('transactions.installments')}</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="block text-xs text-slate-500 mb-1">{t('transactions.installmentCurrentShort')}</label>
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      className="input w-full py-1.5 text-sm"
+                      value={editTxForm.installmentCurrent}
+                      onChange={(e) => setEditTxForm((f) => ({ ...f, installmentCurrent: e.target.value.replace(/\D/g, '') }))}
+                      placeholder="2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-500 mb-1">{t('transactions.installmentTotalShort')}</label>
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      className="input w-full py-1.5 text-sm"
+                      value={editTxForm.installmentTotal}
+                      onChange={(e) => setEditTxForm((f) => ({ ...f, installmentTotal: e.target.value.replace(/\D/g, '') }))}
+                      placeholder="3"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-500 mb-1">{t('transactions.totalAmountShort')}</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="input w-full py-1.5 text-sm"
+                      value={editTxForm.totalAmount}
+                      onChange={(e) => setEditTxForm((f) => ({ ...f, totalAmount: e.target.value }))}
+                      placeholder="1,950"
+                    />
+                  </div>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <input

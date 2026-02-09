@@ -63,6 +63,23 @@ export const users = {
       method: 'PUT',
       body: JSON.stringify(body),
     }),
+  getDashboardConfig: () =>
+    api<{ widgets: WidgetConfig[] } | null>('/api/users/me/dashboard-config'),
+  saveDashboardConfig: (config: { widgets: WidgetConfig[] }) =>
+    api<{ ok: boolean }>('/api/users/me/dashboard-config', {
+      method: 'PUT',
+      body: JSON.stringify(config),
+    }),
+};
+
+export type WidgetConfig = {
+  id: string;
+  type: 'stat' | 'bar-chart' | 'pie-chart' | 'fixed-list' | 'recent-tx';
+  metric?: string;
+  variant?: string;
+  title?: string;
+  color?: string;
+  size: 'sm' | 'md' | 'lg';
 };
 
 export const accounts = {
@@ -106,9 +123,9 @@ export const transactions = {
       `/api/transactions?${qs}`,
     );
   },
-  create: (body: { accountId: string; categoryId?: string; date: string; description: string; amount: number; currency?: string; isRecurring?: boolean }) =>
+  create: (body: { accountId: string; categoryId?: string; date: string; description: string; amount: number; currency?: string; isRecurring?: boolean; totalAmount?: number; installmentCurrent?: number; installmentTotal?: number }) =>
     api<unknown>('/api/transactions', { method: 'POST', body: JSON.stringify(body) }),
-  update: (id: string, body: { accountId?: string; categoryId?: string | null; date?: string; description?: string; amount?: number; isRecurring?: boolean }) =>
+  update: (id: string, body: { accountId?: string; categoryId?: string | null; date?: string; description?: string; amount?: number; isRecurring?: boolean; totalAmount?: number | null; installmentCurrent?: number | null; installmentTotal?: number | null }) =>
     api<unknown>(`/api/transactions/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   updateCategory: (id: string, categoryId: string | null) =>
     api<unknown>(`/api/transactions/${id}/category`, {
@@ -328,4 +345,15 @@ export const dashboard = {
     }),
   fixedExpenses: () => api<FixedItem[]>('/api/dashboard/fixed-expenses'),
   fixedIncome: () => api<FixedItem[]>('/api/dashboard/fixed-income'),
+  recentTransactions: () =>
+    api<Array<{
+      id: string;
+      date: string;
+      description: string;
+      amount: number;
+      categoryName: string | null;
+      categorySlug: string | null;
+      categoryColor: string | null;
+      accountName: string | null;
+    }>>('/api/dashboard/recent-transactions'),
 };
