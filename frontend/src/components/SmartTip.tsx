@@ -1,8 +1,49 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { insights } from '@/lib/api';
+import { insights, type InsightSection } from '@/lib/api';
 import { useTranslation } from '@/i18n/context';
+
+/** Extract a meaningful tip line from AI-generated insight content */
+function extractTip(content: string): string | null {
+  const lines = content.split('\n').map((l) => l.trim()).filter(Boolean);
+
+  for (const line of lines) {
+    // Skip markdown headers
+    if (line.startsWith('#')) continue;
+    // Skip intro/title lines that end with ":"
+    if (line.endsWith(':')) continue;
+    // Skip very short lines
+    if (line.replace(/[*•\-\d.)#]/g, '').trim().length < 15) continue;
+
+    // Clean up: remove bullet/number prefixes and bold markers
+    let cleaned = line
+      .replace(/^[•\-*]\s*/, '')
+      .replace(/^\d+[.)]\s*/, '')
+      .replace(/\*\*/g, '')
+      .trim();
+
+    if (cleaned.length < 15) continue;
+
+    // Truncate if too long
+    if (cleaned.length > 150) {
+      // Try to cut at a sentence boundary
+      const sentenceEnd = cleaned.slice(0, 150).lastIndexOf('.');
+      if (sentenceEnd > 60) {
+        cleaned = cleaned.slice(0, sentenceEnd + 1);
+      } else {
+        cleaned = cleaned.slice(0, 147) + '...';
+      }
+    }
+
+    return cleaned;
+  }
+
+  return null;
+}
+
+// Sections to try, in order - savingsRecommendation gives the best actionable tips
+const TIP_SECTIONS: InsightSection[] = ['savingsRecommendation', 'spendingInsights', 'monthlySummary'];
 
 export default function SmartTip() {
   const { t, locale } = useTranslation();
@@ -15,23 +56,24 @@ export default function SmartTip() {
     const key = `smartTip_shown_${locale}`;
     if (typeof window !== 'undefined' && sessionStorage.getItem(key)) return;
 
-    const timer = setTimeout(() => {
-      insights
-        .getSection('spendingInsights', locale)
-        .then((res) => {
+    const timer = setTimeout(async () => {
+      // Try multiple sections until we find a good tip
+      for (const section of TIP_SECTIONS) {
+        try {
+          const res = await insights.getSection(section, locale);
           if (res.content) {
-            const lines = res.content
-              .split('\n')
-              .filter((l) => l.trim() && !l.trim().startsWith('#'));
-            const firstLine = lines[0]?.replace(/[*#\-]/g, '').trim();
-            if (firstLine && firstLine.length > 10) {
-              setTip(firstLine.length > 120 ? firstLine.slice(0, 117) + '...' : firstLine);
+            const extracted = extractTip(res.content);
+            if (extracted) {
+              setTip(extracted);
               setVisible(true);
               sessionStorage.setItem(key, '1');
+              return;
             }
           }
-        })
-        .catch(() => {});
+        } catch {
+          // Try next section
+        }
+      }
     }, 3000);
 
     return () => clearTimeout(timer);
@@ -46,7 +88,7 @@ export default function SmartTip() {
 
   return (
     <div
-      className={`fixed bottom-6 start-6 md:start-auto md:end-6 z-50 max-w-sm ${
+      className={`fixed bottom-6 start-6 md:start-auto md:end-6 z-30 max-w-sm ${
         visible ? 'tip-bounce' : 'opacity-0 pointer-events-none'
       }`}
     >
