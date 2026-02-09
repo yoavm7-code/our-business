@@ -106,9 +106,9 @@ export const transactions = {
       `/api/transactions?${qs}`,
     );
   },
-  create: (body: { accountId: string; categoryId?: string; date: string; description: string; amount: number; currency?: string; isRecurring?: boolean }) =>
+  create: (body: { accountId: string; categoryId?: string; date: string; description: string; amount: number; currency?: string; isRecurring?: boolean; totalAmount?: number; installmentCurrent?: number; installmentTotal?: number }) =>
     api<unknown>('/api/transactions', { method: 'POST', body: JSON.stringify(body) }),
-  update: (id: string, body: { accountId?: string; categoryId?: string | null; date?: string; description?: string; amount?: number; isRecurring?: boolean }) =>
+  update: (id: string, body: { accountId?: string; categoryId?: string | null; date?: string; description?: string; amount?: number; isRecurring?: boolean; totalAmount?: number | null; installmentCurrent?: number | null; installmentTotal?: number | null }) =>
     api<unknown>(`/api/transactions/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   updateCategory: (id: string, categoryId: string | null) =>
     api<unknown>(`/api/transactions/${id}/category`, {

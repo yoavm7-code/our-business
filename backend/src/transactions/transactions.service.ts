@@ -306,6 +306,10 @@ export class TransactionsService {
       }
     }
     if (dto.isRecurring !== undefined) data.isRecurring = dto.isRecurring;
+    // Handle installment fields – allow setting to null to clear them
+    if (dto.totalAmount !== undefined) data.totalAmount = dto.totalAmount;
+    if (dto.installmentCurrent !== undefined) data.installmentCurrent = dto.installmentCurrent;
+    if (dto.installmentTotal !== undefined) data.installmentTotal = dto.installmentTotal;
     const result = await this.prisma.transaction.updateMany({
       where: { id, householdId },
       data,

@@ -393,7 +393,11 @@
     "firstChargeDate": "First charge date",
     "recurring": "Recurring",
     "recurringOn": "Fixed expense/income – click to clear",
-    "recurringOff": "Mark as fixed expense/income"
+    "recurringOff": "Mark as fixed expense/income",
+    "installments": "Installments",
+    "installmentCurrentShort": "Current",
+    "installmentTotalShort": "Of total",
+    "totalAmountShort": "Total amount"
   },
   "upload": {
     "title": "Upload Documents",

@@ -393,7 +393,11 @@
     "firstChargeDate": "תאריך חיוב ראשון",
     "recurring": "קבוע",
     "recurringOn": "הוצאה/הכנסה קבועה – לחץ לביטול",
-    "recurringOff": "סמן כהוצאה/הכנסה קבועה"
+    "recurringOff": "סמן כהוצאה/הכנסה קבועה",
+    "installments": "תשלומים",
+    "installmentCurrentShort": "תשלום נוכחי",
+    "installmentTotalShort": "מתוך",
+    "totalAmountShort": "סכום כולל"
   },
   "upload": {
     "title": "העלאת מסמכים",
