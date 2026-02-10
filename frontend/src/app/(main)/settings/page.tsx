@@ -351,6 +351,20 @@ export default function SettingsPage() {
                 {t('settings.country')}: {t(`countries.${user.countryCode}`)}
               </p>
             )}
+            {user?.avatarUrl && (
+              <button
+                type="button"
+                className="text-xs text-red-500 hover:text-red-700 mt-1"
+                onClick={async () => {
+                  try {
+                    await users.deleteAvatar();
+                    setUser((u) => u ? { ...u, avatarUrl: null } : u);
+                  } catch {}
+                }}
+              >
+                {t('profile.deleteAvatar')}
+              </button>
+            )}
           </div>
         </div>
         <input

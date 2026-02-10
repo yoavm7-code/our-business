@@ -76,6 +76,8 @@ export const users = {
       return res.json() as Promise<{ avatarUrl: string }>;
     });
   },
+  deleteAvatar: () =>
+    api<{ avatarUrl: null }>('/api/users/me/avatar', { method: 'DELETE' }),
   getDashboardConfig: () =>
     api<{ widgets: WidgetConfig[] } | null>('/api/users/me/dashboard-config'),
   saveDashboardConfig: (config: { widgets: WidgetConfig[] }) =>
