@@ -4,7 +4,10 @@ const nextConfig = {
   reactStrictMode: true,
   devIndicators: false,
   async rewrites() {
-    return [{ source: '/api/:path*', destination: `${apiUrl.replace(/\/$/, '')}/api/:path*` }];
+    return [
+      { source: '/api/:path*', destination: `${apiUrl.replace(/\/$/, '')}/api/:path*` },
+      { source: '/uploads/:path*', destination: `${apiUrl.replace(/\/$/, '')}/uploads/:path*` },
+    ];
   },
 };
 

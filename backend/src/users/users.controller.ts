@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Put, Res, UseGuards, UseInterceptors, UploadedFile, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Post, Put, Res, UseGuards, UseInterceptors, UploadedFile, BadRequestException, NotFoundException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -44,6 +44,11 @@ export class UsersController {
     if (!allowed.includes(file.mimetype)) throw new BadRequestException('Only JPEG, PNG, WebP, and GIF images are allowed');
     if (file.size > 2 * 1024 * 1024) throw new BadRequestException('File must be under 2MB');
     return this.usersService.uploadAvatar(user.id, file);
+  }
+
+  @Delete('me/avatar')
+  async deleteAvatar(@CurrentUser() user: { id: string }) {
+    return this.usersService.deleteAvatar(user.id);
   }
 
   @Get('me/dashboard-config')

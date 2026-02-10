@@ -109,6 +109,18 @@ export class UsersService {
     return { avatarUrl: `/uploads/avatars/${fileName}?v=${Date.now()}` };
   }
 
+  async deleteAvatar(userId: string) {
+    const u = await this.prisma.user.findUnique({ where: { id: userId }, select: { avatarPath: true } });
+    if (u?.avatarPath) {
+      try { fs.unlinkSync(u.avatarPath); } catch { /* ignore if file missing */ }
+    }
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { avatarPath: null },
+    });
+    return { avatarUrl: null };
+  }
+
   async getAvatarPath(userId: string): Promise<string | null> {
     const u = await this.prisma.user.findUnique({ where: { id: userId }, select: { avatarPath: true } });
     if (!u?.avatarPath || !fs.existsSync(u.avatarPath)) return null;

@@ -653,7 +653,8 @@
     "cropAvatar": "Adjust profile picture",
     "cropHint": "Drag to move, scroll or slider to zoom",
     "cropConfirm": "Save photo",
-    "avatarUpdated": "Profile picture updated."
+    "avatarUpdated": "Profile picture updated.",
+    "deleteAvatar": "Delete photo"
   },
   "tips": {
     "title": "Financial Tips",
