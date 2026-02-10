@@ -332,12 +332,12 @@ export default function SettingsPage() {
                 src={user.avatarUrl}
                 alt=""
                 className="w-16 h-16 rounded-full object-cover ring-2 ring-primary-500/30"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }}
               />
-            ) : null}
-            <div className={`w-16 h-16 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-xl font-bold ring-2 ring-primary-500/30 ${user?.avatarUrl ? 'hidden' : ''}`}>
-              {user?.name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || '?'}
-            </div>
+            ) : (
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-xl font-bold ring-2 ring-primary-500/30">
+                {user?.name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || '?'}
+              </div>
+            )}
             <button
               type="button"
               onClick={() => avatarInputRef.current?.click()}
@@ -403,12 +403,12 @@ export default function SettingsPage() {
                       src={user.avatarUrl}
                       alt=""
                       className="w-14 h-14 rounded-full object-cover ring-2 ring-primary-500/30"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }}
                     />
-                  ) : null}
-                  <div className={`w-14 h-14 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-lg font-bold ring-2 ring-primary-500/30 ${user?.avatarUrl ? 'hidden' : ''}`}>
-                    {user?.name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || '?'}
-                  </div>
+                  ) : (
+                    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-lg font-bold ring-2 ring-primary-500/30">
+                      {user?.name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || '?'}
+                    </div>
+                  )}
                 </div>
                 <button
                   type="button"
