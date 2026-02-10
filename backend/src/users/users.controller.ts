@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Post, Put, Res, UseGuards, UseInterceptors, UploadedFile, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Post, Put, Res, UseGuards, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -29,7 +29,10 @@ export class UsersController {
     @Res() res: Response,
   ) {
     const avatar = await this.usersService.getAvatarData(user.id);
-    if (!avatar) throw new NotFoundException('No avatar');
+    if (!avatar) {
+      res.status(404).json({ message: 'No avatar' });
+      return;
+    }
     res.set('Content-Type', avatar.mime);
     res.set('Cache-Control', 'public, max-age=86400');
     res.send(avatar.data);

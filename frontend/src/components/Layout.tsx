@@ -191,12 +191,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 src={userInfo.avatarUrl}
                 alt=""
                 className="w-9 h-9 rounded-full object-cover ring-2 ring-emerald-500/50"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }}
               />
-            ) : null}
-            <div className={`w-9 h-9 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white text-sm font-bold ring-2 ring-emerald-500/50 ${userInfo.avatarUrl ? 'hidden' : ''}`}>
-              {userInitial}
-            </div>
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white text-sm font-bold ring-2 ring-emerald-500/50">
+                {userInitial}
+              </div>
+            )}
             <div className="flex-1 min-w-0 text-start">
               <p className="font-medium truncate text-sm text-white">{userDisplayName}</p>
               <p className="text-xs text-[#a0a3bd] truncate">{userInfo.email}</p>

@@ -36,17 +36,16 @@ export class UsersService {
   async findById(id: string) {
     const u = await this.prisma.user.findUnique({
       where: { id },
-      select: { id: true, email: true, name: true, householdId: true, countryCode: true, avatarData: true },
+      select: { id: true, email: true, name: true, householdId: true, countryCode: true, avatarData: true, avatarMime: true },
     });
     if (!u) return null;
-    const hasAvatar = !!u.avatarData;
     return {
       id: u.id,
       email: u.email,
       name: u.name,
       householdId: u.householdId,
       countryCode: u.countryCode,
-      avatarUrl: hasAvatar ? `/api/users/me/avatar?v=${Date.now()}` : null,
+      avatarUrl: u.avatarData ? `data:${u.avatarMime || 'image/png'};base64,${u.avatarData}` : null,
     };
   }
 
@@ -87,7 +86,7 @@ export class UsersService {
     const u = await this.prisma.user.update({
       where: { id },
       data,
-      select: { id: true, email: true, name: true, householdId: true, countryCode: true, avatarData: true },
+      select: { id: true, email: true, name: true, householdId: true, countryCode: true, avatarData: true, avatarMime: true },
     });
     return {
       id: u.id,
@@ -95,7 +94,7 @@ export class UsersService {
       name: u.name,
       householdId: u.householdId,
       countryCode: u.countryCode,
-      avatarUrl: u.avatarData ? `/api/users/me/avatar?v=${Date.now()}` : null,
+      avatarUrl: u.avatarData ? `data:${u.avatarMime || 'image/png'};base64,${u.avatarData}` : null,
     };
   }
 
@@ -108,7 +107,7 @@ export class UsersService {
         avatarMime: file.mimetype,
       },
     });
-    return { avatarUrl: `/api/users/me/avatar?v=${Date.now()}` };
+    return { avatarUrl: `data:${file.mimetype};base64,${base64}` };
   }
 
   async deleteAvatar(userId: string) {
