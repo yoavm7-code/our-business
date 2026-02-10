@@ -8,8 +8,12 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // Security headers
-  app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+  // Security headers – disable CSP (frontend is on a different origin)
+  app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  }));
 
   // Serve only avatar uploads as static assets (not full uploads dir)
   const uploadDir = path.resolve(process.env.UPLOAD_DIR || './uploads');
