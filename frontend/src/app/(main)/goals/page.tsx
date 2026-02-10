@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { goals, type GoalItem } from '@/lib/api';
 import { useTranslation } from '@/i18n/context';
+import HelpTooltip from '@/components/HelpTooltip';
 
 const GOAL_ICONS = ['🎯', '✈️', '🏠', '🚗', '💰', '📚', '🏥', '💍', '🎓', '🛒', '🏖️', '💻', '👶', '🐕', '🎁'];
 const GOAL_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#ec4899'];
@@ -123,7 +124,7 @@ export default function GoalsPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">{t('goals.title')}</h1>
+          <h1 className="text-2xl font-bold">{t('goals.title')} <HelpTooltip text={t('help.goals')} className="ms-1" /></h1>
           <p className="text-sm text-slate-500 mt-1">{t('goals.subtitle')}</p>
         </div>
         <button type="button" className="btn-primary" onClick={openAdd}>

@@ -8,6 +8,7 @@ import { JwtStrategy } from './jwt.strategy';
 import { UsersModule } from '../users/users.module';
 import { CaptchaModule } from '../captcha/captcha.module';
 import { TwoFactorModule } from '../two-factor/two-factor.module';
+import { EmailModule } from '../email/email.module';
 import { DEFAULT_JWT_SECRET } from './constants';
 
 @Module({
@@ -15,6 +16,7 @@ import { DEFAULT_JWT_SECRET } from './constants';
     UsersModule,
     CaptchaModule,
     TwoFactorModule,
+    EmailModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],

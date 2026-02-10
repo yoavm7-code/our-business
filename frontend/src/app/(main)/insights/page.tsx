@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { insights, type InsightSection } from '@/lib/api';
 import { useTranslation } from '@/i18n/context';
+import HelpTooltip from '@/components/HelpTooltip';
 
 const CACHE_PREFIX = 'insights_';
 
@@ -247,7 +248,7 @@ export default function InsightsPage() {
   return (
     <div className="space-y-6 max-w-2xl mx-auto animate-fadeIn">
       <div className="text-center mb-2">
-        <h1 className="text-2xl font-bold">{t('insightsPage.title')}</h1>
+        <h1 className="text-2xl font-bold">{t('insightsPage.title')} <HelpTooltip text={t('help.insights')} className="ms-1" /></h1>
         <p className="text-slate-500 dark:text-slate-400 mt-1.5 text-sm">
           {t('insightsPage.subtitle')}
         </p>

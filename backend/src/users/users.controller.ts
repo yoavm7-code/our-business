@@ -18,9 +18,35 @@ export class UsersController {
   @Put('me')
   async updateMe(
     @CurrentUser() user: { id: string },
-    @Body() body: { name?: string; email?: string; password?: string; countryCode?: string | null },
+    @Body() body: { name?: string; email?: string; password?: string; countryCode?: string | null; phone?: string | null },
   ) {
     return this.usersService.update(user.id, body);
+  }
+
+  @Get('me/notification-settings')
+  async getNotificationSettings(@CurrentUser() user: { id: string }) {
+    return this.usersService.getNotificationSettings(user.id);
+  }
+
+  @Put('me/notification-settings')
+  async updateNotificationSettings(
+    @CurrentUser() user: { id: string },
+    @Body() body: {
+      notifyLogin?: boolean;
+      notifyLargeTransaction?: boolean;
+      notifyBudgetExceeded?: boolean;
+      notifyGoalDeadline?: boolean;
+      notifyWeeklyReport?: boolean;
+      notifyMonthlyReport?: boolean;
+      largeTransactionThreshold?: number | null;
+    },
+  ) {
+    return this.usersService.updateNotificationSettings(user.id, body);
+  }
+
+  @Post('me/complete-onboarding')
+  async completeOnboarding(@CurrentUser() user: { id: string }) {
+    return this.usersService.completeOnboarding(user.id);
   }
 
   @Get('me/avatar')

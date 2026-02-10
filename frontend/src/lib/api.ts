@@ -49,15 +49,19 @@ export const auth = {
       '/api/auth/login',
       { method: 'POST', body: JSON.stringify({ email, password, captchaToken, twoFactorToken }) },
     ),
-  register: (email: string, password: string, name?: string, countryCode?: string, captchaToken?: string) =>
+  register: (email: string, password: string, name?: string, countryCode?: string, captchaToken?: string, phone?: string) =>
     api<{ accessToken: string; user: { id: string; email: string; name: string | null; householdId: string; countryCode?: string } }>('/api/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email, password, name, countryCode, captchaToken }),
+      body: JSON.stringify({ email, password, name, countryCode, captchaToken, phone }),
     }),
+  verifyEmail: (token: string) =>
+    api<{ verified: boolean }>('/api/auth/verify-email', { method: 'POST', body: JSON.stringify({ token }) }),
+  resendVerification: () =>
+    api<{ sent: boolean }>('/api/auth/resend-verification', { method: 'POST' }),
 };
 
 export const users = {
-  me: () => api<{ id: string; email: string; name: string | null; householdId: string; countryCode?: string | null; avatarUrl?: string | null }>('/api/users/me'),
+  me: () => api<{ id: string; email: string; name: string | null; householdId: string; countryCode?: string | null; avatarUrl?: string | null; emailVerified?: boolean; phone?: string | null; onboardingCompleted?: boolean; twoFactorMethod?: string | null }>('/api/users/me'),
   update: (body: { name?: string; email?: string; password?: string; countryCode?: string | null }) =>
     api<{ id: string; email: string; name: string | null; householdId: string; countryCode?: string | null; avatarUrl?: string | null }>('/api/users/me', {
       method: 'PUT',
@@ -78,6 +82,12 @@ export const users = {
   },
   deleteAvatar: () =>
     api<{ avatarUrl: null }>('/api/users/me/avatar', { method: 'DELETE' }),
+  getNotificationSettings: () =>
+    api<NotificationSettings>('/api/users/me/notification-settings'),
+  updateNotificationSettings: (settings: Partial<NotificationSettings>) =>
+    api<NotificationSettings>('/api/users/me/notification-settings', { method: 'PUT', body: JSON.stringify(settings) }),
+  completeOnboarding: () =>
+    api<{ ok: boolean }>('/api/users/me/complete-onboarding', { method: 'POST' }),
   getDashboardConfig: () =>
     api<{ widgets: WidgetConfig[] } | null>('/api/users/me/dashboard-config'),
   saveDashboardConfig: (config: { widgets: WidgetConfig[] }) =>
@@ -92,6 +102,19 @@ export const twoFactor = {
   generate: () => api<{ secret: string; qrCode: string }>('/api/2fa/generate', { method: 'POST' }),
   enable: (token: string) => api<{ enabled: boolean }>('/api/2fa/enable', { method: 'POST', body: JSON.stringify({ token }) }),
   disable: (token: string) => api<{ enabled: boolean }>('/api/2fa/disable', { method: 'POST', body: JSON.stringify({ token }) }),
+  sendCode: () => api<{ sent: boolean }>('/api/2fa/send-code', { method: 'POST' }),
+  getMethod: () => api<{ method: string | null }>('/api/2fa/method'),
+  setMethod: (method: string) => api<{ method: string }>('/api/2fa/method', { method: 'PUT', body: JSON.stringify({ method }) }),
+};
+
+export type NotificationSettings = {
+  notifyLogin: boolean;
+  notifyLargeTransaction: boolean;
+  notifyBudgetExceeded: boolean;
+  notifyGoalDeadline: boolean;
+  notifyWeeklyReport: boolean;
+  notifyMonthlyReport: boolean;
+  largeTransactionThreshold: number | null;
 };
 
 export type WidgetConfig = {

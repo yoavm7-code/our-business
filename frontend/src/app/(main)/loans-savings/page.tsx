@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { useTranslation } from '@/i18n/context';
+import HelpTooltip from '@/components/HelpTooltip';
 
 type Loan = {
   id: string;
@@ -208,7 +209,7 @@ export default function LoansSavingsPage() {
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      <h1 className="text-2xl font-bold">{t('loansSavings.title')}</h1>
+      <h1 className="text-2xl font-bold">{t('loansSavings.title')} <HelpTooltip text={t('help.loansSavings')} className="ms-1" /></h1>
       <p className="text-slate-600 dark:text-slate-400">{t('loansSavings.description')}</p>
 
       {/* Summary cards */}

@@ -5,6 +5,7 @@ import { dashboard, accounts, categories, users, transactions as txApi, forex, g
 import { useTranslation } from '@/i18n/context';
 import DateRangePicker from '@/components/DateRangePicker';
 import SmartTip from '@/components/SmartTip';
+import HelpTooltip from '@/components/HelpTooltip';
 import WidgetSettings from '@/components/dashboard/WidgetSettings';
 import { DEFAULT_WIDGETS } from '@/components/dashboard/defaults';
 import { getQuickRangeDates } from '@/components/DateRangePicker';
@@ -846,9 +847,10 @@ export default function DashboardPage() {
     <div className="space-y-6 animate-fadeIn">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold">{t('dashboard.title')}</h1>
+        <h1 className="text-2xl font-bold">{t('dashboard.title')} <HelpTooltip text={t('help.dashboardTitle')} className="ms-1" /></h1>
         <div className="flex flex-wrap items-center gap-3">
           <DateRangePicker from={from} to={to} onChange={handleDateRangeChange} />
+          <HelpTooltip text={t('help.dateRange')} className="ms-1" />
           <select className="input w-auto min-w-[160px]" value={accountId} onChange={(e) => setAccountId(e.target.value)} title={t('common.accounts')}>
             <option value="">{t('common.allAccounts')}</option>
             {accountsList.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
@@ -875,6 +877,7 @@ export default function DashboardPage() {
             <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
           </svg>
           {t('dashboard.customize')}
+          <HelpTooltip text={t('help.customize')} className="ms-1" />
         </button>
         {editMode && (
           <>
