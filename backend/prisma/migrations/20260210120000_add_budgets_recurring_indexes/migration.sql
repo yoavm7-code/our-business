@@ -1,5 +1,5 @@
--- Add index on User.householdId for faster household lookups
-CREATE INDEX "User_household_id_idx" ON "User"("household_id");
+-- Add index on User.householdId for faster household lookups (if not exists)
+CREATE INDEX IF NOT EXISTS "User_household_id_idx" ON "User"("household_id");
 
 -- CreateTable
 CREATE TABLE "Budget" (
