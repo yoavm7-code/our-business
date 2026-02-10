@@ -10,6 +10,7 @@ import AvatarCropper from '@/components/AvatarCropper';
 import CommandPalette from '@/components/CommandPalette';
 import { useTheme } from '@/components/ThemeProvider';
 import AlertsBell from '@/components/AlertsBell';
+import OnboardingProvider, { useOnboarding } from '@/components/OnboardingProvider';
 
 const navItems: { href: string; key: string; icon: string }[] = [
   { href: '/dashboard', key: 'nav.dashboard', icon: 'grid' },
@@ -62,6 +63,21 @@ function NavIcon({ name, className }: { name: string; className?: string }) {
     default:
       return null;
   }
+}
+
+function StartTourButton() {
+  const { t } = useTranslation();
+  const { startTour } = useOnboarding();
+  return (
+    <button
+      type="button"
+      onClick={startTour}
+      className="flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm text-[#a0a3bd] hover:bg-white/5 hover:text-white transition-all duration-150"
+    >
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span>{t('onboarding.startTour')}</span>
+    </button>
+  );
 }
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -290,6 +306,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
           <span>{locale === 'he' ? 'English' : 'עברית'}</span>
         </button>
+        {/* Start tour */}
+        <StartTourButton />
         {/* Sign out */}
         <button
           type="button"
@@ -304,6 +322,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   );
 
   return (
+    <OnboardingProvider>
     <div className="min-h-screen flex flex-col md:flex-row">
       {/* Mobile top bar */}
       <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-[var(--border)] bg-[var(--card)] sticky top-0 z-30">
@@ -373,5 +392,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         />
       )}
     </div>
+    </OnboardingProvider>
   );
 }

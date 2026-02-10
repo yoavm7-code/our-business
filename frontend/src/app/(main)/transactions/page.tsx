@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { transactions as txApi, accounts, categories } from '@/lib/api';
 import { useTranslation } from '@/i18n/context';
 import DateRangePicker from '@/components/DateRangePicker';
+import HelpTooltip from '@/components/HelpTooltip';
 
 function formatCurrency(n: number, locale: string) {
   return new Intl.NumberFormat(locale === 'he' ? 'he-IL' : 'en-IL', { style: 'currency', currency: 'ILS' }).format(n);
@@ -518,10 +519,13 @@ export default function TransactionsPage() {
   return (
     <div className="space-y-6 animate-fadeIn">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold">{t('transactions.title')}</h1>
-        <button type="button" className="btn-primary" onClick={() => setShowAddTx(true)}>
-          {t('transactionsPage.addTransaction')}
-        </button>
+        <h1 className="text-2xl font-semibold">{t('transactions.title')} <HelpTooltip text={t('help.transactions')} className="ms-1" /></h1>
+        <div className="flex items-center gap-2">
+          <button type="button" className="btn-primary" onClick={() => setShowAddTx(true)}>
+            {t('transactionsPage.addTransaction')}
+          </button>
+          <HelpTooltip text={t('help.addTransaction')} className="ms-1" />
+        </div>
       </div>
       <div className="card p-4 space-y-4">
         {/* First row: Date range and search */}
@@ -623,6 +627,7 @@ export default function TransactionsPage() {
                   <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
                     {t('transactions.selectedCount', { count: selectedIds.size })}
                   </span>
+                  <HelpTooltip text={t('help.bulkActions')} className="ms-1" />
                   <div className="flex-1" />
                   <button
                     type="button"
@@ -979,6 +984,7 @@ export default function TransactionsPage() {
                   >
                     {suggestingCategory ? '…' : t('transactionsPage.suggestCategory')}
                   </button>
+                  <HelpTooltip text={t('help.aiCategory')} className="ms-1" />
                 </div>
               </div>
               <div>

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { recurring, type RecurringPatternItem } from '@/lib/api';
 import { useTranslation } from '@/i18n/context';
+import HelpTooltip from '@/components/HelpTooltip';
 import { useToast } from '@/components/Toast';
 
 function formatCurrency(n: number, locale: string) {
@@ -105,7 +106,7 @@ export default function RecurringPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">{t('recurring.title')}</h1>
+          <h1 className="text-2xl font-bold">{t('recurring.title')} <HelpTooltip text={t('help.recurring')} className="ms-1" /></h1>
           <p className="text-sm text-slate-500 mt-1">{t('recurring.subtitle')}</p>
         </div>
         <button

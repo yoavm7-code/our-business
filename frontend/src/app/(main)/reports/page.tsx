@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { useTranslation } from '@/i18n/context';
+import HelpTooltip from '@/components/HelpTooltip';
 import { useToast } from '@/components/Toast';
 
 type ReportData = {
@@ -146,7 +147,7 @@ export default function ReportsPage() {
     <div className="space-y-6 animate-fadeIn">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold">{t('reports.title')}</h1>
+        <h1 className="text-2xl font-bold">{t('reports.title')} <HelpTooltip text={t('help.reports')} className="ms-1" /></h1>
         <p className="text-sm text-slate-500 mt-1">{t('reports.subtitle')}</p>
       </div>
 
@@ -217,7 +218,7 @@ export default function ReportsPage() {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
               </svg>
-              {t('reports.exportPdf')}
+              {t('reports.exportPdf')} <HelpTooltip text={t('help.exportPdf')} className="ms-1" />
             </button>
           )}
         </div>

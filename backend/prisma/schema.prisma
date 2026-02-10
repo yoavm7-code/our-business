@@ -43,12 +43,32 @@ model User {
   passwordHash     String   @map("password_hash")
   name             String?
   countryCode      String?  @map("country_code") // ISO 3166-1 alpha-2 (e.g. IL, US)
+  phone            String?  // phone number for SMS 2FA
   avatarPath       String?  @map("avatar_path")  // path to uploaded avatar image (legacy)
   avatarData       String?  @map("avatar_data") @db.Text  // base64-encoded avatar image
   avatarMime       String?  @map("avatar_mime")  // MIME type e.g. image/png
   twoFactorSecret  String?  @map("two_factor_secret") // TOTP secret
   twoFactorEnabled Boolean  @default(false) @map("two_factor_enabled")
+  twoFactorMethod  String?  @map("two_factor_method") // 'totp', 'email', 'sms'
   dashboardConfig  Json?    @map("dashboard_config") // widget layout, colors, order
+
+  // Email verification
+  emailVerified    Boolean  @default(false) @map("email_verified")
+  emailVerifyToken String?  @map("email_verify_token")
+  emailVerifyExp   DateTime? @map("email_verify_exp")
+
+  // Notification preferences
+  notifyLogin           Boolean @default(false) @map("notify_login")
+  notifyLargeTransaction Boolean @default(false) @map("notify_large_tx")
+  notifyBudgetExceeded  Boolean @default(true) @map("notify_budget_exceeded")
+  notifyGoalDeadline    Boolean @default(true) @map("notify_goal_deadline")
+  notifyWeeklyReport    Boolean @default(false) @map("notify_weekly_report")
+  notifyMonthlyReport   Boolean @default(false) @map("notify_monthly_report")
+  largeTransactionThreshold Decimal? @map("large_tx_threshold") @db.Decimal(14, 2)
+
+  // Onboarding
+  onboardingCompleted Boolean @default(false) @map("onboarding_completed")
+
   householdId      String   @map("household_id")
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt

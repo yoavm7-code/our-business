@@ -1,0 +1,14 @@
+-- AlterTable: add email verification, 2FA method, notifications, phone, onboarding
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "phone" TEXT;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "two_factor_method" TEXT;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "email_verified" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "email_verify_token" TEXT;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "email_verify_exp" TIMESTAMP(3);
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "notify_login" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "notify_large_tx" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "notify_budget_exceeded" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "notify_goal_deadline" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "notify_weekly_report" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "notify_monthly_report" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "large_tx_threshold" DECIMAL(14,2);
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "onboarding_completed" BOOLEAN NOT NULL DEFAULT false;

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { accounts } from '@/lib/api';
 import { useTranslation } from '@/i18n/context';
+import HelpTooltip from '@/components/HelpTooltip';
 
 function formatCurrency(n: number, locale: string) {
   return new Intl.NumberFormat(locale === 'he' ? 'he-IL' : 'en-IL', { style: 'currency', currency: 'ILS' }).format(n);
@@ -85,7 +86,7 @@ export default function InsuranceFundsPage() {
     <div className="space-y-8 animate-fadeIn">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">{t('insuranceFunds.title')}</h1>
+          <h1 className="text-2xl font-bold">{t('insuranceFunds.title')} <HelpTooltip text={t('help.insuranceFunds')} className="ms-1" /></h1>
           <p className="text-slate-600 dark:text-slate-400 mt-1">{t('insuranceFunds.description')}</p>
         </div>
         <button

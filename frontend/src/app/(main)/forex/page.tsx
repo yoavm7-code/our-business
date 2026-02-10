@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { forex, dashboard, type ForexAccountItem, type ForexTransferItem } from '@/lib/api';
 import { useTranslation } from '@/i18n/context';
+import HelpTooltip from '@/components/HelpTooltip';
 
 const POPULAR_CURRENCIES = ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'CNY', 'THB', 'TRY'];
 const CURRENCY_SYMBOLS: Record<string, string> = {
@@ -343,7 +344,7 @@ export default function ForexPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">{t('forex.title')}</h1>
+        <h1 className="text-2xl font-bold">{t('forex.title')} <HelpTooltip text={t('help.forex')} className="ms-1" /></h1>
         <p className="text-sm text-slate-500 mt-1">{t('forex.subtitle')}</p>
       </div>
 

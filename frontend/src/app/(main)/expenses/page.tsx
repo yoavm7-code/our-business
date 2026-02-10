@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { dashboard, transactions as txApi, accounts, categories } from '@/lib/api';
 import { useTranslation } from '@/i18n/context';
+import HelpTooltip from '@/components/HelpTooltip';
 
 const KNOWN_SLUGS = ['groceries', 'transport', 'utilities', 'rent', 'insurance', 'healthcare', 'dining', 'shopping', 'entertainment', 'other', 'salary', 'income', 'credit_charges', 'transfers', 'fees', 'subscriptions', 'education', 'pets', 'gifts', 'childcare', 'savings', 'pension', 'investment', 'bank_fees', 'online_shopping', 'loan_payment', 'loan_interest', 'standing_order', 'finance', 'unknown'];
 function getCatName(name: string, slug: string | undefined, t: (k: string) => string) {
@@ -91,7 +92,7 @@ export default function ExpensesPage() {
 
   return (
     <div className="space-y-8 animate-fadeIn">
-      <h1 className="text-2xl font-bold">{t('expenses.title')}</h1>
+      <h1 className="text-2xl font-bold">{t('expenses.title')} <HelpTooltip text={t('help.expenses')} className="ms-1" /></h1>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="card">
           <p className="text-sm text-slate-500 dark:text-slate-400">{t('expenses.expensesThisPeriod')}</p>

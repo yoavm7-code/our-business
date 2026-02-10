@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { users, accounts, categories, twoFactor } from '@/lib/api';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { users, accounts, categories, twoFactor, type NotificationSettings } from '@/lib/api';
 import { COUNTRY_CODES } from '@/lib/countries';
 import { useTranslation } from '@/i18n/context';
+import HelpTooltip from '@/components/HelpTooltip';
 import AvatarCropper from '@/components/AvatarCropper';
 
 const KNOWN_CATEGORY_SLUGS = ['groceries', 'transport', 'utilities', 'rent', 'insurance', 'healthcare', 'dining', 'shopping', 'entertainment', 'other', 'salary', 'income', 'credit_charges', 'transfers', 'fees', 'subscriptions', 'education', 'pets', 'gifts', 'childcare', 'savings', 'pension', 'investment', 'bank_fees', 'online_shopping', 'loan_payment', 'loan_interest', 'standing_order', 'finance', 'unknown'];
@@ -55,16 +56,44 @@ export default function SettingsPage() {
   const [twoFADisabling, setTwoFADisabling] = useState(false);
   const [twoFADisableCode, setTwoFADisableCode] = useState('');
 
+  // 2FA method selection state
+  const [twoFAMethod, setTwoFAMethod] = useState<string | null>(null);
+  const [twoFAMethodSelection, setTwoFAMethodSelection] = useState<string | null>(null);
+  const [twoFAEmailCodeSent, setTwoFAEmailCodeSent] = useState(false);
+  const [twoFASmsCodeSent, setTwoFASmsCodeSent] = useState(false);
+  const [twoFAPhoneInput, setTwoFAPhoneInput] = useState('');
+  const [userPhone, setUserPhone] = useState<string | null>(null);
+
+  // Notification settings state
+  const [notifSettings, setNotifSettings] = useState<NotificationSettings>({
+    notifyLogin: false,
+    notifyLargeTransaction: false,
+    notifyBudgetExceeded: false,
+    notifyGoalDeadline: false,
+    notifyWeeklyReport: false,
+    notifyMonthlyReport: false,
+    largeTransactionThreshold: null,
+  });
+  const [notifLoading, setNotifLoading] = useState(true);
+  const notifSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
-    Promise.all([users.me(), accounts.list(), categories.list(), twoFactor.status()])
-      .then(([u, a, c, tfa]) => {
+    Promise.all([users.me(), accounts.list(), categories.list(), twoFactor.status(), twoFactor.getMethod()])
+      .then(([u, a, c, tfa, tfaMethod]) => {
         setUser({ email: u.email, name: u.name, countryCode: u.countryCode, avatarUrl: u.avatarUrl });
+        setUserPhone(u.phone ?? null);
         setAccountsList(a);
         setCategoriesList(c);
         setTwoFAEnabled(tfa.enabled);
+        setTwoFAMethod(tfaMethod.method);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
+
+    users.getNotificationSettings()
+      .then((ns) => setNotifSettings(ns))
+      .catch(() => {})
+      .finally(() => setNotifLoading(false));
   }, []);
 
   async function handleAddAccount(e: React.FormEvent) {
@@ -236,6 +265,122 @@ export default function SettingsPage() {
       setTwoFADisabling(false);
       setTwoFADisableCode('');
       setTwoFAMsg(t('settings.twoFactorDeactivated'));
+    } catch (err) {
+      setTwoFAMsg(err instanceof Error ? err.message : t('settings.twoFactorInvalidCode'));
+    } finally {
+      setTwoFALoading(false);
+    }
+  }
+
+  // Debounced notification settings save
+  const saveNotifSettings = useCallback((updated: NotificationSettings) => {
+    if (notifSaveTimerRef.current) clearTimeout(notifSaveTimerRef.current);
+    notifSaveTimerRef.current = setTimeout(() => {
+      users.updateNotificationSettings(updated).catch(() => {});
+    }, 500);
+  }, []);
+
+  function handleNotifToggle(key: keyof NotificationSettings) {
+    setNotifSettings((prev) => {
+      const updated = { ...prev, [key]: !prev[key] };
+      if (key === 'notifyLargeTransaction' && !updated.notifyLargeTransaction) {
+        updated.largeTransactionThreshold = null;
+      }
+      saveNotifSettings(updated);
+      return updated;
+    });
+  }
+
+  function handleThresholdChange(value: string) {
+    const num = value === '' ? null : Number(value);
+    setNotifSettings((prev) => {
+      const updated = { ...prev, largeTransactionThreshold: num };
+      saveNotifSettings(updated);
+      return updated;
+    });
+  }
+
+  // 2FA method selection handlers
+  async function handleSelectTwoFAMethod(method: string) {
+    setTwoFAMethodSelection(method);
+    setTwoFACode('');
+    setTwoFAEmailCodeSent(false);
+    setTwoFASmsCodeSent(false);
+    setTwoFAMsg('');
+    setTwoFASetup(null);
+    if (method === 'totp') {
+      handleSetup2FA();
+    }
+  }
+
+  async function handleSendEmailCode() {
+    setTwoFALoading(true);
+    setTwoFAMsg('');
+    try {
+      await twoFactor.sendCode();
+      setTwoFAEmailCodeSent(true);
+      setTwoFAMsg(t('settings.codeSent'));
+    } catch (err) {
+      setTwoFAMsg(err instanceof Error ? err.message : t('common.failedToLoad'));
+    } finally {
+      setTwoFALoading(false);
+    }
+  }
+
+  async function handleSendSmsCode() {
+    setTwoFALoading(true);
+    setTwoFAMsg('');
+    try {
+      // If phone input was filled, update it first
+      if (twoFAPhoneInput && twoFAPhoneInput !== userPhone) {
+        await users.update({ name: user?.name ?? undefined, countryCode: user?.countryCode ?? null } as Parameters<typeof users.update>[0]);
+      }
+      await twoFactor.sendCode();
+      setTwoFASmsCodeSent(true);
+      setTwoFAMsg(t('settings.smsSent'));
+    } catch (err) {
+      setTwoFAMsg(err instanceof Error ? err.message : t('common.failedToLoad'));
+    } finally {
+      setTwoFALoading(false);
+    }
+  }
+
+  async function handleEnableEmailOrSms2FA(e: React.FormEvent) {
+    e.preventDefault();
+    setTwoFALoading(true);
+    setTwoFAMsg('');
+    try {
+      await twoFactor.enable(twoFACode);
+      if (twoFAMethodSelection) {
+        await twoFactor.setMethod(twoFAMethodSelection);
+        setTwoFAMethod(twoFAMethodSelection);
+      }
+      setTwoFAEnabled(true);
+      setTwoFAMethodSelection(null);
+      setTwoFACode('');
+      setTwoFAEmailCodeSent(false);
+      setTwoFASmsCodeSent(false);
+      setTwoFAMsg(t('settings.twoFactorActivated'));
+    } catch (err) {
+      setTwoFAMsg(err instanceof Error ? err.message : t('settings.twoFactorInvalidCode'));
+    } finally {
+      setTwoFALoading(false);
+    }
+  }
+
+  async function handleEnableTOTP2FA(e: React.FormEvent) {
+    e.preventDefault();
+    setTwoFALoading(true);
+    setTwoFAMsg('');
+    try {
+      await twoFactor.enable(twoFACode);
+      await twoFactor.setMethod('totp');
+      setTwoFAMethod('totp');
+      setTwoFAEnabled(true);
+      setTwoFASetup(null);
+      setTwoFAMethodSelection(null);
+      setTwoFACode('');
+      setTwoFAMsg(t('settings.twoFactorActivated'));
     } catch (err) {
       setTwoFAMsg(err instanceof Error ? err.message : t('settings.twoFactorInvalidCode'));
     } finally {
@@ -482,12 +627,19 @@ export default function SettingsPage() {
 
       {/* 2FA Section */}
       <div className="card max-w-md">
-        <h2 className="font-medium mb-2">{t('settings.twoFactorAuth')}</h2>
+        <h2 className="font-medium mb-2">{t('settings.twoFactorAuth')} <HelpTooltip text={t('help.twoFactor')} className="ms-1" /></h2>
         <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{t('settings.twoFactorDescription')}</p>
 
         {twoFAEnabled ? (
           <div>
-            <p className="text-sm text-green-600 dark:text-green-400 font-medium mb-3">{t('settings.twoFactorEnabled')}</p>
+            <p className="text-sm text-green-600 dark:text-green-400 font-medium mb-1">{t('settings.twoFactorEnabled')}</p>
+            {twoFAMethod && (
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+                {twoFAMethod === 'totp' && t('settings.twoFactorMethodTotp')}
+                {twoFAMethod === 'email' && t('settings.twoFactorMethodEmail')}
+                {twoFAMethod === 'sms' && t('settings.twoFactorMethodSms')}
+              </p>
+            )}
             {!twoFADisabling ? (
               <button
                 type="button"
@@ -521,58 +673,368 @@ export default function SettingsPage() {
               </form>
             )}
           </div>
-        ) : twoFASetup ? (
+        ) : twoFAMethodSelection ? (
           <div className="space-y-4">
-            <p className="text-sm">{t('settings.twoFactorScanQR')}</p>
-            <div className="flex justify-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={twoFASetup.qrCode} alt="QR Code" className="w-48 h-48 rounded-lg" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 mb-1">{t('settings.twoFactorManualKey')}:</p>
-              <code className="block bg-slate-100 dark:bg-slate-800 px-3 py-2 rounded text-xs break-all select-all">{twoFASetup.secret}</code>
-            </div>
-            <form onSubmit={handleEnable2FA} className="space-y-3">
-              <p className="text-sm">{t('settings.twoFactorVerifyCode')}</p>
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={6}
-                className="input text-center text-lg tracking-widest w-40"
-                value={twoFACode}
-                onChange={(e) => setTwoFACode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                placeholder="000000"
-                autoFocus
-              />
-              <div className="flex gap-2">
-                <button type="submit" className="btn-primary text-sm" disabled={twoFALoading || twoFACode.length < 6}>
-                  {twoFALoading ? t('common.loading') : t('settings.twoFactorEnable')}
-                </button>
-                <button type="button" className="btn-secondary text-sm" onClick={() => { setTwoFASetup(null); setTwoFACode(''); }}>
-                  {t('common.cancel')}
-                </button>
+            {/* TOTP setup flow */}
+            {twoFAMethodSelection === 'totp' && twoFASetup && (
+              <div className="space-y-4">
+                <p className="text-sm">{t('settings.twoFactorScanQR')}</p>
+                <div className="flex justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={twoFASetup.qrCode} alt="QR Code" className="w-48 h-48 rounded-lg" />
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">{t('settings.twoFactorManualKey')}:</p>
+                  <code className="block bg-slate-100 dark:bg-slate-800 px-3 py-2 rounded text-xs break-all select-all">{twoFASetup.secret}</code>
+                </div>
+                <form onSubmit={handleEnableTOTP2FA} className="space-y-3">
+                  <p className="text-sm">{t('settings.twoFactorVerifyCode')}</p>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={6}
+                    className="input text-center text-lg tracking-widest w-40"
+                    value={twoFACode}
+                    onChange={(e) => setTwoFACode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="000000"
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
+                    <button type="submit" className="btn-primary text-sm" disabled={twoFALoading || twoFACode.length < 6}>
+                      {twoFALoading ? t('common.loading') : t('settings.twoFactorEnable')}
+                    </button>
+                    <button type="button" className="btn-secondary text-sm" onClick={() => { setTwoFASetup(null); setTwoFACode(''); setTwoFAMethodSelection(null); }}>
+                      {t('common.cancel')}
+                    </button>
+                  </div>
+                </form>
               </div>
-            </form>
+            )}
+            {twoFAMethodSelection === 'totp' && !twoFASetup && (
+              <div className="flex items-center gap-2">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary-500 border-t-transparent" />
+                <span className="text-sm text-slate-500">{t('common.loading')}</span>
+              </div>
+            )}
+
+            {/* Email setup flow */}
+            {twoFAMethodSelection === 'email' && (
+              <div className="space-y-4">
+                {!twoFAEmailCodeSent ? (
+                  <div className="space-y-3">
+                    <p className="text-sm text-slate-600 dark:text-slate-400">{t('settings.twoFactorMethodEmailDesc')}</p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        className="btn-primary text-sm"
+                        onClick={handleSendEmailCode}
+                        disabled={twoFALoading}
+                      >
+                        {twoFALoading ? t('common.loading') : t('settings.sendTestCode')}
+                      </button>
+                      <button type="button" className="btn-secondary text-sm" onClick={() => setTwoFAMethodSelection(null)}>
+                        {t('common.cancel')}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <form onSubmit={handleEnableEmailOrSms2FA} className="space-y-3">
+                    <p className="text-sm">{t('settings.verifyCode')}</p>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={6}
+                      className="input text-center text-lg tracking-widest w-40"
+                      value={twoFACode}
+                      onChange={(e) => setTwoFACode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="000000"
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <button type="submit" className="btn-primary text-sm" disabled={twoFALoading || twoFACode.length < 6}>
+                        {twoFALoading ? t('common.loading') : t('settings.twoFactorEnable')}
+                      </button>
+                      <button type="button" className="btn-secondary text-sm" onClick={() => { setTwoFAMethodSelection(null); setTwoFACode(''); setTwoFAEmailCodeSent(false); }}>
+                        {t('common.cancel')}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            )}
+
+            {/* SMS setup flow */}
+            {twoFAMethodSelection === 'sms' && (
+              <div className="space-y-4">
+                {!userPhone && !twoFASmsCodeSent ? (
+                  <div className="space-y-3">
+                    <p className="text-sm text-amber-600 dark:text-amber-400">{t('settings.phoneRequired')}</p>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">{t('settings.phoneNumber')}</label>
+                      <input
+                        type="tel"
+                        className="input w-full max-w-xs"
+                        value={twoFAPhoneInput}
+                        onChange={(e) => setTwoFAPhoneInput(e.target.value)}
+                        placeholder="+972-50-1234567"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        className="btn-primary text-sm"
+                        onClick={() => { setUserPhone(twoFAPhoneInput); handleSendSmsCode(); }}
+                        disabled={twoFALoading || !twoFAPhoneInput.trim()}
+                      >
+                        {twoFALoading ? t('common.loading') : t('settings.sendTestCode')}
+                      </button>
+                      <button type="button" className="btn-secondary text-sm" onClick={() => setTwoFAMethodSelection(null)}>
+                        {t('common.cancel')}
+                      </button>
+                    </div>
+                  </div>
+                ) : !twoFASmsCodeSent ? (
+                  <div className="space-y-3">
+                    <p className="text-sm text-slate-600 dark:text-slate-400">{t('settings.twoFactorMethodSmsDesc')}</p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        className="btn-primary text-sm"
+                        onClick={handleSendSmsCode}
+                        disabled={twoFALoading}
+                      >
+                        {twoFALoading ? t('common.loading') : t('settings.sendTestCode')}
+                      </button>
+                      <button type="button" className="btn-secondary text-sm" onClick={() => setTwoFAMethodSelection(null)}>
+                        {t('common.cancel')}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <form onSubmit={handleEnableEmailOrSms2FA} className="space-y-3">
+                    <p className="text-sm">{t('settings.verifyCode')}</p>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={6}
+                      className="input text-center text-lg tracking-widest w-40"
+                      value={twoFACode}
+                      onChange={(e) => setTwoFACode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="000000"
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <button type="submit" className="btn-primary text-sm" disabled={twoFALoading || twoFACode.length < 6}>
+                        {twoFALoading ? t('common.loading') : t('settings.twoFactorEnable')}
+                      </button>
+                      <button type="button" className="btn-secondary text-sm" onClick={() => { setTwoFAMethodSelection(null); setTwoFACode(''); setTwoFASmsCodeSent(false); }}>
+                        {t('common.cancel')}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            )}
           </div>
         ) : (
           <div>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">{t('settings.twoFactorDisabled')}</p>
-            <button
-              type="button"
-              className="btn-primary text-sm"
-              onClick={handleSetup2FA}
-              disabled={twoFALoading}
-            >
-              {twoFALoading ? t('common.loading') : t('settings.twoFactorEnable')}
-            </button>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{t('settings.twoFactorDisabled')}</p>
+            <p className="text-sm font-medium mb-3">{t('settings.twoFactorChooseMethod')}</p>
+            <div className="space-y-2">
+              {/* TOTP option */}
+              <button
+                type="button"
+                className="w-full text-left border border-[var(--border)] rounded-lg p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                onClick={() => handleSelectTwoFAMethod('totp')}
+                disabled={twoFALoading}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-primary-600 dark:text-primary-400"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18.01"/></svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">{t('settings.twoFactorMethodTotp')}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{t('settings.twoFactorMethodTotpDesc')}</p>
+                  </div>
+                </div>
+              </button>
+              {/* Email option */}
+              <button
+                type="button"
+                className="w-full text-left border border-[var(--border)] rounded-lg p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                onClick={() => handleSelectTwoFAMethod('email')}
+                disabled={twoFALoading}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-blue-600 dark:text-blue-400"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 7L2 7"/></svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">{t('settings.twoFactorMethodEmail')}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{t('settings.twoFactorMethodEmailDesc')}</p>
+                  </div>
+                </div>
+              </button>
+              {/* SMS option */}
+              <button
+                type="button"
+                className="w-full text-left border border-[var(--border)] rounded-lg p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                onClick={() => handleSelectTwoFAMethod('sms')}
+                disabled={twoFALoading}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-600 dark:text-green-400"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">{t('settings.twoFactorMethodSms')}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{t('settings.twoFactorMethodSmsDesc')}</p>
+                  </div>
+                </div>
+              </button>
+            </div>
           </div>
         )}
         {twoFAMsg && <p className="text-sm text-slate-600 mt-3">{twoFAMsg}</p>}
       </div>
 
+      {/* Email Notifications Section */}
+      <div className="card max-w-md">
+        <h2 className="font-medium mb-2">{t('settings.notifications')}</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{t('settings.notificationsDesc')}</p>
+
+        {notifLoading ? (
+          <div className="flex justify-center py-4">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary-500 border-t-transparent" />
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Login alerts */}
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium">{t('settings.notifyLogin')}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{t('settings.notifyLoginDesc')}</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={notifSettings.notifyLogin}
+                onClick={() => handleNotifToggle('notifyLogin')}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${notifSettings.notifyLogin ? 'bg-primary-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+              >
+                <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${notifSettings.notifyLogin ? 'translate-x-5' : 'translate-x-0'}`} />
+              </button>
+            </div>
+
+            {/* Large transactions */}
+            <div>
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">{t('settings.notifyLargeTx')}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{t('settings.notifyLargeTxDesc')}</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={notifSettings.notifyLargeTransaction}
+                  onClick={() => handleNotifToggle('notifyLargeTransaction')}
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${notifSettings.notifyLargeTransaction ? 'bg-primary-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                >
+                  <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${notifSettings.notifyLargeTransaction ? 'translate-x-5' : 'translate-x-0'}`} />
+                </button>
+              </div>
+              {notifSettings.notifyLargeTransaction && (
+                <div className="mt-2 ms-0">
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">{t('settings.largeTxThreshold')}</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="100"
+                    className="input w-32 text-sm"
+                    value={notifSettings.largeTransactionThreshold ?? ''}
+                    onChange={(e) => handleThresholdChange(e.target.value)}
+                    placeholder="1000"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Budget exceeded */}
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium">{t('settings.notifyBudget')}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{t('settings.notifyBudgetDesc')}</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={notifSettings.notifyBudgetExceeded}
+                onClick={() => handleNotifToggle('notifyBudgetExceeded')}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${notifSettings.notifyBudgetExceeded ? 'bg-primary-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+              >
+                <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${notifSettings.notifyBudgetExceeded ? 'translate-x-5' : 'translate-x-0'}`} />
+              </button>
+            </div>
+
+            {/* Goal deadline */}
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium">{t('settings.notifyGoal')}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{t('settings.notifyGoalDesc')}</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={notifSettings.notifyGoalDeadline}
+                onClick={() => handleNotifToggle('notifyGoalDeadline')}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${notifSettings.notifyGoalDeadline ? 'bg-primary-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+              >
+                <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${notifSettings.notifyGoalDeadline ? 'translate-x-5' : 'translate-x-0'}`} />
+              </button>
+            </div>
+
+            {/* Weekly report */}
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium">{t('settings.notifyWeekly')}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{t('settings.notifyWeeklyDesc')}</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={notifSettings.notifyWeeklyReport}
+                onClick={() => handleNotifToggle('notifyWeeklyReport')}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${notifSettings.notifyWeeklyReport ? 'bg-primary-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+              >
+                <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${notifSettings.notifyWeeklyReport ? 'translate-x-5' : 'translate-x-0'}`} />
+              </button>
+            </div>
+
+            {/* Monthly report */}
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium">{t('settings.notifyMonthly')}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{t('settings.notifyMonthlyDesc')}</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={notifSettings.notifyMonthlyReport}
+                onClick={() => handleNotifToggle('notifyMonthlyReport')}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${notifSettings.notifyMonthlyReport ? 'bg-primary-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+              >
+                <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${notifSettings.notifyMonthlyReport ? 'translate-x-5' : 'translate-x-0'}`} />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="card max-w-lg">
-        <h2 className="font-medium mb-4">{t('settings.accounts')}</h2>
+        <h2 className="font-medium mb-4">{t('settings.accounts')} <HelpTooltip text={t('help.addAccount')} className="ms-1" /></h2>
         <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
           {t('settings.accountsDescription')}
         </p>
@@ -801,7 +1263,7 @@ export default function SettingsPage() {
       )}
 
       <div className="card max-w-lg">
-        <h2 className="font-medium mb-4">{t('common.categories')}</h2>
+        <h2 className="font-medium mb-4">{t('common.categories')} <HelpTooltip text={t('help.addCategory')} className="ms-1" /></h2>
         <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
           {t('settings.categoriesDescription')}
         </p>

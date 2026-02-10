@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { budgets, categories, type BudgetItem } from '@/lib/api';
 import { useTranslation } from '@/i18n/context';
+import HelpTooltip from '@/components/HelpTooltip';
 import { useToast } from '@/components/Toast';
 
 type CategoryOption = { id: string; name: string; slug: string; isIncome: boolean };
@@ -105,7 +106,7 @@ export default function BudgetsPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">{t('budgets.title')}</h1>
+          <h1 className="text-2xl font-bold">{t('budgets.title')} <HelpTooltip text={t('help.budgets')} className="ms-1" /></h1>
           <p className="text-sm text-slate-500 mt-1">{t('budgets.subtitle')}</p>
         </div>
         <button type="button" className="btn-primary" onClick={openAdd}>

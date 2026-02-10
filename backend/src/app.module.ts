@@ -19,6 +19,7 @@ import { GoalsModule } from './goals/goals.module';
 import { RecurringModule } from './recurring/recurring.module';
 import { BudgetsModule } from './budgets/budgets.module';
 import { AlertsModule } from './alerts/alerts.module';
+import { EmailModule } from './email/email.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { AlertsModule } from './alerts/alerts.module';
     RecurringModule,
     BudgetsModule,
     AlertsModule,
+    EmailModule,
   ],
   providers: [],
 })

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { documents, accounts, type ExtractedItem } from '@/lib/api';
 import { useTranslation } from '@/i18n/context';
+import HelpTooltip from '@/components/HelpTooltip';
 
 const MAX_FILES = 10;
 
@@ -223,7 +224,7 @@ export default function UploadPage() {
 
   return (
     <div className="space-y-8 animate-fadeIn">
-      <h1 className="text-2xl font-bold">{t('upload.title')}</h1>
+      <h1 className="text-2xl font-bold">{t('upload.title')} <HelpTooltip text={t('help.upload')} className="ms-1" /></h1>
       <p className="text-slate-600 dark:text-slate-400">
         {t('upload.description')}
       </p>
