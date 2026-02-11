@@ -12,20 +12,44 @@ import { useTheme } from '@/components/ThemeProvider';
 import AlertsBell from '@/components/AlertsBell';
 import OnboardingProvider, { useOnboarding } from '@/components/OnboardingProvider';
 
-const navItems: { href: string; key: string; icon: string }[] = [
+type NavItem = { href: string; key: string; icon: string };
+
+const topNavItems: NavItem[] = [
   { href: '/dashboard', key: 'nav.dashboard', icon: 'grid' },
   { href: '/transactions', key: 'nav.transactions', icon: 'list' },
   { href: '/upload', key: 'nav.uploadDocuments', icon: 'upload' },
-  { href: '/income', key: 'nav.income', icon: 'trending-up' },
-  { href: '/expenses', key: 'nav.expenses', icon: 'trending-down' },
-  { href: '/loans-savings', key: 'nav.loansSavings', icon: 'banknotes' },
-  { href: '/insurance-funds', key: 'nav.insuranceFunds', icon: 'shield' },
-  { href: '/forex', key: 'nav.forex', icon: 'currency' },
-  { href: '/goals', key: 'nav.goals', icon: 'target' },
-  { href: '/budgets', key: 'nav.budgets', icon: 'wallet' },
-  { href: '/recurring', key: 'nav.recurring', icon: 'repeat' },
-  { href: '/insights', key: 'nav.insights', icon: 'sparkles' },
-  { href: '/reports', key: 'nav.reports', icon: 'file-text' },
+];
+
+const navGroups: { id: string; labelKey: string; items: NavItem[] }[] = [
+  {
+    id: 'planning',
+    labelKey: 'nav.planning',
+    items: [
+      { href: '/goals', key: 'nav.goals', icon: 'target' },
+      { href: '/budgets', key: 'nav.budgets', icon: 'wallet' },
+      { href: '/recurring', key: 'nav.recurring', icon: 'repeat' },
+    ],
+  },
+  {
+    id: 'assets',
+    labelKey: 'nav.assets',
+    items: [
+      { href: '/loans-savings', key: 'nav.loansSavings', icon: 'banknotes' },
+      { href: '/insurance-funds', key: 'nav.insuranceFunds', icon: 'shield' },
+      { href: '/forex', key: 'nav.forex', icon: 'currency' },
+    ],
+  },
+  {
+    id: 'analysis',
+    labelKey: 'nav.analysis',
+    items: [
+      { href: '/insights', key: 'nav.insights', icon: 'sparkles' },
+      { href: '/reports', key: 'nav.reports', icon: 'file-text' },
+    ],
+  },
+];
+
+const bottomNavItems: NavItem[] = [
   { href: '/settings', key: 'nav.settings', icon: 'settings' },
 ];
 
@@ -86,6 +110,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const { t, locale, setLocale } = useTranslation();
   const { resolvedTheme, setTheme } = useTheme();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set(['planning', 'assets', 'analysis']));
+  const toggleGroup = (g: string) => setOpenGroups(prev => { const n = new Set(prev); if (n.has(g)) n.delete(g); else n.add(g); return n; });
   const [userInfo, setUserInfo] = useState<{ name: string | null; email: string; avatarUrl?: string | null } | null>(null);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -253,13 +279,73 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
-        {navItems.map((item) => {
+        {/* Top-level items */}
+        {topNavItems.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link
               key={item.href}
               href={item.href}
               className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
+                isActive
+                  ? 'bg-emerald-500/15 text-emerald-400'
+                  : 'text-[#a0a3bd] hover:bg-white/5 hover:text-white'
+              }`}
+            >
+              <NavIcon name={item.icon} />
+              <span>{t(item.key)}</span>
+            </Link>
+          );
+        })}
+
+        {/* Collapsible groups */}
+        {navGroups.map((group) => (
+          <div key={group.id}>
+            <div
+              onClick={() => toggleGroup(group.id)}
+              className="flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 cursor-pointer hover:text-slate-600 dark:hover:text-slate-400 mt-4"
+            >
+              <span>{t(group.labelKey)}</span>
+              <svg
+                className={`w-4 h-4 transition-transform duration-200 ${openGroups.has(group.id) ? 'rotate-180' : ''}`}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </div>
+            {openGroups.has(group.id) && group.items.map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
+                    isActive
+                      ? 'bg-emerald-500/15 text-emerald-400'
+                      : 'text-[#a0a3bd] hover:bg-white/5 hover:text-white'
+                  }`}
+                >
+                  <NavIcon name={item.icon} />
+                  <span>{t(item.key)}</span>
+                </Link>
+              );
+            })}
+          </div>
+        ))}
+
+        {/* Bottom items */}
+        {bottomNavItems.map((item) => {
+          const isActive = pathname === item.href;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 mt-4 ${
                 isActive
                   ? 'bg-emerald-500/15 text-emerald-400'
                   : 'text-[#a0a3bd] hover:bg-white/5 hover:text-white'

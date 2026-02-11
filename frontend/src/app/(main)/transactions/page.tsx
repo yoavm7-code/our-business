@@ -98,8 +98,10 @@ export default function TransactionsPage() {
     totalAmount: '',
   });
   const [addingTx, setAddingTx] = useState(false);
+  const [showAdvancedAdd, setShowAdvancedAdd] = useState(false);
   const [suggestingCategory, setSuggestingCategory] = useState(false);
   const [editingTxId, setEditingTxId] = useState<string | null>(null);
+  const [showAdvancedEdit, setShowAdvancedEdit] = useState(false);
   const [editTxForm, setEditTxForm] = useState({
     type: 'expense' as 'expense' | 'income',
     accountId: '',
@@ -310,7 +312,7 @@ export default function TransactionsPage() {
 
   async function handleSaveEditTx(e: React.FormEvent) {
     e.preventDefault();
-    if (!editingTxId || !editTxForm.accountId || !editTxForm.description.trim() || !editTxForm.amount || parseFloat(editTxForm.amount) <= 0) return;
+    if (!editingTxId || !editTxForm.accountId || !editTxForm.amount || parseFloat(editTxForm.amount) <= 0) return;
     setUpdatingTx(true);
     setError('');
     const amountNum = parseFloat(editTxForm.amount);
@@ -324,7 +326,7 @@ export default function TransactionsPage() {
         accountId: editTxForm.accountId,
         categoryId: editTxForm.categoryId || null,
         date: editTxForm.date,
-        description: editTxForm.description.trim(),
+        description: editTxForm.description.trim() || '-',
         amount,
         isRecurring: editTxForm.isRecurring,
         installmentCurrent: instCurrent,
@@ -486,7 +488,7 @@ export default function TransactionsPage() {
 
   async function handleAddTransaction(e: React.FormEvent) {
     e.preventDefault();
-    if (!addTxForm.accountId || !addTxForm.description.trim() || !addTxForm.amount || parseFloat(addTxForm.amount) <= 0) return;
+    if (!addTxForm.accountId || !addTxForm.amount || parseFloat(addTxForm.amount) <= 0) return;
     setAddingTx(true);
     setError('');
     try {
@@ -499,7 +501,7 @@ export default function TransactionsPage() {
         accountId: addTxForm.accountId,
         categoryId: addTxForm.categoryId || undefined,
         date: addTxForm.date,
-        description: addTxForm.description.trim(),
+        description: addTxForm.description.trim() || '-',
         amount,
         isRecurring: addTxForm.isRecurring,
         ...(instCurrent && { installmentCurrent: instCurrent }),
@@ -521,7 +523,7 @@ export default function TransactionsPage() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold">{t('transactions.title')} <HelpTooltip text={t('help.transactions')} className="ms-1" /></h1>
         <div className="flex items-center gap-2">
-          <button type="button" className="btn-primary" onClick={() => setShowAddTx(true)}>
+          <button type="button" className="btn-primary" onClick={() => { setShowAddTx(true); if (accountsList.length > 0 && !addTxForm.accountId) setAddTxForm((f) => ({ ...f, accountId: accountsList[0].id })); }}>
             {t('transactionsPage.addTransaction')}
           </button>
           <HelpTooltip text={t('help.addTransaction')} className="ms-1" />
@@ -1005,7 +1007,6 @@ export default function TransactionsPage() {
                   value={addTxForm.description}
                   onChange={(e) => setAddTxForm((f) => ({ ...f, description: e.target.value }))}
                   placeholder={addTxForm.type === 'income' ? t('income.descriptionPlaceholder') : t('expenses.descriptionPlaceholder')}
-                  required
                 />
               </div>
               <div>
@@ -1020,57 +1021,42 @@ export default function TransactionsPage() {
                   required
                 />
               </div>
-              {/* Installment fields */}
-              <div className="pt-3 border-t border-[var(--border)]">
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">{t('transactions.installments')}</p>
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <label className="block text-xs text-slate-500 mb-1">{t('transactions.installmentCurrentShort')}</label>
-                    <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      className="input w-full py-1.5 text-sm"
-                      value={addTxForm.installmentCurrent}
-                      onChange={(e) => setAddTxForm((f) => ({ ...f, installmentCurrent: e.target.value.replace(/\D/g, '') }))}
-                      placeholder="2"
-                    />
+              <div>
+                <button
+                  type="button"
+                  className="text-sm text-primary-600 hover:underline flex items-center gap-1"
+                  onClick={() => setShowAdvancedAdd(!showAdvancedAdd)}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-transform ${showAdvancedAdd ? 'rotate-90' : ''}`}>
+                    <path d="M9 18l6-6-6-6"/>
+                  </svg>
+                  {t('transactions.advancedOptions')}
+                </button>
+                {showAdvancedAdd && (
+                  <div className="mt-3 space-y-3">
+                    <div className="pt-3 border-t border-[var(--border)]">
+                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">{t('transactions.installments')}</p>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <label className="block text-xs text-slate-500 mb-1">{t('transactions.installmentCurrentShort')}</label>
+                          <input type="number" min="1" step="1" className="input w-full py-1.5 text-sm" value={addTxForm.installmentCurrent} onChange={(e) => setAddTxForm((f) => ({ ...f, installmentCurrent: e.target.value.replace(/\D/g, '') }))} placeholder="2" />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-slate-500 mb-1">{t('transactions.installmentTotalShort')}</label>
+                          <input type="number" min="1" step="1" className="input w-full py-1.5 text-sm" value={addTxForm.installmentTotal} onChange={(e) => setAddTxForm((f) => ({ ...f, installmentTotal: e.target.value.replace(/\D/g, '') }))} placeholder="3" />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-slate-500 mb-1">{t('transactions.totalAmountShort')}</label>
+                          <input type="number" step="0.01" min="0" className="input w-full py-1.5 text-sm" value={addTxForm.totalAmount} onChange={(e) => setAddTxForm((f) => ({ ...f, totalAmount: e.target.value }))} placeholder="1,950" />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input type="checkbox" id="add-tx-recurring" checked={addTxForm.isRecurring} onChange={(e) => setAddTxForm((f) => ({ ...f, isRecurring: e.target.checked }))} className="rounded" />
+                      <label htmlFor="add-tx-recurring" className="text-sm">{t('transactions.recurring')}</label>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs text-slate-500 mb-1">{t('transactions.installmentTotalShort')}</label>
-                    <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      className="input w-full py-1.5 text-sm"
-                      value={addTxForm.installmentTotal}
-                      onChange={(e) => setAddTxForm((f) => ({ ...f, installmentTotal: e.target.value.replace(/\D/g, '') }))}
-                      placeholder="3"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-slate-500 mb-1">{t('transactions.totalAmountShort')}</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      className="input w-full py-1.5 text-sm"
-                      value={addTxForm.totalAmount}
-                      onChange={(e) => setAddTxForm((f) => ({ ...f, totalAmount: e.target.value }))}
-                      placeholder="1,950"
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="add-tx-recurring"
-                  checked={addTxForm.isRecurring}
-                  onChange={(e) => setAddTxForm((f) => ({ ...f, isRecurring: e.target.checked }))}
-                  className="rounded"
-                />
-                <label htmlFor="add-tx-recurring" className="text-sm">{t('transactions.recurring')}</label>
+                )}
               </div>
               <div className="flex gap-2">
                 <button type="submit" className="btn-primary" disabled={addingTx}>
@@ -1145,7 +1131,6 @@ export default function TransactionsPage() {
                   className="input w-full"
                   value={editTxForm.description}
                   onChange={(e) => setEditTxForm((f) => ({ ...f, description: e.target.value }))}
-                  required
                 />
               </div>
               <div>
@@ -1160,57 +1145,42 @@ export default function TransactionsPage() {
                   required
                 />
               </div>
-              {/* Installment fields */}
-              <div className="pt-3 border-t border-[var(--border)]">
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">{t('transactions.installments')}</p>
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <label className="block text-xs text-slate-500 mb-1">{t('transactions.installmentCurrentShort')}</label>
-                    <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      className="input w-full py-1.5 text-sm"
-                      value={editTxForm.installmentCurrent}
-                      onChange={(e) => setEditTxForm((f) => ({ ...f, installmentCurrent: e.target.value.replace(/\D/g, '') }))}
-                      placeholder="2"
-                    />
+              <div>
+                <button
+                  type="button"
+                  className="text-sm text-primary-600 hover:underline flex items-center gap-1"
+                  onClick={() => setShowAdvancedEdit(!showAdvancedEdit)}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-transform ${showAdvancedEdit ? 'rotate-90' : ''}`}>
+                    <path d="M9 18l6-6-6-6"/>
+                  </svg>
+                  {t('transactions.advancedOptions')}
+                </button>
+                {showAdvancedEdit && (
+                  <div className="mt-3 space-y-3">
+                    <div className="pt-3 border-t border-[var(--border)]">
+                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">{t('transactions.installments')}</p>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <label className="block text-xs text-slate-500 mb-1">{t('transactions.installmentCurrentShort')}</label>
+                          <input type="number" min="1" step="1" className="input w-full py-1.5 text-sm" value={editTxForm.installmentCurrent} onChange={(e) => setEditTxForm((f) => ({ ...f, installmentCurrent: e.target.value.replace(/\D/g, '') }))} placeholder="2" />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-slate-500 mb-1">{t('transactions.installmentTotalShort')}</label>
+                          <input type="number" min="1" step="1" className="input w-full py-1.5 text-sm" value={editTxForm.installmentTotal} onChange={(e) => setEditTxForm((f) => ({ ...f, installmentTotal: e.target.value.replace(/\D/g, '') }))} placeholder="3" />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-slate-500 mb-1">{t('transactions.totalAmountShort')}</label>
+                          <input type="number" step="0.01" min="0" className="input w-full py-1.5 text-sm" value={editTxForm.totalAmount} onChange={(e) => setEditTxForm((f) => ({ ...f, totalAmount: e.target.value }))} placeholder="1,950" />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input type="checkbox" id="edit-tx-recurring" checked={editTxForm.isRecurring} onChange={(e) => setEditTxForm((f) => ({ ...f, isRecurring: e.target.checked }))} className="rounded" />
+                      <label htmlFor="edit-tx-recurring" className="text-sm">{t('transactions.recurring')}</label>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs text-slate-500 mb-1">{t('transactions.installmentTotalShort')}</label>
-                    <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      className="input w-full py-1.5 text-sm"
-                      value={editTxForm.installmentTotal}
-                      onChange={(e) => setEditTxForm((f) => ({ ...f, installmentTotal: e.target.value.replace(/\D/g, '') }))}
-                      placeholder="3"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-slate-500 mb-1">{t('transactions.totalAmountShort')}</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      className="input w-full py-1.5 text-sm"
-                      value={editTxForm.totalAmount}
-                      onChange={(e) => setEditTxForm((f) => ({ ...f, totalAmount: e.target.value }))}
-                      placeholder="1,950"
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="edit-tx-recurring"
-                  checked={editTxForm.isRecurring}
-                  onChange={(e) => setEditTxForm((f) => ({ ...f, isRecurring: e.target.checked }))}
-                  className="rounded"
-                />
-                <label htmlFor="edit-tx-recurring" className="text-sm">{t('transactions.recurring')}</label>
+                )}
               </div>
               <div className="flex gap-2">
                 <button type="submit" className="btn-primary" disabled={updatingTx}>

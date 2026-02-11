@@ -71,7 +71,10 @@
     "budgets": "Budgets",
     "recurring": "Recurring",
     "reports": "Reports",
-    "settings": "Settings"
+    "settings": "Settings",
+    "planning": "Planning",
+    "assets": "Assets",
+    "analysis": "Analysis"
   },
   "login": {
     "title": "Our Money",
@@ -459,7 +462,12 @@
     "widgetBudgets": "Budgets",
     "widgetRecurring": "Recurring Income/Expenses",
     "budgetsWidget": "Budgets by Category",
-    "recurringWidget": "Auto Detection"
+    "recurringWidget": "Auto Detection",
+    "welcomeTitle": "Welcome to Our Money!",
+    "welcomeDescription": "To start seeing your financial data, add your transactions — upload a file (bank statement, credit card, or any financial document) or add transactions manually.",
+    "uploadFile": "Upload File",
+    "addManually": "Add Manually",
+    "welcomeHint": "You can always add more details like categories, accounts, and budgets later."
   },
   "transactions": {
     "title": "Transactions",
@@ -494,10 +502,12 @@
     "recurring": "Recurring",
     "recurringOn": "Fixed expense/income – click to clear",
     "recurringOff": "Mark as fixed expense/income",
+    "advancedOptions": "Advanced options",
     "installments": "Installments",
     "installmentCurrentShort": "Current",
     "installmentTotalShort": "Of total",
-    "totalAmountShort": "Total amount"
+    "totalAmountShort": "Total amount",
+    "advancedOptions": "Advanced options"
   },
   "upload": {
     "title": "Upload Documents",
