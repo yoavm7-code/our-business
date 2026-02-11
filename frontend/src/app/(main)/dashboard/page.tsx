@@ -900,8 +900,38 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Widgets grid */}
-      {summary && (
+      {/* Empty state for new users */}
+      {summary && !loading && summary.transactionCount === 0 && summary.income === 0 && summary.expenses === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 px-4 animate-fadeIn">
+          <div className="w-20 h-20 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center mb-6">
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary-600 dark:text-primary-400">
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+          </div>
+          <h2 className="text-2xl font-semibold mb-2">{t('dashboard.welcomeTitle')}</h2>
+          <p className="text-slate-500 dark:text-slate-400 text-center max-w-md mb-8">
+            {t('dashboard.welcomeDescription')}
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <a href="/upload" className="btn-primary flex items-center gap-2 px-6 py-3 text-base">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+              {t('dashboard.uploadFile')}
+            </a>
+            <a href="/transactions" className="btn-secondary flex items-center gap-2 px-6 py-3 text-base">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              {t('dashboard.addManually')}
+            </a>
+          </div>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-6 text-center max-w-sm">
+            {t('dashboard.welcomeHint')}
+          </p>
+        </div>
+      ) : summary && (
+        /* Widgets grid */
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={widgets.map((w) => w.id)} strategy={rectSortingStrategy}>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -71,7 +71,10 @@
     "budgets": "תקציבים",
     "recurring": "קבועים",
     "reports": "דו\"חות",
-    "settings": "הגדרות"
+    "settings": "הגדרות",
+    "planning": "תכנון",
+    "assets": "נכסים",
+    "analysis": "ניתוח"
   },
   "login": {
     "title": "Our Money",
@@ -459,7 +462,12 @@
     "widgetBudgets": "תקציבים",
     "widgetRecurring": "הוצאות/הכנסות קבועות",
     "budgetsWidget": "תקציבים לפי קטגוריה",
-    "recurringWidget": "זיהוי אוטומטי"
+    "recurringWidget": "זיהוי אוטומטי",
+    "welcomeTitle": "ברוכים הבאים ל-Our Money!",
+    "welcomeDescription": "כדי להתחיל לראות נתונים, הוסיפו את התנועות הפיננסיות שלכם — העלו קובץ (דף חשבון, אשראי, או כל מסמך פיננסי) או הוסיפו תנועות ידנית.",
+    "uploadFile": "העלאת קובץ",
+    "addManually": "הוספה ידנית",
+    "welcomeHint": "תוכלו תמיד להוסיף פרטים נוספים כמו קטגוריות, חשבונות, ותקציבים בהמשך."
   },
   "transactions": {
     "title": "תנועות",
@@ -497,7 +505,8 @@
     "installments": "תשלומים",
     "installmentCurrentShort": "תשלום נוכחי",
     "installmentTotalShort": "מתוך",
-    "totalAmountShort": "סכום כולל"
+    "totalAmountShort": "סכום כולל",
+    "advancedOptions": "אפשרויות נוספות"
   },
   "upload": {
     "title": "העלאת מסמכים",
