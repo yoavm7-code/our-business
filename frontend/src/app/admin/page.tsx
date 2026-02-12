@@ -7,7 +7,7 @@ import { adminApi } from '@/lib/adminApi';
 
 type Stats = {
   totalUsers: number;
-  totalHouseholds: number;
+  totalBusinesses: number;
   totalTransactions: number;
   totalAccounts: number;
   usersToday: number;
@@ -42,8 +42,8 @@ export default function AdminDashboardPage() {
       ),
     },
     {
-      key: 'totalHouseholds',
-      label: t('admin.totalHouseholds'),
+      key: 'totalBusinesses',
+      label: t('admin.totalBusinesses'),
       color: '#8b5cf6',
       icon: (
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
