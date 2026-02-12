@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { forex, dashboard, type ForexAccountItem, type ForexTransferItem } from '@/lib/api';
 import { useTranslation } from '@/i18n/context';
 import HelpTooltip from '@/components/HelpTooltip';
+import VoiceInputButton from '@/components/VoiceInputButton';
 
 const POPULAR_CURRENCIES = ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'CNY', 'THB', 'TRY'];
 const CURRENCY_SYMBOLS: Record<string, string> = {
@@ -715,7 +716,10 @@ export default function ForexPage() {
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium mb-1">{t('forex.accountName')}</label>
-                <input className="input" value={accountForm.name} onChange={(e) => setAccountForm({ ...accountForm, name: e.target.value })} placeholder={t('forex.accountNamePlaceholder')} />
+                <div className="relative flex items-center">
+                  <input className="input pe-9" value={accountForm.name} onChange={(e) => setAccountForm({ ...accountForm, name: e.target.value })} placeholder={t('forex.accountNamePlaceholder')} />
+                  <div className="absolute end-2 top-1/2 -translate-y-1/2"><VoiceInputButton onResult={(text) => setAccountForm((f) => ({ ...f, name: text }))} /></div>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -733,15 +737,24 @@ export default function ForexPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">{t('forex.accountProvider')}</label>
-                <input className="input" value={accountForm.provider} onChange={(e) => setAccountForm({ ...accountForm, provider: e.target.value })} placeholder={t('forex.accountProviderPlaceholder')} />
+                <div className="relative flex items-center">
+                  <input className="input pe-9" value={accountForm.provider} onChange={(e) => setAccountForm({ ...accountForm, provider: e.target.value })} placeholder={t('forex.accountProviderPlaceholder')} />
+                  <div className="absolute end-2 top-1/2 -translate-y-1/2"><VoiceInputButton onResult={(text) => setAccountForm((f) => ({ ...f, provider: text }))} /></div>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">{t('forex.accountNumber')}</label>
-                <input className="input" value={accountForm.accountNum} onChange={(e) => setAccountForm({ ...accountForm, accountNum: e.target.value })} />
+                <div className="relative flex items-center">
+                  <input className="input pe-9" value={accountForm.accountNum} onChange={(e) => setAccountForm({ ...accountForm, accountNum: e.target.value })} />
+                  <div className="absolute end-2 top-1/2 -translate-y-1/2"><VoiceInputButton onResult={(text) => setAccountForm((f) => ({ ...f, accountNum: text }))} /></div>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">{t('forex.accountNotes')}</label>
-                <textarea className="input" rows={2} value={accountForm.notes} onChange={(e) => setAccountForm({ ...accountForm, notes: e.target.value })} />
+                <div className="relative">
+                  <textarea className="input pe-9" rows={2} value={accountForm.notes} onChange={(e) => setAccountForm({ ...accountForm, notes: e.target.value })} />
+                  <div className="absolute end-2 top-2"><VoiceInputButton onResult={(text) => setAccountForm((f) => ({ ...f, notes: f.notes ? f.notes + ' ' + text : text }))} /></div>
+                </div>
               </div>
             </div>
             <div className="flex gap-3 mt-6">
@@ -817,11 +830,17 @@ export default function ForexPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">{t('forex.transferDescription')}</label>
-                <input className="input" value={transferForm.description} onChange={(e) => setTransferForm({ ...transferForm, description: e.target.value })} />
+                <div className="relative flex items-center">
+                  <input className="input pe-9" value={transferForm.description} onChange={(e) => setTransferForm({ ...transferForm, description: e.target.value })} />
+                  <div className="absolute end-2 top-1/2 -translate-y-1/2"><VoiceInputButton onResult={(text) => setTransferForm((f) => ({ ...f, description: text }))} /></div>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">{t('forex.transferNotes')}</label>
-                <textarea className="input" rows={2} value={transferForm.notes} onChange={(e) => setTransferForm({ ...transferForm, notes: e.target.value })} />
+                <div className="relative">
+                  <textarea className="input pe-9" rows={2} value={transferForm.notes} onChange={(e) => setTransferForm({ ...transferForm, notes: e.target.value })} />
+                  <div className="absolute end-2 top-2"><VoiceInputButton onResult={(text) => setTransferForm((f) => ({ ...f, notes: f.notes ? f.notes + ' ' + text : text }))} /></div>
+                </div>
               </div>
             </div>
             <div className="flex gap-3 mt-6">

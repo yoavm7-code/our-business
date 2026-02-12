@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { mortgages, type MortgageItem, type MortgageTrackItem } from '@/lib/api';
 import { useTranslation } from '@/i18n/context';
+import VoiceInputButton from '@/components/VoiceInputButton';
 
 const TRACK_TYPES = ['PRIME', 'FIXED', 'VARIABLE', 'CPI_FIXED', 'CPI_VARIABLE'] as const;
 const INDEX_TYPES = ['NONE', 'CPI', 'DOLLAR', 'EURO'] as const;
@@ -505,19 +506,25 @@ export default function MortgagesPage() {
             <form onSubmit={handleSaveMortgage} className="p-4 space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">{t('mortgage.name')}</label>
-                <input
-                  type="text" className="input w-full" required
-                  value={mortgageForm.name}
-                  onChange={(e) => setMortgageForm((f) => ({ ...f, name: e.target.value }))}
-                />
+                <div className="relative flex items-center">
+                  <input
+                    type="text" className="input w-full pe-9" required
+                    value={mortgageForm.name}
+                    onChange={(e) => setMortgageForm((f) => ({ ...f, name: e.target.value }))}
+                  />
+                  <div className="absolute end-2 top-1/2 -translate-y-1/2"><VoiceInputButton onResult={(text) => setMortgageForm((f) => ({ ...f, name: text }))} /></div>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">{t('mortgage.bank')}</label>
-                <input
-                  type="text" className="input w-full"
-                  value={mortgageForm.bank}
-                  onChange={(e) => setMortgageForm((f) => ({ ...f, bank: e.target.value }))}
-                />
+                <div className="relative flex items-center">
+                  <input
+                    type="text" className="input w-full pe-9"
+                    value={mortgageForm.bank}
+                    onChange={(e) => setMortgageForm((f) => ({ ...f, bank: e.target.value }))}
+                  />
+                  <div className="absolute end-2 top-1/2 -translate-y-1/2"><VoiceInputButton onResult={(text) => setMortgageForm((f) => ({ ...f, bank: text }))} /></div>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -575,11 +582,14 @@ export default function MortgagesPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">{t('common.notes')}</label>
-                <textarea
-                  className="input w-full h-20 resize-none"
-                  value={mortgageForm.notes}
-                  onChange={(e) => setMortgageForm((f) => ({ ...f, notes: e.target.value }))}
-                />
+                <div className="relative">
+                  <textarea
+                    className="input w-full h-20 resize-none pe-9"
+                    value={mortgageForm.notes}
+                    onChange={(e) => setMortgageForm((f) => ({ ...f, notes: e.target.value }))}
+                  />
+                  <div className="absolute end-2 top-2"><VoiceInputButton onResult={(text) => setMortgageForm((f) => ({ ...f, notes: f.notes ? f.notes + ' ' + text : text }))} /></div>
+                </div>
               </div>
               <div className="flex gap-2">
                 <button type="submit" className="btn-primary flex-1" disabled={saving}>
@@ -612,11 +622,14 @@ export default function MortgagesPage() {
             <form onSubmit={handleSaveTrack} className="p-4 space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">{t('mortgage.trackName')}</label>
-                <input
-                  type="text" className="input w-full"
-                  value={trackForm.name}
-                  onChange={(e) => setTrackForm((f) => ({ ...f, name: e.target.value }))}
-                />
+                <div className="relative flex items-center">
+                  <input
+                    type="text" className="input w-full pe-9"
+                    value={trackForm.name}
+                    onChange={(e) => setTrackForm((f) => ({ ...f, name: e.target.value }))}
+                  />
+                  <div className="absolute end-2 top-1/2 -translate-y-1/2"><VoiceInputButton onResult={(text) => setTrackForm((f) => ({ ...f, name: text }))} /></div>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -709,11 +722,14 @@ export default function MortgagesPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">{t('common.notes')}</label>
-                <textarea
-                  className="input w-full h-20 resize-none"
-                  value={trackForm.notes}
-                  onChange={(e) => setTrackForm((f) => ({ ...f, notes: e.target.value }))}
-                />
+                <div className="relative">
+                  <textarea
+                    className="input w-full h-20 resize-none pe-9"
+                    value={trackForm.notes}
+                    onChange={(e) => setTrackForm((f) => ({ ...f, notes: e.target.value }))}
+                  />
+                  <div className="absolute end-2 top-2"><VoiceInputButton onResult={(text) => setTrackForm((f) => ({ ...f, notes: f.notes ? f.notes + ' ' + text : text }))} /></div>
+                </div>
               </div>
               <div className="flex gap-2">
                 <button type="submit" className="btn-primary flex-1" disabled={saving}>
