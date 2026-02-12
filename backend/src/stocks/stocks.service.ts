@@ -25,6 +25,7 @@ export class StocksService {
         currency: dto.currency ?? 'ILS',
         notes: dto.notes ?? null,
       },
+      include: { holdings: true },
     });
   }
 
