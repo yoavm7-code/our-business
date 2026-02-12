@@ -43,9 +43,10 @@ export default function VoiceTransaction() {
   const handleVoiceResult = useCallback((text: string) => {
     setVoiceText(text);
     processVoice(text);
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryList, accountList, parsedAccountId]);
 
-  const { isListening, isSupported, error: voiceError, start: startListening, stop: stopListening } = useVoiceRecorder({
+  const { isListening, interimTranscript, isSupported, error: voiceError, start: startListening, stop: stopListening } = useVoiceRecorder({
     lang: locale === 'he' ? 'he-IL' : 'en-US',
     onResult: handleVoiceResult,
   });
@@ -167,7 +168,7 @@ export default function VoiceTransaction() {
       <button
         type="button"
         onClick={handleOpen}
-        className="fixed bottom-6 end-6 z-40 w-14 h-14 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/30 hover:shadow-xl hover:shadow-primary-500/40 hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center"
+        className="fixed bottom-24 end-6 z-40 w-14 h-14 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/30 hover:shadow-xl hover:shadow-primary-500/40 hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center"
         title={t('voice.title')}
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -239,6 +240,11 @@ export default function VoiceTransaction() {
                     </button>
                   </div>
                   <p className="text-sm font-medium text-red-500 animate-pulse">{t('voice.listening')}</p>
+                  {interimTranscript && (
+                    <p className="text-sm text-slate-500 mt-2 bg-slate-50 dark:bg-slate-800 rounded-lg p-2 inline-block max-w-[280px]">
+                      &ldquo;{interimTranscript}&rdquo;
+                    </p>
+                  )}
                   <p className="text-xs text-slate-400 mt-1">{t('voice.tapToStop')}</p>
                 </div>
               )}

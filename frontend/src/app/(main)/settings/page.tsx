@@ -6,6 +6,7 @@ import { COUNTRY_CODES } from '@/lib/countries';
 import { useTranslation } from '@/i18n/context';
 import HelpTooltip from '@/components/HelpTooltip';
 import AvatarCropper from '@/components/AvatarCropper';
+import VoiceInputButton from '@/components/VoiceInputButton';
 
 const KNOWN_CATEGORY_SLUGS = ['groceries', 'transport', 'utilities', 'rent', 'insurance', 'healthcare', 'dining', 'shopping', 'entertainment', 'other', 'salary', 'income', 'credit_charges', 'transfers', 'fees', 'subscriptions', 'education', 'pets', 'gifts', 'childcare', 'savings', 'pension', 'investment', 'bank_fees', 'online_shopping', 'loan_payment', 'loan_interest', 'standing_order', 'finance', 'unknown'];
 
@@ -568,13 +569,16 @@ export default function SettingsPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">{t('settings.displayName')}</label>
-                <input
-                  type="text"
-                  className="input w-full"
-                  value={profileForm.name}
-                  onChange={(e) => setProfileForm((f) => ({ ...f, name: e.target.value }))}
-                  placeholder={user?.name ?? user?.email ?? ''}
-                />
+                <div className="relative flex items-center">
+                  <input
+                    type="text"
+                    className="input w-full pe-9"
+                    value={profileForm.name}
+                    onChange={(e) => setProfileForm((f) => ({ ...f, name: e.target.value }))}
+                    placeholder={user?.name ?? user?.email ?? ''}
+                  />
+                  <div className="absolute end-2 top-1/2 -translate-y-1/2"><VoiceInputButton onResult={(text) => setProfileForm((f) => ({ ...f, name: text }))} /></div>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">{t('settings.email')}</label>
@@ -1271,14 +1275,17 @@ export default function SettingsPage() {
           <div className="flex flex-wrap gap-4 items-end">
             <div className="flex-1 min-w-[160px]">
               <label className="block text-sm font-medium mb-1">{t('settings.categoryName')}</label>
-              <input
-                type="text"
-                className="input"
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                placeholder={t('settings.categoryNamePlaceholder')}
-                required
-              />
+              <div className="relative flex items-center">
+                <input
+                  type="text"
+                  className="input pe-9"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder={t('settings.categoryNamePlaceholder')}
+                  required
+                />
+                <div className="absolute end-2 top-1/2 -translate-y-1/2"><VoiceInputButton onResult={(text) => setNewCategoryName(text)} /></div>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <input

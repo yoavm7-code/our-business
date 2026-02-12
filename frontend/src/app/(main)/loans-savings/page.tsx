@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { useTranslation } from '@/i18n/context';
 import HelpTooltip from '@/components/HelpTooltip';
+import VoiceInputButton from '@/components/VoiceInputButton';
 
 type Loan = {
   id: string;
@@ -378,11 +379,17 @@ export default function LoansSavingsPage() {
             <form onSubmit={handleSaveLoan} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">{t('loansSavings.loanName')}</label>
-                <input type="text" className="input w-full" value={loanForm.name} onChange={(e) => setLoanForm((f) => ({ ...f, name: e.target.value }))} placeholder={t('loansSavings.loanNamePlaceholder')} required />
+                <div className="relative flex items-center">
+                  <input type="text" className="input w-full pe-9" value={loanForm.name} onChange={(e) => setLoanForm((f) => ({ ...f, name: e.target.value }))} placeholder={t('loansSavings.loanNamePlaceholder')} required />
+                  <div className="absolute end-2 top-1/2 -translate-y-1/2"><VoiceInputButton onResult={(text) => setLoanForm((f) => ({ ...f, name: text }))} /></div>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">{t('loansSavings.lender')}</label>
-                <input type="text" className="input w-full" value={loanForm.lender} onChange={(e) => setLoanForm((f) => ({ ...f, lender: e.target.value }))} placeholder={t('loansSavings.lenderPlaceholder')} />
+                <div className="relative flex items-center">
+                  <input type="text" className="input w-full pe-9" value={loanForm.lender} onChange={(e) => setLoanForm((f) => ({ ...f, lender: e.target.value }))} placeholder={t('loansSavings.lenderPlaceholder')} />
+                  <div className="absolute end-2 top-1/2 -translate-y-1/2"><VoiceInputButton onResult={(text) => setLoanForm((f) => ({ ...f, lender: text }))} /></div>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -416,7 +423,10 @@ export default function LoansSavingsPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">{t('loansSavings.notes')}</label>
-                <textarea className="input w-full" rows={2} value={loanForm.notes} onChange={(e) => setLoanForm((f) => ({ ...f, notes: e.target.value }))} />
+                <div className="relative">
+                  <textarea className="input w-full pe-9" rows={2} value={loanForm.notes} onChange={(e) => setLoanForm((f) => ({ ...f, notes: e.target.value }))} />
+                  <div className="absolute end-2 top-2"><VoiceInputButton onResult={(text) => setLoanForm((f) => ({ ...f, notes: f.notes ? f.notes + ' ' + text : text }))} /></div>
+                </div>
               </div>
               <div className="flex gap-2">
                 <button type="submit" className="btn-primary" disabled={saving}>{saving ? t('common.loading') : t('common.save')}</button>
@@ -435,7 +445,10 @@ export default function LoansSavingsPage() {
             <form onSubmit={handleSaveSaving} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">{t('loansSavings.savingName')}</label>
-                <input type="text" className="input w-full" value={savingForm.name} onChange={(e) => setSavingForm((f) => ({ ...f, name: e.target.value }))} placeholder={t('loansSavings.savingNamePlaceholder')} required />
+                <div className="relative flex items-center">
+                  <input type="text" className="input w-full pe-9" value={savingForm.name} onChange={(e) => setSavingForm((f) => ({ ...f, name: e.target.value }))} placeholder={t('loansSavings.savingNamePlaceholder')} required />
+                  <div className="absolute end-2 top-1/2 -translate-y-1/2"><VoiceInputButton onResult={(text) => setSavingForm((f) => ({ ...f, name: text }))} /></div>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -459,7 +472,10 @@ export default function LoansSavingsPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">{t('loansSavings.notes')}</label>
-                <textarea className="input w-full" rows={2} value={savingForm.notes} onChange={(e) => setSavingForm((f) => ({ ...f, notes: e.target.value }))} />
+                <div className="relative">
+                  <textarea className="input w-full pe-9" rows={2} value={savingForm.notes} onChange={(e) => setSavingForm((f) => ({ ...f, notes: e.target.value }))} />
+                  <div className="absolute end-2 top-2"><VoiceInputButton onResult={(text) => setSavingForm((f) => ({ ...f, notes: f.notes ? f.notes + ' ' + text : text }))} /></div>
+                </div>
               </div>
               <div className="flex gap-2">
                 <button type="submit" className="btn-primary" disabled={saving}>{saving ? t('common.loading') : t('common.save')}</button>

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { stocks, type StockPortfolioItem, type StockHoldingItem, type StockProviderInfo, type StockQuote } from '@/lib/api';
 import { useTranslation } from '@/i18n/context';
+import VoiceInputButton from '@/components/VoiceInputButton';
 
 /* ───── helpers ───── */
 
@@ -169,11 +170,11 @@ export default function StocksPage() {
           currency: 'USD',
         });
         targetPortfolioId = newPortfolio.id;
-        setPortfolios([newPortfolio]);
+        setPortfolios([{ ...newPortfolio, holdings: [] }]);
       }
 
       // Directly add holding with sensible defaults
-      await stocks.holdings.add(targetPortfolioId, {
+      const newHolding = await stocks.holdings.add(targetPortfolioId, {
         ticker: selectedStock.symbol,
         name: selectedStock.name,
         shares: 1,
@@ -182,8 +183,16 @@ export default function StocksPage() {
         buyDate: new Date().toISOString().slice(0, 10),
       });
 
+      // Dynamically update portfolios state without refetching
+      setPortfolios((prev) =>
+        prev.map((p) =>
+          p.id === targetPortfolioId
+            ? { ...p, holdings: [...(p.holdings || []), newHolding] }
+            : p,
+        ),
+      );
+
       setTrackSuccess(true);
-      fetchData();
 
       // Clear after brief success animation
       setTimeout(() => {
@@ -247,11 +256,27 @@ export default function StocksPage() {
       };
       if (editingPortfolio) {
         await stocks.portfolios.update(editingPortfolio.id, body);
+        // Update local state dynamically
+        setPortfolios((prev) =>
+          prev.map((p) =>
+            p.id === editingPortfolio.id
+              ? {
+                  ...p,
+                  name: body.name,
+                  broker: body.broker ?? p.broker,
+                  accountNum: body.accountNum ?? p.accountNum,
+                  currency: body.currency ?? p.currency,
+                  notes: body.notes ?? p.notes,
+                }
+              : p,
+          ),
+        );
       } else {
-        await stocks.portfolios.create(body);
+        const newPortfolio = await stocks.portfolios.create(body);
+        // Add to local state dynamically
+        setPortfolios((prev) => [...prev, { ...newPortfolio, holdings: newPortfolio.holdings || [] }]);
       }
       setShowPortfolioModal(false);
-      fetchData();
     } catch {
       setError(t('common.somethingWentWrong'));
     } finally {
@@ -316,13 +341,46 @@ export default function StocksPage() {
       };
       if (editingHolding) {
         await stocks.holdings.update(holdingPortfolioId, editingHolding.id, body);
+        // Update the holding in local state
+        setPortfolios((prev) =>
+          prev.map((p) =>
+            p.id === holdingPortfolioId
+              ? {
+                  ...p,
+                  holdings: p.holdings.map((h) =>
+                    h.id === editingHolding.id
+                      ? {
+                          ...h,
+                          ticker: body.ticker,
+                          name: body.name,
+                          exchange: body.exchange ?? h.exchange,
+                          sector: body.sector ?? h.sector,
+                          shares: body.shares,
+                          avgBuyPrice: body.avgBuyPrice,
+                          currency: body.currency ?? h.currency,
+                          buyDate: body.buyDate ?? h.buyDate,
+                          notes: body.notes ?? h.notes,
+                        }
+                      : h,
+                  ),
+                }
+              : p,
+          ),
+        );
       } else {
-        await stocks.holdings.add(holdingPortfolioId, body);
+        const newHolding = await stocks.holdings.add(holdingPortfolioId, body);
+        // Add to local state dynamically
+        setPortfolios((prev) =>
+          prev.map((p) =>
+            p.id === holdingPortfolioId
+              ? { ...p, holdings: [...(p.holdings || []), newHolding] }
+              : p,
+          ),
+        );
       }
       setShowHoldingModal(false);
       setSelectedStock(null);
       setSelectedQuote(null);
-      fetchData();
     } catch {
       setError(t('common.somethingWentWrong'));
     } finally {
@@ -813,12 +871,17 @@ export default function StocksPage() {
             <div className="p-4 space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">{t('stocks.portfolioName')}</label>
-                <input
-                  className="input"
-                  value={portfolioForm.name}
-                  onChange={(e) => setPortfolioForm({ ...portfolioForm, name: e.target.value })}
-                  placeholder={t('stocks.portfolioName')}
-                />
+                <div className="relative flex items-center">
+                  <input
+                    className="input pe-9"
+                    value={portfolioForm.name}
+                    onChange={(e) => setPortfolioForm({ ...portfolioForm, name: e.target.value })}
+                    placeholder={t('stocks.portfolioName')}
+                  />
+                  <div className="absolute end-2 top-1/2 -translate-y-1/2">
+                    <VoiceInputButton onResult={(text) => setPortfolioForm((f) => ({ ...f, name: text }))} />
+                  </div>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -855,12 +918,17 @@ export default function StocksPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">{t('stocks.notes')}</label>
-                <textarea
-                  className="input h-20 resize-none"
-                  value={portfolioForm.notes}
-                  onChange={(e) => setPortfolioForm({ ...portfolioForm, notes: e.target.value })}
-                  placeholder={t('common.optional')}
-                />
+                <div className="relative">
+                  <textarea
+                    className="input h-20 resize-none pe-9"
+                    value={portfolioForm.notes}
+                    onChange={(e) => setPortfolioForm({ ...portfolioForm, notes: e.target.value })}
+                    placeholder={t('common.optional')}
+                  />
+                  <div className="absolute end-2 top-2">
+                    <VoiceInputButton onResult={(text) => setPortfolioForm((f) => ({ ...f, notes: f.notes ? f.notes + ' ' + text : text }))} />
+                  </div>
+                </div>
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowPortfolioModal(false)} className="btn-secondary flex-1">
@@ -945,12 +1013,17 @@ export default function StocksPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">{t('stocks.companyName')}</label>
-                  <input
-                    className="input"
-                    value={holdingForm.name}
-                    onChange={(e) => setHoldingForm({ ...holdingForm, name: e.target.value })}
-                    placeholder={t('stocks.companyName')}
-                  />
+                  <div className="relative flex items-center">
+                    <input
+                      className="input pe-9"
+                      value={holdingForm.name}
+                      onChange={(e) => setHoldingForm({ ...holdingForm, name: e.target.value })}
+                      placeholder={t('stocks.companyName')}
+                    />
+                    <div className="absolute end-2 top-1/2 -translate-y-1/2">
+                      <VoiceInputButton onResult={(text) => setHoldingForm((f) => ({ ...f, name: text }))} />
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -1047,12 +1120,17 @@ export default function StocksPage() {
               {/* Notes */}
               <div>
                 <label className="block text-sm font-medium mb-1">{t('stocks.notes')}</label>
-                <textarea
-                  className="input h-20 resize-none"
-                  value={holdingForm.notes}
-                  onChange={(e) => setHoldingForm({ ...holdingForm, notes: e.target.value })}
-                  placeholder={t('common.optional')}
-                />
+                <div className="relative">
+                  <textarea
+                    className="input h-20 resize-none pe-9"
+                    value={holdingForm.notes}
+                    onChange={(e) => setHoldingForm({ ...holdingForm, notes: e.target.value })}
+                    placeholder={t('common.optional')}
+                  />
+                  <div className="absolute end-2 top-2">
+                    <VoiceInputButton onResult={(text) => setHoldingForm((f) => ({ ...f, notes: f.notes ? f.notes + ' ' + text : text }))} />
+                  </div>
+                </div>
               </div>
 
               {/* Buttons */}

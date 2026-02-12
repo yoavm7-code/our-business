@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from '@/i18n/context';
 import { accounts, categories, transactions as txApi, goals, budgets, forex, mortgages, stocks, api } from '@/lib/api';
+import VoiceInputButton from '@/components/VoiceInputButton';
 
 /* ─── Types ─── */
 
@@ -629,13 +630,18 @@ export default function QuickAdd({ open, onClose }: QuickAddProps) {
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">{t('common.description')}</label>
-            <input
-              type="text"
-              className="input w-full"
-              value={txDescription}
-              onChange={(e) => setTxDescription(e.target.value)}
-              placeholder={selectedType === 'expense' ? t('expenses.descriptionPlaceholder') : t('income.descriptionPlaceholder')}
-            />
+            <div className="relative flex items-center">
+              <input
+                type="text"
+                className="input w-full pe-9"
+                value={txDescription}
+                onChange={(e) => setTxDescription(e.target.value)}
+                placeholder={selectedType === 'expense' ? t('expenses.descriptionPlaceholder') : t('income.descriptionPlaceholder')}
+              />
+              <div className="absolute end-2 top-1/2 -translate-y-1/2">
+                <VoiceInputButton onResult={(text) => setTxDescription(text)} />
+              </div>
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">{t('common.account')}</label>
@@ -743,14 +749,19 @@ export default function QuickAdd({ open, onClose }: QuickAddProps) {
         <div className="space-y-3">
           <div>
             <label className="block text-sm font-medium mb-1">{t('common.name')} *</label>
-            <input
-              type="text"
-              className="input w-full"
-              value={accName}
-              onChange={(e) => setAccName(e.target.value)}
-              placeholder={t('settings.namePlaceholder')}
-              autoFocus
-            />
+            <div className="relative flex items-center">
+              <input
+                type="text"
+                className="input w-full pe-9"
+                value={accName}
+                onChange={(e) => setAccName(e.target.value)}
+                placeholder={t('settings.namePlaceholder')}
+                autoFocus
+              />
+              <div className="absolute end-2 top-1/2 -translate-y-1/2">
+                <VoiceInputButton onResult={(text) => setAccName(text)} />
+              </div>
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">{t('settings.type')}</label>
@@ -841,14 +852,19 @@ export default function QuickAdd({ open, onClose }: QuickAddProps) {
         <div className="space-y-3">
           <div>
             <label className="block text-sm font-medium mb-1">{t('loansSavings.loanName')} *</label>
-            <input
-              type="text"
-              className="input w-full"
-              value={loanName}
-              onChange={(e) => setLoanName(e.target.value)}
-              placeholder={t('loansSavings.loanNamePlaceholder')}
-              autoFocus
-            />
+            <div className="relative flex items-center">
+              <input
+                type="text"
+                className="input w-full pe-9"
+                value={loanName}
+                onChange={(e) => setLoanName(e.target.value)}
+                placeholder={t('loansSavings.loanNamePlaceholder')}
+                autoFocus
+              />
+              <div className="absolute end-2 top-1/2 -translate-y-1/2">
+                <VoiceInputButton onResult={(text) => setLoanName(text)} />
+              </div>
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">{t('loansSavings.originalAmount')} *</label>
@@ -900,13 +916,18 @@ export default function QuickAdd({ open, onClose }: QuickAddProps) {
             <div className="space-y-3 pt-2 border-t border-[var(--border)]">
               <div>
                 <label className="block text-sm font-medium mb-1">{t('quickAdd.lender')}</label>
-                <input
-                  type="text"
-                  className="input w-full"
-                  value={loanLender}
-                  onChange={(e) => setLoanLender(e.target.value)}
-                  placeholder={t('quickAdd.lenderPlaceholder')}
-                />
+                <div className="relative flex items-center">
+                  <input
+                    type="text"
+                    className="input w-full pe-9"
+                    value={loanLender}
+                    onChange={(e) => setLoanLender(e.target.value)}
+                    placeholder={t('quickAdd.lenderPlaceholder')}
+                  />
+                  <div className="absolute end-2 top-1/2 -translate-y-1/2">
+                    <VoiceInputButton onResult={(text) => setLoanLender(text)} />
+                  </div>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -930,12 +951,17 @@ export default function QuickAdd({ open, onClose }: QuickAddProps) {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">{t('quickAdd.notes')}</label>
-                <textarea
-                  className="input w-full"
-                  rows={2}
-                  value={loanNotes}
-                  onChange={(e) => setLoanNotes(e.target.value)}
-                />
+                <div className="relative">
+                  <textarea
+                    className="input w-full pe-9"
+                    rows={2}
+                    value={loanNotes}
+                    onChange={(e) => setLoanNotes(e.target.value)}
+                  />
+                  <div className="absolute end-2 top-2">
+                    <VoiceInputButton onResult={(text) => setLoanNotes((prev) => prev ? prev + ' ' + text : text)} />
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -953,14 +979,19 @@ export default function QuickAdd({ open, onClose }: QuickAddProps) {
         <div className="space-y-3">
           <div>
             <label className="block text-sm font-medium mb-1">{t('loansSavings.savingName')} *</label>
-            <input
-              type="text"
-              className="input w-full"
-              value={savingName}
-              onChange={(e) => setSavingName(e.target.value)}
-              placeholder={t('loansSavings.savingNamePlaceholder')}
-              autoFocus
-            />
+            <div className="relative flex items-center">
+              <input
+                type="text"
+                className="input w-full pe-9"
+                value={savingName}
+                onChange={(e) => setSavingName(e.target.value)}
+                placeholder={t('loansSavings.savingNamePlaceholder')}
+                autoFocus
+              />
+              <div className="absolute end-2 top-1/2 -translate-y-1/2">
+                <VoiceInputButton onResult={(text) => setSavingName(text)} />
+              </div>
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">{t('loansSavings.currentAmountLabel')}</label>
@@ -1021,12 +1052,17 @@ export default function QuickAdd({ open, onClose }: QuickAddProps) {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">{t('quickAdd.notes')}</label>
-                <textarea
-                  className="input w-full"
-                  rows={2}
-                  value={savingNotes}
-                  onChange={(e) => setSavingNotes(e.target.value)}
-                />
+                <div className="relative">
+                  <textarea
+                    className="input w-full pe-9"
+                    rows={2}
+                    value={savingNotes}
+                    onChange={(e) => setSavingNotes(e.target.value)}
+                  />
+                  <div className="absolute end-2 top-2">
+                    <VoiceInputButton onResult={(text) => setSavingNotes((prev) => prev ? prev + ' ' + text : text)} />
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -1044,14 +1080,19 @@ export default function QuickAdd({ open, onClose }: QuickAddProps) {
         <div className="space-y-3">
           <div>
             <label className="block text-sm font-medium mb-1">{t('goals.goalName')} *</label>
-            <input
-              type="text"
-              className="input w-full"
-              value={goalName}
-              onChange={(e) => setGoalName(e.target.value)}
-              placeholder={t('goals.goalNamePlaceholder')}
-              autoFocus
-            />
+            <div className="relative flex items-center">
+              <input
+                type="text"
+                className="input w-full pe-9"
+                value={goalName}
+                onChange={(e) => setGoalName(e.target.value)}
+                placeholder={t('goals.goalNamePlaceholder')}
+                autoFocus
+              />
+              <div className="absolute end-2 top-1/2 -translate-y-1/2">
+                <VoiceInputButton onResult={(text) => setGoalName(text)} />
+              </div>
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">{t('goals.targetAmount')} *</label>
@@ -1125,12 +1166,17 @@ export default function QuickAdd({ open, onClose }: QuickAddProps) {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">{t('quickAdd.notes')}</label>
-                <textarea
-                  className="input w-full"
-                  rows={2}
-                  value={goalNotes}
-                  onChange={(e) => setGoalNotes(e.target.value)}
-                />
+                <div className="relative">
+                  <textarea
+                    className="input w-full pe-9"
+                    rows={2}
+                    value={goalNotes}
+                    onChange={(e) => setGoalNotes(e.target.value)}
+                  />
+                  <div className="absolute end-2 top-2">
+                    <VoiceInputButton onResult={(text) => setGoalNotes((prev) => prev ? prev + ' ' + text : text)} />
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -1259,21 +1305,31 @@ export default function QuickAdd({ open, onClose }: QuickAddProps) {
               )}
               <div>
                 <label className="block text-sm font-medium mb-1">{t('common.description')}</label>
-                <input
-                  type="text"
-                  className="input w-full"
-                  value={fxDescription}
-                  onChange={(e) => setFxDescription(e.target.value)}
-                />
+                <div className="relative flex items-center">
+                  <input
+                    type="text"
+                    className="input w-full pe-9"
+                    value={fxDescription}
+                    onChange={(e) => setFxDescription(e.target.value)}
+                  />
+                  <div className="absolute end-2 top-1/2 -translate-y-1/2">
+                    <VoiceInputButton onResult={(text) => setFxDescription(text)} />
+                  </div>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">{t('quickAdd.notes')}</label>
-                <textarea
-                  className="input w-full"
-                  rows={2}
-                  value={fxNotes}
-                  onChange={(e) => setFxNotes(e.target.value)}
-                />
+                <div className="relative">
+                  <textarea
+                    className="input w-full pe-9"
+                    rows={2}
+                    value={fxNotes}
+                    onChange={(e) => setFxNotes(e.target.value)}
+                  />
+                  <div className="absolute end-2 top-2">
+                    <VoiceInputButton onResult={(text) => setFxNotes((prev) => prev ? prev + ' ' + text : text)} />
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -1329,14 +1385,19 @@ export default function QuickAdd({ open, onClose }: QuickAddProps) {
         <div className="space-y-3">
           <div>
             <label className="block text-sm font-medium mb-1">{t('mortgage.name')} *</label>
-            <input
-              type="text"
-              className="input w-full"
-              value={mortName}
-              onChange={(e) => setMortName(e.target.value)}
-              placeholder={t('mortgage.namePlaceholder')}
-              autoFocus
-            />
+            <div className="relative flex items-center">
+              <input
+                type="text"
+                className="input w-full pe-9"
+                value={mortName}
+                onChange={(e) => setMortName(e.target.value)}
+                placeholder={t('mortgage.namePlaceholder')}
+                autoFocus
+              />
+              <div className="absolute end-2 top-1/2 -translate-y-1/2">
+                <VoiceInputButton onResult={(text) => setMortName(text)} />
+              </div>
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">{t('mortgage.totalAmount')} *</label>
@@ -1351,13 +1412,18 @@ export default function QuickAdd({ open, onClose }: QuickAddProps) {
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">{t('mortgage.bank')}</label>
-            <input
-              type="text"
-              className="input w-full"
-              value={mortBank}
-              onChange={(e) => setMortBank(e.target.value)}
-              placeholder={t('mortgage.bankPlaceholder')}
-            />
+            <div className="relative flex items-center">
+              <input
+                type="text"
+                className="input w-full pe-9"
+                value={mortBank}
+                onChange={(e) => setMortBank(e.target.value)}
+                placeholder={t('mortgage.bankPlaceholder')}
+              />
+              <div className="absolute end-2 top-1/2 -translate-y-1/2">
+                <VoiceInputButton onResult={(text) => setMortBank(text)} />
+              </div>
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">{t('mortgage.propertyValue')}</label>
@@ -1384,24 +1450,34 @@ export default function QuickAdd({ open, onClose }: QuickAddProps) {
         <div className="space-y-3">
           <div>
             <label className="block text-sm font-medium mb-1">{t('stocks.portfolioName')} *</label>
-            <input
-              type="text"
-              className="input w-full"
-              value={spName}
-              onChange={(e) => setSpName(e.target.value)}
-              placeholder={t('stocks.portfolioNamePlaceholder')}
-              autoFocus
-            />
+            <div className="relative flex items-center">
+              <input
+                type="text"
+                className="input w-full pe-9"
+                value={spName}
+                onChange={(e) => setSpName(e.target.value)}
+                placeholder={t('stocks.portfolioNamePlaceholder')}
+                autoFocus
+              />
+              <div className="absolute end-2 top-1/2 -translate-y-1/2">
+                <VoiceInputButton onResult={(text) => setSpName(text)} />
+              </div>
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">{t('stocks.broker')}</label>
-            <input
-              type="text"
-              className="input w-full"
-              value={spBroker}
-              onChange={(e) => setSpBroker(e.target.value)}
-              placeholder={t('stocks.brokerPlaceholder')}
-            />
+            <div className="relative flex items-center">
+              <input
+                type="text"
+                className="input w-full pe-9"
+                value={spBroker}
+                onChange={(e) => setSpBroker(e.target.value)}
+                placeholder={t('stocks.brokerPlaceholder')}
+              />
+              <div className="absolute end-2 top-1/2 -translate-y-1/2">
+                <VoiceInputButton onResult={(text) => setSpBroker(text)} />
+              </div>
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">{t('stocks.accountNum')}</label>

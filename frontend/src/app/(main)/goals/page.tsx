@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { goals, type GoalItem } from '@/lib/api';
 import { useTranslation } from '@/i18n/context';
 import HelpTooltip from '@/components/HelpTooltip';
+import VoiceInputButton from '@/components/VoiceInputButton';
 
 const GOAL_ICONS = ['🎯', '✈️', '🏠', '🚗', '💰', '📚', '🏥', '💍', '🎓', '🛒', '🏖️', '💻', '👶', '🐕', '🎁'];
 const GOAL_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#ec4899'];
@@ -259,7 +260,10 @@ export default function GoalsPage() {
             <form onSubmit={handleSave} className="p-4 space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">{t('goals.goalName')}</label>
-                <input className="input w-full" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder={t('goals.goalNamePlaceholder')} required />
+                <div className="relative flex items-center">
+                  <input className="input w-full pe-9" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder={t('goals.goalNamePlaceholder')} required />
+                  <div className="absolute end-2 top-1/2 -translate-y-1/2"><VoiceInputButton onResult={(text) => setForm((f) => ({ ...f, name: text }))} /></div>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -295,7 +299,10 @@ export default function GoalsPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">{t('goals.notes')}</label>
-                <textarea className="input w-full h-20 resize-none" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} placeholder={t('goals.notesPlaceholder')} />
+                <div className="relative">
+                  <textarea className="input w-full h-20 resize-none pe-9" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} placeholder={t('goals.notesPlaceholder')} />
+                  <div className="absolute end-2 top-2"><VoiceInputButton onResult={(text) => setForm((f) => ({ ...f, notes: f.notes ? f.notes + ' ' + text : text }))} /></div>
+                </div>
               </div>
               <button type="submit" className="btn-primary w-full" disabled={saving}>
                 {saving ? t('common.loading') : t('common.save')}
