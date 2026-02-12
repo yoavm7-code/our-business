@@ -47,6 +47,8 @@ model Business {
   invoices           Invoice[]
   taxPeriods         TaxPeriod[]
   mortgages          Mortgage[]
+
+  @@map("Household")
 }
 
 // --------------------------------------------
@@ -82,7 +84,7 @@ model User {
   onboardingCompleted Boolean @default(false) @map("onboarding_completed")
   isAdmin          Boolean  @default(false) @map("is_admin")
 
-  businessId       String   @map("business_id")
+  businessId       String   @map("household_id")
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -96,7 +98,7 @@ model User {
 // --------------------------------------------
 model Client {
   id             String   @id @default(uuid())
-  businessId     String   @map("business_id")
+  businessId     String   @map("household_id")
   name           String
   contactName    String?  @map("contact_name")
   email          String?
@@ -124,7 +126,7 @@ model Client {
 // --------------------------------------------
 model Project {
   id           String   @id @default(uuid())
-  businessId   String   @map("business_id")
+  businessId   String   @map("household_id")
   clientId     String?  @map("client_id")
   name         String
   description  String?  @db.Text
@@ -161,7 +163,7 @@ enum ProjectStatus {
 // --------------------------------------------
 model Invoice {
   id              String   @id @default(uuid())
-  businessId      String   @map("business_id")
+  businessId      String   @map("household_id")
   clientId        String?  @map("client_id")
   projectId       String?  @map("project_id")
   invoiceNumber   String   @map("invoice_number") // auto-generated sequential
@@ -231,7 +233,7 @@ enum InvoiceStatus {
 // --------------------------------------------
 model TaxPeriod {
   id           String   @id @default(uuid())
-  businessId   String   @map("business_id")
+  businessId   String   @map("household_id")
   type         TaxType
   periodStart  DateTime @map("period_start") @db.Date
   periodEnd    DateTime @map("period_end") @db.Date
@@ -271,7 +273,7 @@ enum TaxPeriodStatus {
 // --------------------------------------------
 model Account {
   id                  String   @id @default(uuid())
-  businessId          String   @map("business_id")
+  businessId          String   @map("household_id")
   name                String
   type                AccountType
   provider            String?
@@ -309,7 +311,7 @@ enum AccountType {
 // --------------------------------------------
 model Category {
   id           String   @id @default(uuid())
-  businessId   String   @map("business_id")
+  businessId   String   @map("household_id")
   name         String
   slug         String
   icon         String?
@@ -340,7 +342,7 @@ model Category {
 // --------------------------------------------
 model Transaction {
   id                 String    @id @default(uuid())
-  businessId         String    @map("business_id")
+  businessId         String    @map("household_id")
   accountId          String    @map("account_id")
   categoryId         String?   @map("category_id")
   clientId           String?   @map("client_id")
@@ -391,7 +393,7 @@ enum TransactionSource {
 // --------------------------------------------
 model Document {
   id           String   @id @default(uuid())
-  businessId   String   @map("business_id")
+  businessId   String   @map("household_id")
   fileName     String   @map("file_name")
   mimeType     String   @map("mime_type")
   storagePath  String   @map("storage_path")
@@ -423,7 +425,7 @@ enum DocumentStatus {
 // --------------------------------------------
 model CategoryRule {
   id          String   @id @default(uuid())
-  businessId  String   @map("business_id")
+  businessId  String   @map("household_id")
   categoryId  String   @map("category_id")
   pattern     String
   patternType String   @default("contains") @map("pattern_type")
@@ -444,7 +446,7 @@ model CategoryRule {
 // --------------------------------------------
 model Loan {
   id              String    @id @default(uuid())
-  businessId      String    @map("business_id")
+  businessId      String    @map("household_id")
   name            String
   lender          String?
   originalAmount  Decimal   @map("original_amount") @db.Decimal(14, 2)
@@ -469,7 +471,7 @@ model Loan {
 // --------------------------------------------
 model Saving {
   id            String    @id @default(uuid())
-  businessId    String    @map("business_id")
+  businessId    String    @map("household_id")
   name          String
   targetAmount  Decimal?  @map("target_amount") @db.Decimal(14, 2)
   currentAmount Decimal   @default(0) @map("current_amount") @db.Decimal(14, 2)
@@ -492,7 +494,7 @@ model Saving {
 // --------------------------------------------
 model Goal {
   id              String    @id @default(uuid())
-  businessId      String    @map("business_id")
+  businessId      String    @map("household_id")
   name            String
   targetAmount    Decimal   @map("target_amount") @db.Decimal(14, 2)
   currentAmount   Decimal   @default(0) @map("current_amount") @db.Decimal(14, 2)
@@ -519,7 +521,7 @@ model Goal {
 // --------------------------------------------
 model StockPortfolio {
   id          String   @id @default(uuid())
-  businessId  String   @map("business_id")
+  businessId  String   @map("household_id")
   name        String
   broker      String?
   accountNum  String?  @map("account_num")
@@ -564,7 +566,7 @@ model StockHolding {
 // --------------------------------------------
 model ForexAccount {
   id          String   @id @default(uuid())
-  businessId  String   @map("business_id")
+  businessId  String   @map("household_id")
   name        String
   currency    String
   balance     Decimal  @default(0) @db.Decimal(14, 2)
@@ -583,7 +585,7 @@ model ForexAccount {
 
 model ForexTransfer {
   id             String   @id @default(uuid())
-  businessId     String   @map("business_id")
+  businessId     String   @map("household_id")
   forexAccountId String?  @map("forex_account_id")
   type           ForexTransferType
   fromCurrency   String   @map("from_currency")
@@ -617,7 +619,7 @@ enum ForexTransferType {
 // --------------------------------------------
 model Budget {
   id          String   @id @default(uuid())
-  businessId  String   @map("business_id")
+  businessId  String   @map("household_id")
   categoryId  String   @map("category_id")
   amount      Decimal  @db.Decimal(14, 2)
   currency    String   @default("ILS")
@@ -637,7 +639,7 @@ model Budget {
 // --------------------------------------------
 model RecurringPattern {
   id            String   @id @default(uuid())
-  businessId    String   @map("business_id")
+  businessId    String   @map("household_id")
   description   String
   amount        Decimal  @db.Decimal(14, 2)
   type          String   // 'income' or 'expense'
@@ -661,7 +663,7 @@ model RecurringPattern {
 // --------------------------------------------
 model Mortgage {
   id              String    @id @default(uuid())
-  businessId      String    @map("business_id")
+  businessId      String    @map("household_id")
   name            String
   bank            String?
   propertyValue   Decimal?  @map("property_value") @db.Decimal(14, 2)

@@ -69,7 +69,7 @@ export const auth = {
   login: (email: string, password: string, captchaToken?: string, twoFactorToken?: string) =>
     api<{
       accessToken: string | null;
-      user: { id: string; email: string; name: string | null; householdId: string; countryCode?: string } | null;
+      user: { id: string; email: string; name: string | null; businessId: string; countryCode?: string } | null;
       requiresTwoFactor?: boolean;
     }>('/api/auth/login', {
       method: 'POST',
@@ -78,7 +78,7 @@ export const auth = {
   register: (email: string, password: string, name?: string, countryCode?: string, captchaToken?: string, phone?: string) =>
     api<{
       accessToken: string;
-      user: { id: string; email: string; name: string | null; householdId: string; countryCode?: string };
+      user: { id: string; email: string; name: string | null; businessId: string; countryCode?: string };
     }>('/api/auth/register', {
       method: 'POST',
       body: JSON.stringify({ email, password, name, countryCode, captchaToken, phone }),
@@ -119,7 +119,7 @@ export const users = {
       id: string;
       email: string;
       name: string | null;
-      householdId: string;
+      businessId: string;
       countryCode?: string | null;
       avatarUrl?: string | null;
       emailVerified?: boolean;
@@ -132,7 +132,7 @@ export const users = {
       id: string;
       email: string;
       name: string | null;
-      householdId: string;
+      businessId: string;
       countryCode?: string | null;
       avatarUrl?: string | null;
     }>('/api/users/me', {
@@ -1335,7 +1335,7 @@ export const admin = {
   stats: () =>
     api<{
       totalUsers: number;
-      totalHouseholds: number;
+      totalBusinesses: number;
       totalTransactions: number;
       totalAccounts: number;
       usersToday: number;
@@ -1353,7 +1353,7 @@ export const admin = {
           twoFactorEnabled: boolean;
           isAdmin: boolean;
           createdAt: string;
-          householdId: string;
+          businessId: string;
           _count?: { accounts: number; transactions: number };
         }>;
         total: number;
