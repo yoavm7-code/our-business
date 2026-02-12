@@ -63,6 +63,7 @@ export function useVoiceRecorder(options: UseVoiceRecorderOptions = {}) {
     recognition.continuous = options.continuous !== false;
 
     let finalText = '';
+    let lastInterim = '';
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       let interim = '';
@@ -87,6 +88,7 @@ export function useVoiceRecorder(options: UseVoiceRecorderOptions = {}) {
           onResultRef.current?.(final);
         }
       } else {
+        lastInterim = interim;
         setInterimTranscript(interim);
       }
     };
@@ -119,9 +121,11 @@ export function useVoiceRecorder(options: UseVoiceRecorderOptions = {}) {
     };
 
     recognition.onend = () => {
-      // If we have a final result and we're in continuous mode, fire callback
-      if (finalText && options.continuous !== false) {
-        onResultRef.current?.(finalText);
+      // Use finalText if available, otherwise use the last interim transcript
+      // (some browsers don't finalize text when stop() is called quickly)
+      const textToUse = finalText || lastInterim;
+      if (textToUse && options.continuous !== false) {
+        onResultRef.current?.(textToUse);
       }
       setIsListening(false);
       setInterimTranscript('');
