@@ -18,4 +18,4 @@ npx prisma migrate resolve --rolled-back 20260210120000_add_budgets_recurring_in
 npx prisma migrate resolve --rolled-back 20260212100000_add_business_fields_and_freelancer_tables || true
 
 npx prisma migrate deploy
-exec npm run start
+exec node dist/main.js
