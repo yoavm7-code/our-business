@@ -1,21 +1,69 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, Logger } from '@nestjs/common';
+import {
+  ValidationPipe,
+  Logger,
+  Catch,
+  ArgumentsHost,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 
 const logger = new Logger('Bootstrap');
 
-// Catch process-level crashes so we can see what kills the process
+// Log every process-level crash
 process.on('uncaughtException', (err) => {
-  logger.error(`Uncaught Exception: ${err.message}`, err.stack);
+  console.error('UNCAUGHT EXCEPTION:', err);
 });
 process.on('unhandledRejection', (reason) => {
-  logger.error(`Unhandled Rejection: ${reason}`);
+  console.error('UNHANDLED REJECTION:', reason);
 });
 
+// Global filter: catch ALL errors, log them, return proper HTTP response (prevent 502)
+@Catch()
+class GlobalExceptionFilter {
+  private readonly logger = new Logger('ExceptionFilter');
+
+  catch(exception: any, host: ArgumentsHost) {
+    const ctx = host.switchToHttp();
+    const response = ctx.getResponse();
+    const request = ctx.getRequest();
+
+    const status =
+      exception instanceof HttpException
+        ? exception.getStatus()
+        : HttpStatus.INTERNAL_SERVER_ERROR;
+
+    const message =
+      exception instanceof HttpException
+        ? exception.getResponse()
+        : { statusCode: status, message: exception?.message || 'Internal server error' };
+
+    this.logger.error(
+      `${request.method} ${request.url} → ${status}: ${exception?.message}`,
+      exception?.stack,
+    );
+
+    response.status(status).json(
+      typeof message === 'string' ? { statusCode: status, message } : message,
+    );
+  }
+}
+
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  console.log('Starting NestJS application...');
+  console.log(`NODE_ENV=${process.env.NODE_ENV}`);
+  console.log(`PORT=${process.env.PORT}`);
+  console.log(`DATABASE_URL=${process.env.DATABASE_URL ? '***set***' : 'NOT SET'}`);
+
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    logger: ['error', 'warn', 'log'],
+  });
+
+  // Global exception filter - catches EVERYTHING
+  app.useGlobalFilters(new GlobalExceptionFilter());
 
   // Security headers
   app.use(
@@ -26,10 +74,9 @@ async function bootstrap() {
     }),
   );
 
-  // CORS - allow all origins in production for now (Railway generates dynamic URLs)
-  const frontendUrl = process.env.FRONTEND_URL;
+  // CORS - permissive for now to eliminate as a failure cause
   app.enableCors({
-    origin: frontendUrl ? frontendUrl.split(',') : true,
+    origin: true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
@@ -47,18 +94,18 @@ async function bootstrap() {
     }),
   );
 
-  // Simple health check that bypasses all NestJS guards/middleware
+  // Health check - raw Express, bypasses all NestJS middleware/guards
   const expressApp = app.getHttpAdapter().getInstance();
   expressApp.get('/health', (_req: any, res: any) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    res.json({ status: 'ok', time: new Date().toISOString() });
   });
 
   const port = process.env.PORT || 4000;
   await app.listen(port, '0.0.0.0');
-  logger.log(`Freelancer Finance API running on 0.0.0.0:${port}`);
+  console.log(`NestJS application listening on 0.0.0.0:${port}`);
 }
 
 bootstrap().catch((err) => {
-  logger.error(`Failed to start application: ${err.message}`, err.stack);
+  console.error('BOOTSTRAP FAILED:', err);
   process.exit(1);
 });
