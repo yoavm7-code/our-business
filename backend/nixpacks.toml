@@ -9,4 +9,4 @@ cmds = ["npm install", "npx prisma generate"]
 cmds = ["npm run build"]
 
 [start]
-cmd = "npx prisma migrate deploy && node dist/main.js"
+cmd = "sh start.sh"

@@ -1,21 +1,8 @@
 #!/bin/sh
-set -e
-
-# Use DATABASE_PUBLIC_URL when railway.internal fails (P1001)
-# Add variable in Railway: DATABASE_PUBLIC_URL = ${{Postgres.DATABASE_PUBLIC_URL}}
+# Use public DB URL for migrations (internal network may not be ready at start)
 if [ -n "$DATABASE_PUBLIC_URL" ]; then
   export DATABASE_URL="$DATABASE_PUBLIC_URL"
 fi
-
-# Give Railway's private network time to initialize
-sleep 5
-
-# Resolve failed migration (P3009) - mark as rolled-back so deploy can retry
-# Ignores errors if migration is not in failed state
-npx prisma migrate resolve --rolled-back 20260129000000_add_installment_fields || true
-npx prisma migrate resolve --rolled-back 20260129100000_fix_installment_amounts || true
-npx prisma migrate resolve --rolled-back 20260210120000_add_budgets_recurring_indexes || true
-npx prisma migrate resolve --rolled-back 20260212100000_add_business_fields_and_freelancer_tables || true
 
 npx prisma migrate deploy
 exec node dist/main.js
