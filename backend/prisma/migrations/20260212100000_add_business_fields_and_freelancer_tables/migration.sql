@@ -9,6 +9,9 @@ ALTER TABLE "Household" ADD COLUMN IF NOT EXISTS "logo_mime" TEXT;
 ALTER TABLE "Household" ADD COLUMN IF NOT EXISTS "default_currency" TEXT NOT NULL DEFAULT 'ILS';
 ALTER TABLE "Household" ADD COLUMN IF NOT EXISTS "vat_rate" DECIMAL(5,2) NOT NULL DEFAULT 17;
 
+-- Add missing notify_invoice_overdue column to User table
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "notify_invoice_overdue" BOOLEAN NOT NULL DEFAULT true;
+
 -- CreateEnum
 DO $$ BEGIN
   CREATE TYPE "ProjectStatus" AS ENUM ('ACTIVE', 'COMPLETED', 'ON_HOLD', 'CANCELLED');
