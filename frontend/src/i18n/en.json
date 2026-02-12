@@ -1226,8 +1226,8 @@
   },
   "voice": {
     "title": "Voice Add",
-    "hint": "Tap the microphone and say your transaction, e.g.: \"I spent 50 on coffee\"",
-    "hintExpanded": "Tap the mic and say what to add. E.g.: \"I spent 50 on coffee\", \"loan 5000 to David\", \"budget 3000 for food\", \"goal 10000 for vacation\"",
+    "hint": "Tap the microphone and say your transaction, e.g.: \"I bought coffee for 15\" or \"paid 200 for electricity\"",
+    "hintExpanded": "Tap the mic and say what to add. Examples:\n• Expenses: \"bought shoes for 300\", \"paid bill 200\", \"ordered food for 80\", \"it cost me 50 for coffee\", \"ate at a restaurant for 120\"\n• Income: \"received salary 15000\", \"earned 5000 from freelance\", \"bonus 3000\"\n• More: \"loan 5000 to David\", \"saving 1000\", \"budget 3000 for food\", \"goal 10000 for vacation\"",
     "tapToStart": "Tap to start",
     "listening": "Listening...",
     "tapToStop": "Tap to stop",
