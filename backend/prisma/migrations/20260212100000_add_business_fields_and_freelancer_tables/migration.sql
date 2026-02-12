@@ -39,10 +39,9 @@ EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 -- Add INVOICE to TransactionSource enum if not exists
-DO $$ BEGIN
-  ALTER TYPE "TransactionSource" ADD VALUE IF NOT EXISTS 'INVOICE';
-EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
+-- NOTE: Cannot use DO/EXCEPTION block here because ALTER TYPE ADD VALUE
+-- is not allowed inside a subtransaction in PostgreSQL
+ALTER TYPE "TransactionSource" ADD VALUE IF NOT EXISTS 'INVOICE';
 
 -- CreateTable: Client
 CREATE TABLE IF NOT EXISTS "Client" (
