@@ -372,7 +372,7 @@ export default function StocksPage() {
 
   /* ───── summary calculations ───── */
 
-  const allHoldings = portfolios.flatMap((p) => p.holdings.filter((h) => h.isActive));
+  const allHoldings = portfolios.flatMap((p) => (p.holdings || []).filter((h) => h.isActive));
 
   const totalPortfolioValue = allHoldings.reduce((sum, h) => {
     const price = h.currentPrice ?? h.avgBuyPrice;
@@ -594,7 +594,7 @@ export default function StocksPage() {
       {portfolios.length > 0 && (
         <div className="space-y-6">
           {portfolios.map((portfolio) => {
-            const activeHoldings = portfolio.holdings.filter((h) => h.isActive);
+            const activeHoldings = (portfolio.holdings || []).filter((h) => h.isActive);
             const portfolioValue = activeHoldings.reduce((sum, h) => {
               const price = h.currentPrice ?? h.avgBuyPrice;
               return sum + h.shares * price;
