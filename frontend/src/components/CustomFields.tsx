@@ -99,7 +99,7 @@ export default function CustomFields({ entityType, value, onChange, templates: p
     setLoadingTemplates(true);
     try {
       const result = await customFieldsApi.getTemplates(entityType);
-      setTemplates(result);
+      setTemplates(result as unknown as CustomFieldTemplate[]);
     } catch {
       // silently fail
     } finally {

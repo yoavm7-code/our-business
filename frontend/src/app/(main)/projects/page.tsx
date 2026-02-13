@@ -951,6 +951,7 @@ export default function ProjectsPage() {
       endDate: p.endDate ? new Date(p.endDate).toISOString().slice(0, 10) : '',
       color: '#6366f1',
       notes: p.notes || '',
+      customFields: (p as any).customFields || {},
     });
     setShowQuickClient(false);
     setQuickClient(emptyQuickClient);

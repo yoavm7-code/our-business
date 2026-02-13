@@ -74,8 +74,8 @@ ALTER TABLE "Project" ADD COLUMN IF NOT EXISTS "custom_fields" JSONB;
 ALTER TABLE "Invoice" ADD COLUMN IF NOT EXISTS "custom_fields" JSONB;
 
 -- Add Morning login credentials to Business
-ALTER TABLE "Business" ADD COLUMN IF NOT EXISTS "green_invoice_email" TEXT;
-ALTER TABLE "Business" ADD COLUMN IF NOT EXISTS "green_invoice_password" TEXT;
+ALTER TABLE "Household" ADD COLUMN IF NOT EXISTS "green_invoice_email" TEXT;
+ALTER TABLE "Household" ADD COLUMN IF NOT EXISTS "green_invoice_password" TEXT;
 
 -- CreateIndex
 CREATE INDEX "CustomFieldTemplate_household_id_idx" ON "CustomFieldTemplate"("household_id");
@@ -88,6 +88,6 @@ CREATE UNIQUE INDEX "ZReport_household_id_report_date_key" ON "ZReport"("househo
 CREATE INDEX "ZReport_household_id_idx" ON "ZReport"("household_id");
 
 -- AddForeignKey
-ALTER TABLE "CustomFieldTemplate" ADD CONSTRAINT "CustomFieldTemplate_household_id_fkey" FOREIGN KEY ("household_id") REFERENCES "Business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "Expense" ADD CONSTRAINT "Expense_household_id_fkey" FOREIGN KEY ("household_id") REFERENCES "Business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "ZReport" ADD CONSTRAINT "ZReport_household_id_fkey" FOREIGN KEY ("household_id") REFERENCES "Business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "CustomFieldTemplate" ADD CONSTRAINT "CustomFieldTemplate_household_id_fkey" FOREIGN KEY ("household_id") REFERENCES "Household"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Expense" ADD CONSTRAINT "Expense_household_id_fkey" FOREIGN KEY ("household_id") REFERENCES "Household"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ZReport" ADD CONSTRAINT "ZReport_household_id_fkey" FOREIGN KEY ("household_id") REFERENCES "Household"("id") ON DELETE CASCADE ON UPDATE CASCADE;
