@@ -27,6 +27,7 @@ import { ProjectsModule } from './projects/projects.module';
 import { InvoicesModule } from './invoices/invoices.module';
 import { TaxModule } from './tax/tax.module';
 import { ReportsModule } from './reports/reports.module';
+import { GreenInvoiceModule } from './green-invoice/green-invoice.module';
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { ReportsModule } from './reports/reports.module';
     ProjectsModule,
     InvoicesModule,
     TaxModule,
+    GreenInvoiceModule,
 
     // Analytics & reporting
     DashboardModule,

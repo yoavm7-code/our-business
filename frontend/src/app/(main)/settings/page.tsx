@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { users, accounts, categories, twoFactor, type NotificationSettings, type UploadPreferences, type AccountItem, type CategoryItem } from '@/lib/api';
+import { users, accounts, categories, twoFactor, greenInvoice, type NotificationSettings, type UploadPreferences, type AccountItem, type CategoryItem, type GreenInvoiceStatus } from '@/lib/api';
 import { COUNTRY_CODES } from '@/lib/countries';
 import { useTranslation } from '@/i18n/context';
 import AvatarCropper from '@/components/AvatarCropper';
@@ -10,7 +10,7 @@ import AvatarCropper from '@/components/AvatarCropper';
    Constants
    ────────────────────────────────────────────────────────────── */
 
-type TabKey = 'profile' | 'business' | 'accounts' | 'categories' | 'security' | 'notifications';
+type TabKey = 'profile' | 'business' | 'accounts' | 'categories' | 'security' | 'notifications' | 'integrations';
 
 const ACCOUNT_TYPE_OPTIONS = ['BANK', 'CREDIT_CARD', 'INSURANCE', 'PENSION', 'INVESTMENT', 'CASH'] as const;
 
@@ -225,6 +225,15 @@ export default function SettingsPage() {
   const [uploadPrefsLoading, setUploadPrefsLoading] = useState(true);
   const uploadPrefsSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  /* ── Green Invoice integration state ── */
+  const [giStatus, setGiStatus] = useState<GreenInvoiceStatus>({ connected: false, sandbox: false, lastSync: null });
+  const [giKeyId, setGiKeyId] = useState('');
+  const [giSecret, setGiSecret] = useState('');
+  const [giSandbox, setGiSandbox] = useState(false);
+  const [giConnecting, setGiConnecting] = useState(false);
+  const [giSyncing, setGiSyncing] = useState(false);
+  const [giSyncResult, setGiSyncResult] = useState<{ imported: number; skipped: number; total: number } | null>(null);
+
   /* ══════════════════════════════════════════════════════════════
      DATA LOADING
      ══════════════════════════════════════════════════════════════ */
@@ -265,6 +274,10 @@ export default function SettingsPage() {
       .then((up) => setUploadPrefs(up))
       .catch(() => {})
       .finally(() => setUploadPrefsLoading(false));
+
+    greenInvoice.getStatus()
+      .then((s) => setGiStatus(s))
+      .catch(() => {});
   }, []);
 
   /* ══════════════════════════════════════════════════════════════
@@ -689,6 +702,55 @@ export default function SettingsPage() {
   }
 
   /* ══════════════════════════════════════════════════════════════
+     GREEN INVOICE HANDLERS
+     ══════════════════════════════════════════════════════════════ */
+
+  async function handleGiConnect() {
+    if (!giKeyId.trim() || !giSecret.trim()) return;
+    setGiConnecting(true);
+    try {
+      const result = await greenInvoice.connect(giKeyId.trim(), giSecret.trim(), giSandbox);
+      if (result.success) {
+        setGiStatus({ connected: true, sandbox: giSandbox, lastSync: null });
+        setGiKeyId('');
+        setGiSecret('');
+        setMsg(t('integrations.connectionSuccess'));
+      } else {
+        setMsg(t('integrations.connectionFailed'));
+      }
+    } catch {
+      setMsg(t('integrations.connectionFailed'));
+    } finally {
+      setGiConnecting(false);
+    }
+  }
+
+  async function handleGiDisconnect() {
+    try {
+      await greenInvoice.disconnect();
+      setGiStatus({ connected: false, sandbox: false, lastSync: null });
+      setMsg(t('integrations.disconnected'));
+    } catch {
+      setMsg(t('common.somethingWentWrong'));
+    }
+  }
+
+  async function handleGiSync() {
+    setGiSyncing(true);
+    setGiSyncResult(null);
+    try {
+      const result = await greenInvoice.sync();
+      setGiSyncResult(result);
+      setGiStatus((prev) => ({ ...prev, lastSync: new Date().toISOString() }));
+      setMsg(t('integrations.syncComplete', { imported: result.imported, total: result.total }));
+    } catch {
+      setMsg(t('common.somethingWentWrong'));
+    } finally {
+      setGiSyncing(false);
+    }
+  }
+
+  /* ══════════════════════════════════════════════════════════════
      RENDER: TAB NAVIGATION
      ══════════════════════════════════════════════════════════════ */
 
@@ -722,6 +784,11 @@ export default function SettingsPage() {
       key: 'notifications',
       label: t('settings.notifications'),
       icon: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 01-3.46 0" /></svg>,
+    },
+    {
+      key: 'integrations',
+      label: t('settings.integrations'),
+      icon: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" /></svg>,
     },
   ];
 
@@ -1988,6 +2055,170 @@ export default function SettingsPage() {
                 )}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════
+           INTEGRATIONS TAB
+           ═══════════════════════════════════════════════════ */}
+      {activeTab === 'integrations' && (
+        <div className="space-y-6">
+          {/* Green Invoice (Morning) */}
+          <div className="card">
+            <div className="flex items-start gap-4 mb-4">
+              <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400 shrink-0">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold">{t('integrations.greenInvoice')}</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{t('integrations.greenInvoiceDesc')}</p>
+              </div>
+              {giStatus.connected && (
+                <span className="badge badge-success">{t('integrations.connected')}</span>
+              )}
+            </div>
+
+            {giStatus.connected ? (
+              /* ─── Connected state ─── */
+              <div className="space-y-4">
+                <div className="p-4 rounded-xl bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    <span className="text-sm font-medium text-green-700 dark:text-green-300">{t('integrations.connected')}</span>
+                    {giStatus.sandbox && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">Sandbox</span>
+                    )}
+                  </div>
+                  {giStatus.lastSync && (
+                    <p className="text-xs text-green-600 dark:text-green-400">
+                      {t('integrations.lastSync')}: {new Date(giStatus.lastSync).toLocaleString(locale === 'he' ? 'he-IL' : 'en-IL')}
+                    </p>
+                  )}
+                </div>
+
+                {/* Sync section */}
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleGiSync}
+                    disabled={giSyncing}
+                    className="btn-primary"
+                  >
+                    {giSyncing ? (
+                      <span className="flex items-center gap-2">
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        {t('integrations.syncing')}
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
+                        </svg>
+                        {t('integrations.syncNow')}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleGiDisconnect}
+                    className="btn-secondary text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20"
+                  >
+                    {t('integrations.disconnect')}
+                  </button>
+                </div>
+
+                {/* Sync result */}
+                {giSyncResult && (
+                  <div className="p-3 rounded-xl bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 text-sm">
+                    <p className="font-medium text-primary-700 dark:text-primary-300">
+                      {t('integrations.syncResult', { imported: giSyncResult.imported, skipped: giSyncResult.skipped, total: giSyncResult.total })}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* ─── Setup / Connect state ─── */
+              <div className="space-y-4">
+                {/* Setup guide */}
+                <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800">
+                  <h4 className="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-2">{t('integrations.howToConnect')}</h4>
+                  <ol className="text-sm text-blue-600 dark:text-blue-400 space-y-1.5 list-decimal ps-4">
+                    <li>{t('integrations.step1')}</li>
+                    <li>{t('integrations.step2')}</li>
+                    <li>{t('integrations.step3')}</li>
+                    <li>{t('integrations.step4')}</li>
+                  </ol>
+                </div>
+
+                {/* Credentials form */}
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">{t('integrations.apiKeyId')}</label>
+                    <input
+                      className="input w-full"
+                      value={giKeyId}
+                      onChange={(e) => setGiKeyId(e.target.value)}
+                      placeholder={t('integrations.apiKeyIdPlaceholder')}
+                      dir="ltr"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">{t('integrations.apiSecret')}</label>
+                    <input
+                      type="password"
+                      className="input w-full"
+                      value={giSecret}
+                      onChange={(e) => setGiSecret(e.target.value)}
+                      placeholder={t('integrations.apiSecretPlaceholder')}
+                      dir="ltr"
+                    />
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={giSandbox}
+                      onChange={(e) => setGiSandbox(e.target.checked)}
+                      className="rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    <span className="text-sm text-slate-600 dark:text-slate-400">{t('integrations.sandboxMode')}</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleGiConnect}
+                    disabled={giConnecting || !giKeyId.trim() || !giSecret.trim()}
+                    className="btn-primary w-full sm:w-auto"
+                  >
+                    {giConnecting ? (
+                      <span className="flex items-center gap-2">
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        {t('integrations.connecting')}
+                      </span>
+                    ) : (
+                      t('integrations.connect')
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Future integrations placeholder */}
+          <div className="card opacity-60">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 shrink-0">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">{t('integrations.bankConnection')}</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{t('integrations.bankConnectionDesc')}</p>
+                <span className="inline-block mt-2 text-xs px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500">{t('integrations.comingSoon')}</span>
+              </div>
+            </div>
           </div>
         </div>
       )}

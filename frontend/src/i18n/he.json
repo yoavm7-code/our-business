@@ -1364,6 +1364,7 @@
     "title": "הגדרות",
     "profile": "פרופיל",
     "notifications": "התראות",
+    "integrations": "אינטגרציות",
     "accounts": "חשבונות בנק",
     "categories": "קטגוריות",
     "twoFactor": "אימות דו-שלבי",
@@ -2386,5 +2387,34 @@
   },
   "smartTip": {
     "title": "טיפ חכם"
+  },
+  "integrations": {
+    "greenInvoice": "חשבונית ירוקה / מורנינג",
+    "greenInvoiceDesc": "חבר את חשבון חשבונית ירוקה (מורנינג) לסנכרון אוטומטי של חשבוניות וקבלות",
+    "connected": "מחובר",
+    "disconnected": "החיבור נותק",
+    "disconnect": "נתק חיבור",
+    "connect": "התחבר",
+    "connecting": "מתחבר...",
+    "connectionSuccess": "החיבור לחשבונית ירוקה בוצע בהצלחה!",
+    "connectionFailed": "החיבור נכשל. בדוק את פרטי ה-API ונסה שוב",
+    "howToConnect": "איך מתחברים?",
+    "step1": "היכנס לחשבון שלך בחשבונית ירוקה (greeninvoice.co.il)",
+    "step2": "עבור להגדרות → כלי מפתחים → מפתחות API",
+    "step3": "לחץ על 'הוסף מפתח' וצור מפתח API חדש",
+    "step4": "העתק את ה-ID והסוד והדבק אותם כאן",
+    "apiKeyId": "מזהה מפתח API",
+    "apiKeyIdPlaceholder": "הזן את מזהה ה-API Key",
+    "apiSecret": "סוד מפתח API",
+    "apiSecretPlaceholder": "הזן את הסוד",
+    "sandboxMode": "מצב ניסיון (Sandbox) - לבדיקות בלבד",
+    "syncNow": "סנכרן עכשיו",
+    "syncing": "מסנכרן...",
+    "lastSync": "סנכרון אחרון",
+    "syncComplete": "הסנכרון הושלם: {imported} יובאו מתוך {total}",
+    "syncResult": "יובאו {imported} חשבוניות, {skipped} כבר קיימות, {total} סה\"כ נמצאו",
+    "bankConnection": "חיבור לחשבון בנק",
+    "bankConnectionDesc": "ייבוא אוטומטי של תנועות מחשבון הבנק שלך",
+    "comingSoon": "בקרוב"
   }
 }
