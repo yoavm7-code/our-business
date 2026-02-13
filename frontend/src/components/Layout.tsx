@@ -9,7 +9,6 @@ import AvatarCropper from '@/components/AvatarCropper';
 import CommandPalette from '@/components/CommandPalette';
 import AlertsBell from '@/components/AlertsBell';
 import QuickAdd from '@/components/QuickAdd';
-import VoiceInputButton from '@/components/VoiceInputButton';
 import VoiceTransaction from '@/components/VoiceTransaction';
 
 /* ────────────────────────────────────────────── */
@@ -196,10 +195,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  /* --- Voice result (from top bar) goes to search --- */
-  const handleVoiceResult = useCallback((text: string) => {
-    document.dispatchEvent(new CustomEvent('voice-search', { detail: { text } }));
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }));
+  /* --- Voice button (top bar) opens command palette in voice mode --- */
+  const handleVoiceClick = useCallback(() => {
+    document.dispatchEvent(new CustomEvent('voice-search'));
   }, []);
 
   /* --- Logout --- */
@@ -492,7 +490,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
           {/* Right side actions */}
           <div className="flex items-center gap-2">
-            <VoiceInputButton onResult={handleVoiceResult} />
+            <button
+              type="button"
+              onClick={handleVoiceClick}
+              className="shrink-0 p-1.5 rounded-lg text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all duration-200"
+              title={t('voice.start')}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                <line x1="12" y1="19" x2="12" y2="23" />
+                <line x1="8" y1="23" x2="16" y2="23" />
+              </svg>
+            </button>
             <button
               type="button"
               onClick={() => setShowQuickAdd(true)}

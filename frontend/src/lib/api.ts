@@ -647,8 +647,34 @@ export const invoices = {
   delete: (id: string) => api<unknown>(`/api/invoices/${id}`, { method: 'DELETE' }),
   getNextNumber: () =>
     api<{ nextNumber: string }>('/api/invoices/next-number'),
-  getSummary: (params?: { from?: string; to?: string }) =>
-    api<InvoiceSummary>('/api/invoices/summary', { params: params as Record<string, string | undefined> }),
+  getSummary: async (params?: { from?: string; to?: string }): Promise<InvoiceSummary> => {
+    const raw: any = await api('/api/invoices/summary', { params: params as Record<string, string | undefined> });
+    // Backend returns nested shape: { draft: { count, total }, sent: { ... }, ... }
+    // Normalize to the flat InvoiceSummary the frontend expects.
+    if (raw && typeof raw.draft === 'object') {
+      return {
+        totalDraft: Number(raw.draft?.total ?? 0),
+        totalSent: Number(raw.sent?.total ?? 0),
+        totalPaid: Number(raw.paid?.total ?? 0),
+        totalOverdue: Number(raw.overdue?.total ?? 0),
+        countDraft: Number(raw.draft?.count ?? 0),
+        countSent: Number(raw.sent?.count ?? 0),
+        countPaid: Number(raw.paid?.count ?? 0),
+        countOverdue: Number(raw.overdue?.count ?? 0),
+      };
+    }
+    // If the backend already returns the flat shape, coerce values to Number.
+    return {
+      totalDraft: Number(raw.totalDraft ?? 0),
+      totalSent: Number(raw.totalSent ?? 0),
+      totalPaid: Number(raw.totalPaid ?? 0),
+      totalOverdue: Number(raw.totalOverdue ?? 0),
+      countDraft: Number(raw.countDraft ?? 0),
+      countSent: Number(raw.countSent ?? 0),
+      countPaid: Number(raw.countPaid ?? 0),
+      countOverdue: Number(raw.countOverdue ?? 0),
+    };
+  },
 };
 
 // ═══════════════════════════════════════════════
