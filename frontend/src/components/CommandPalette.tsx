@@ -7,7 +7,7 @@ import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { api } from '@/lib/api';
 
 type SearchResults = {
-  transactions: Array<{ id: string; date: string; description: string; amount: number; categoryName: string | null }>;
+  transactions: Array<{ id: string; date: string; description: string; amount: number; categoryName: string | null; categorySlug?: string | null }>;
   accounts: Array<{ id: string; name: string; type: string; balance: string }>;
   categories: Array<{ id: string; name: string; slug: string; isIncome: boolean }>;
   clients: Array<{ id: string; name: string }>;
@@ -257,7 +257,7 @@ export default function CommandPalette() {
       allItems.push({
         type: 'transaction',
         label: tx.description,
-        sublabel: `${amount} -- ${date}${tx.categoryName ? ` -- ${tx.categoryName}` : ''}`,
+        sublabel: `${amount} -- ${date}${tx.categoryName ? ` -- ${tx.categorySlug ? (t('categories.' + tx.categorySlug) !== 'categories.' + tx.categorySlug ? t('categories.' + tx.categorySlug) : tx.categoryName) : tx.categoryName}` : ''}`,
         href: `/transactions?search=${encodeURIComponent(tx.description)}`,
       });
     }

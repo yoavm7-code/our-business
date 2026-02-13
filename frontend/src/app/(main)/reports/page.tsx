@@ -46,6 +46,14 @@ const BAR_INCOME_COLOR = '#22c55e';
 const BAR_EXPENSE_COLOR = '#ef4444';
 
 // ─── Helpers ─────────────────────────────────────────────────
+function getCategoryDisplayName(name: string, slug: string | null | undefined, t: (k: string) => string): string {
+  if (slug) {
+    const translated = t('categories.' + slug);
+    if (translated !== 'categories.' + slug) return translated;
+  }
+  return name;
+}
+
 function fmtCurrency(n: number, locale: string, compact = false) {
   const opts: Intl.NumberFormatOptions = {
     style: 'currency',
@@ -377,7 +385,7 @@ export default function ReportsPage() {
     } else if (activeTab === 'categories' && catExpenseData) {
       csvContent = `${t('common.category')},${t('common.amount')},${t('reports.percentage')},${t('reports.transactionCount')}\n`;
       catExpenseData.forEach((c) => {
-        csvContent += `${c.categoryName},${c.total},${c.percentage},${c.transactionCount}\n`;
+        csvContent += `${getCategoryDisplayName(c.categoryName, c.categorySlug, t)},${c.total},${c.percentage},${c.transactionCount}\n`;
       });
     } else if (activeTab === 'tax' && taxData) {
       csvContent = `${t('reports.quarter')},${t('reports.income')},${t('reports.expenses')},${t('reports.tax')}\n`;
@@ -953,7 +961,7 @@ function CategoryReport({
   const sortedData = useMemo(() => activeData ? [...activeData].sort((a, b) => Math.abs(b.total) - Math.abs(a.total)) : [], [activeData]);
 
   const pieData = sortedData.filter((c) => c.total !== 0).map((c) => ({
-    name: c.categoryName,
+    name: getCategoryDisplayName(c.categoryName, c.categorySlug, t),
     value: Math.abs(c.total),
     color: c.categoryColor,
   }));
@@ -1047,7 +1055,7 @@ function CategoryReport({
             <ResponsiveContainer width="100%" height={300}>
               <BarChart
                 data={sortedData.slice(0, 8).map((c) => ({
-                  name: c.categoryName.length > 12 ? c.categoryName.slice(0, 12) + '...' : c.categoryName,
+                  name: (() => { const n = getCategoryDisplayName(c.categoryName, c.categorySlug, t); return n.length > 12 ? n.slice(0, 12) + '...' : n; })(),
                   [t('common.amount')]: Math.abs(c.total),
                   color: c.categoryColor,
                 }))}
@@ -1091,7 +1099,7 @@ function CategoryReport({
                         className="w-3 h-3 rounded-full shrink-0"
                         style={{ backgroundColor: cat.categoryColor || '#94a3b8' }}
                       />
-                      <span className="font-medium">{cat.categoryName}</span>
+                      <span className="font-medium">{getCategoryDisplayName(cat.categoryName, cat.categorySlug, t)}</span>
                     </div>
                   </td>
                   <td className={`py-2.5 text-end font-semibold ${viewType === 'expense' ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>

@@ -469,7 +469,7 @@ export default function IncomePage() {
                 {fixedIncomeList.map((item) => (
                   <tr key={item.id} className="border-b border-[var(--border)] last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                     <td className="py-2.5 px-3 font-medium">{item.description}</td>
-                    <td className="py-2.5 px-3 text-slate-500">{item.categoryName || '-'}</td>
+                    <td className="py-2.5 px-3 text-slate-500">{item.categorySlug ? (getCatName(item.categoryName || '', item.categorySlug, t) || '-') : (item.categoryName || '-')}</td>
                     <td className="py-2.5 px-3 text-green-600 dark:text-green-400 font-medium">
                       {formatCurrency(item.amount, locale)}
                     </td>

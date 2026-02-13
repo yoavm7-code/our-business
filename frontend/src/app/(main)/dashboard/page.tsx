@@ -958,7 +958,7 @@ export default function DashboardPage() {
                     {list.map((item) => (
                       <li key={item.id} className="text-sm py-2 border-b border-[var(--border)] last:border-0">
                         <span className="font-medium">{item.description}</span>
-                        {item.categoryName && <span className="text-slate-500 dark:text-slate-400"> · {item.categoryName}</span>}
+                        {item.categoryName && <span className="text-slate-500 dark:text-slate-400"> · {item.categorySlug ? (t('categories.' + item.categorySlug) !== 'categories.' + item.categorySlug ? t('categories.' + item.categorySlug) : item.categoryName) : item.categoryName}</span>}
                         <span className="block text-slate-600 dark:text-slate-300 mt-0.5">
                           {formatCurrency(item.amount, locale)}
                           {item.installmentCurrent != null && item.installmentTotal != null && (
@@ -1278,7 +1278,7 @@ export default function DashboardPage() {
                   return (
                     <div key={b.id} className="py-2 border-b border-[var(--border)] last:border-0">
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-sm font-medium">{b.category?.name || t('common.uncategorized')}</span>
+                        <span className="text-sm font-medium">{getCatName(b.category?.name, b.category?.slug) || t('common.uncategorized')}</span>
                         <span className={`text-xs font-medium ${b.isOver ? 'text-red-600' : 'text-green-600'}`}>
                           {b.isOver ? t('budgets.overBudget') : `${pct}%`}
                         </span>

@@ -27,7 +27,7 @@ type BudgetSummary = {
   percentUsed: number;
   budgetCount: number;
   overBudgetCount: number;
-  overBudget: Array<{ categoryName: string; amount: number; spent: number }>;
+  overBudget: Array<{ categoryName: string; categorySlug?: string | null; amount: number; spent: number }>;
 };
 
 function getCategoryDisplayName(name: string, slug: string | undefined, t: (k: string) => string): string {
@@ -296,7 +296,7 @@ export default function BudgetsPage() {
           <div className="space-y-1">
             {summary.overBudget.map((item) => (
               <div key={item.categoryName} className="flex items-center justify-between text-sm">
-                <span className="text-red-700 dark:text-red-300">{item.categoryName}</span>
+                <span className="text-red-700 dark:text-red-300">{getCategoryDisplayName(item.categoryName, item.categorySlug ?? undefined, t)}</span>
                 <span className="text-red-600 dark:text-red-400 font-medium">
                   {formatCurrency(item.spent, locale)} / {formatCurrency(item.amount, locale)}
                   <span className="ms-2 text-xs">
