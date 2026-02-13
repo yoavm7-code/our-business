@@ -81,6 +81,8 @@ model User {
   notifyInvoiceOverdue  Boolean @default(true) @map("notify_invoice_overdue")
   largeTransactionThreshold Decimal? @map("large_tx_threshold") @db.Decimal(14, 2)
 
+  businessField    String?  @map("business_field") // e.g. "software_dev", "consulting"
+
   onboardingCompleted Boolean @default(false) @map("onboarding_completed")
   isAdmin          Boolean  @default(false) @map("is_admin")
 

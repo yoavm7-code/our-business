@@ -10,6 +10,7 @@ import CommandPalette from '@/components/CommandPalette';
 import AlertsBell from '@/components/AlertsBell';
 import QuickAdd from '@/components/QuickAdd';
 import VoiceInputButton from '@/components/VoiceInputButton';
+import VoiceTransaction from '@/components/VoiceTransaction';
 
 /* ────────────────────────────────────────────── */
 /* Navigation data                                 */
@@ -525,6 +526,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Modals & overlays */}
       <CommandPalette />
       <QuickAdd open={showQuickAdd} onClose={() => setShowQuickAdd(false)} />
+      <VoiceTransaction />
 
       {avatarCropFile && (
         <AvatarCropper

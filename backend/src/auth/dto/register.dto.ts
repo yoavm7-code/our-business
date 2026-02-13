@@ -38,4 +38,9 @@ export class RegisterDto {
   @IsOptional()
   @IsString()
   captchaToken?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  businessField?: string;
 }

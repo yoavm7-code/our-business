@@ -736,15 +736,17 @@ function InvoiceFormModal({
   const selectedClient = clientsList.find((c) => c.id === form.clientId);
   const clientProjects = projectsList.filter((p) => p.clientId === form.clientId);
 
-  const subtotal = form.lineItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-  const vatAmount = subtotal * (form.vatRate / 100);
+  const subtotal = form.lineItems.reduce((sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0), 0);
+  const vatAmount = subtotal * ((Number(form.vatRate) || 0) / 100);
   const total = subtotal + vatAmount;
 
   function updateLineItem(index: number, field: keyof InvoiceLineItem, value: string | number) {
     setForm((f) => {
       const items = [...f.lineItems];
       const item = { ...items[index], [field]: value };
-      item.amount = item.quantity * item.unitPrice;
+      const qty = Number(item.quantity) || 0;
+      const price = Number(item.unitPrice) || 0;
+      item.amount = qty * price;
       items[index] = item;
       return { ...f, lineItems: items };
     });
@@ -988,7 +990,7 @@ function InvoiceFormModal({
                       onChange={(e) => updateLineItem(index, 'unitPrice', parseFloat(e.target.value) || 0)}
                     />
                     <div className="text-sm font-medium text-end">
-                      {formatCurrency(item.quantity * item.unitPrice, form.currency, locale)}
+                      {formatCurrency((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0), form.currency, locale)}
                     </div>
                     <button
                       type="button"
@@ -1151,9 +1153,9 @@ function InvoiceFormModal({
                     {form.lineItems.filter((li) => li.description || li.unitPrice > 0).map((item, i) => (
                       <tr key={i} className="border-b border-slate-100 dark:border-slate-800">
                         <td className="py-1">{item.description || '---'}</td>
-                        <td className="py-1 text-center">{item.quantity}</td>
-                        <td className="py-1 text-center">{item.unitPrice}</td>
-                        <td className="py-1 text-end">{(item.quantity * item.unitPrice).toFixed(2)}</td>
+                        <td className="py-1 text-center">{Number(item.quantity) || 0}</td>
+                        <td className="py-1 text-center">{Number(item.unitPrice) || 0}</td>
+                        <td className="py-1 text-end">{((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)).toFixed(2)}</td>
                       </tr>
                     ))}
                   </tbody>

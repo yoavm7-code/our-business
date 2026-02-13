@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/i18n/context';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import {
@@ -12,6 +13,8 @@ import {
   mortgages,
   stocks,
   forex,
+  clients,
+  projects,
   api,
   type ParsedVoiceInput,
 } from '@/lib/api';
@@ -34,15 +37,19 @@ type Step = 'idle' | 'listening' | 'processing' | 'review' | 'saving' | 'done' |
 type VoiceAction = ParsedVoiceInput['action'];
 
 const ACTION_LABELS: Record<VoiceAction, { he: string; en: string; color: string }> = {
-  transaction: { he: '\u05D4\u05D5\u05E6\u05D0\u05D4 / \u05D4\u05DB\u05E0\u05E1\u05D4', en: 'Expense / Income', color: 'indigo' },
-  loan: { he: '\u05D4\u05DC\u05D5\u05D5\u05D0\u05D4', en: 'Loan', color: 'orange' },
-  saving: { he: '\u05D7\u05D9\u05E1\u05DB\u05D5\u05DF', en: 'Saving', color: 'teal' },
-  goal: { he: '\u05D9\u05E2\u05D3', en: 'Goal', color: 'purple' },
-  budget: { he: '\u05EA\u05E7\u05E6\u05D9\u05D1', en: 'Budget', color: 'amber' },
-  forex: { he: '\u05D4\u05E2\u05D1\u05E8\u05EA \u05DE\u05D8"\u05D7', en: 'Forex', color: 'indigo' },
-  mortgage: { he: '\u05DE\u05E9\u05DB\u05E0\u05EA\u05D0', en: 'Mortgage', color: 'cyan' },
-  stock_portfolio: { he: '\u05EA\u05D9\u05E7 \u05DE\u05E0\u05D9\u05D5\u05EA', en: 'Stock Portfolio', color: 'rose' },
-  account: { he: '\u05D7\u05E9\u05D1\u05D5\u05DF', en: 'Account', color: 'blue' },
+  transaction: { he: 'הוצאה / הכנסה', en: 'Expense / Income', color: 'indigo' },
+  loan: { he: 'הלוואה', en: 'Loan', color: 'orange' },
+  saving: { he: 'חיסכון', en: 'Saving', color: 'teal' },
+  goal: { he: 'יעד', en: 'Goal', color: 'purple' },
+  budget: { he: 'תקציב', en: 'Budget', color: 'amber' },
+  forex: { he: 'העברת מט"ח', en: 'Forex', color: 'indigo' },
+  mortgage: { he: 'משכנתא', en: 'Mortgage', color: 'cyan' },
+  stock_portfolio: { he: 'תיק מניות', en: 'Stock Portfolio', color: 'rose' },
+  account: { he: 'חשבון', en: 'Account', color: 'blue' },
+  client: { he: 'לקוח', en: 'Client', color: 'emerald' },
+  project: { he: 'פרויקט', en: 'Project', color: 'violet' },
+  invoice: { he: 'חשבונית', en: 'Invoice', color: 'sky' },
+  navigate: { he: 'ניווט', en: 'Navigate', color: 'gray' },
 };
 
 function getCategoryDisplayName(name: string, slug: string | undefined, t: (k: string) => string): string {
@@ -147,6 +154,21 @@ export default function VoiceTransaction() {
   /* ── Account fields ── */
   const [fAccountType, setFAccountType] = useState('BANK');
 
+  /* ── Client fields ── */
+  const [fEmail, setFEmail] = useState('');
+  const [fPhone, setFPhone] = useState('');
+  const [fCompany, setFCompany] = useState('');
+  const [fContactName, setFContactName] = useState('');
+
+  /* ── Project fields ── */
+  const [fClientId, setFClientId] = useState('');
+  const [fProjectDescription, setFProjectDescription] = useState('');
+  const [clientList, setClientList] = useState<{ id: string; name: string }[]>([]);
+
+  /* ── Navigate fields ── */
+  const [fPage, setFPage] = useState('');
+
+  const router = useRouter();
   const [voiceText, setVoiceText] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [manualText, setManualText] = useState('');
@@ -293,6 +315,32 @@ export default function VoiceTransaction() {
         setFName(result.name || '');
         setFAccountType(result.accountType || 'BANK');
         break;
+      case 'client':
+        setFName(result.name || '');
+        setFEmail((result as any).email || '');
+        setFPhone((result as any).phone || '');
+        setFContactName((result as any).contactName || '');
+        break;
+      case 'project':
+        setFName(result.name || '');
+        setFProjectDescription(result.description || '');
+        // Load clients list for project assignment
+        clients.list().then((list) => {
+          setClientList(list.map((c: any) => ({ id: c.id, name: c.name })));
+          if ((result as any).clientName) {
+            const match = list.find((c: any) =>
+              c.name.toLowerCase().includes(((result as any).clientName || '').toLowerCase()),
+            );
+            if (match) setFClientId(match.id);
+          }
+        }).catch(() => {});
+        break;
+      case 'invoice':
+        // Navigate user to invoices page to create invoice
+        break;
+      case 'navigate':
+        setFPage((result as any).page || '');
+        break;
     }
   };
 
@@ -421,6 +469,57 @@ export default function VoiceTransaction() {
             type: fAccountType,
           });
           break;
+        }
+        case 'client': {
+          if (!fName) return;
+          await clients.create({
+            name: fName,
+            ...(fEmail && { email: fEmail }),
+            ...(fPhone && { phone: fPhone }),
+            ...(fCompany && { company: fCompany }),
+            ...(fContactName && { contactName: fContactName }),
+          });
+          break;
+        }
+        case 'project': {
+          if (!fName || !fClientId) return;
+          await projects.create({
+            name: fName,
+            clientId: fClientId,
+            ...(fProjectDescription && { description: fProjectDescription }),
+          });
+          break;
+        }
+        case 'invoice': {
+          handleClose();
+          router.push('/invoices?new=1');
+          return;
+        }
+        case 'navigate': {
+          handleClose();
+          const pageMap: Record<string, string> = {
+            dashboard: '/',
+            transactions: '/transactions',
+            accounts: '/accounts',
+            categories: '/categories',
+            clients: '/clients',
+            projects: '/projects',
+            invoices: '/invoices',
+            reports: '/reports',
+            settings: '/settings',
+            insights: '/insights',
+            budgets: '/budgets',
+            goals: '/goals',
+            loans: '/loans',
+            savings: '/savings',
+            mortgages: '/mortgages',
+            stocks: '/stocks',
+            forex: '/forex',
+            tax: '/tax',
+            upload: '/upload',
+          };
+          router.push(pageMap[fPage] || '/' + fPage);
+          return;
         }
       }
       setStep('done');
@@ -703,6 +802,89 @@ export default function VoiceTransaction() {
             </div>
           </>
         );
+
+      case 'client':
+        return (
+          <>
+            <div>
+              <label className="block text-sm font-medium mb-1">{t('voice.clientNameLabel')}</label>
+              <input className="input" value={fName} onChange={(e) => setFName(e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">{t('voice.clientEmail')}</label>
+              <input type="email" className="input" value={fEmail} onChange={(e) => setFEmail(e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">{t('voice.clientPhone')}</label>
+              <input type="tel" className="input" value={fPhone} onChange={(e) => setFPhone(e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">{t('voice.clientCompany')}</label>
+              <input className="input" value={fCompany} onChange={(e) => setFCompany(e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">{t('voice.contactNameLabel')}</label>
+              <input className="input" value={fContactName} onChange={(e) => setFContactName(e.target.value)} />
+            </div>
+          </>
+        );
+
+      case 'project':
+        return (
+          <>
+            <div>
+              <label className="block text-sm font-medium mb-1">{t('voice.projectNameLabel')}</label>
+              <input className="input" value={fName} onChange={(e) => setFName(e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">{t('voice.projectClient')}</label>
+              <select className="input" value={fClientId} onChange={(e) => setFClientId(e.target.value)}>
+                <option value="">{t('voice.selectClient')}</option>
+                {clientList.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">{t('voice.projectDescription')}</label>
+              <textarea className="input min-h-[60px]" value={fProjectDescription} onChange={(e) => setFProjectDescription(e.target.value)} />
+            </div>
+          </>
+        );
+
+      case 'invoice':
+        return (
+          <div className="text-center py-4">
+            <p className="text-sm text-slate-500 mb-2">{t('voice.invoiceRedirect')}</p>
+            <p className="text-xs text-slate-400">{t('voice.invoiceRedirectHint')}</p>
+          </div>
+        );
+
+      case 'navigate': {
+        const pageLabels: Record<string, { he: string; en: string }> = {
+          dashboard: { he: 'דשבורד', en: 'Dashboard' },
+          transactions: { he: 'תנועות', en: 'Transactions' },
+          accounts: { he: 'חשבונות', en: 'Accounts' },
+          clients: { he: 'לקוחות', en: 'Clients' },
+          projects: { he: 'פרויקטים', en: 'Projects' },
+          invoices: { he: 'חשבוניות', en: 'Invoices' },
+          reports: { he: 'דו"חות', en: 'Reports' },
+          settings: { he: 'הגדרות', en: 'Settings' },
+          insights: { he: 'תובנות', en: 'Insights' },
+          budgets: { he: 'תקציבים', en: 'Budgets' },
+          goals: { he: 'יעדים', en: 'Goals' },
+          tax: { he: 'מס', en: 'Tax' },
+        };
+        const label = pageLabels[fPage] ? (locale === 'he' ? pageLabels[fPage].he : pageLabels[fPage].en) : fPage;
+        return (
+          <div className="text-center py-4">
+            <p className="text-sm text-slate-500 mb-2">{t('voice.navigatingTo')}</p>
+            <span className="inline-flex items-center px-4 py-2 rounded-xl text-base font-semibold bg-slate-100 dark:bg-slate-800">
+              {label}
+            </span>
+          </div>
+        );
+      }
     }
   };
 

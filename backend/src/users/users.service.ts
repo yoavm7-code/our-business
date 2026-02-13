@@ -29,6 +29,7 @@ export class UsersService {
           ? dto.countryCode.toUpperCase().slice(0, 2)
           : null,
         phone: dto.phone?.trim() || null,
+        businessField: (dto as any).businessField?.trim() || null,
         businessId: business.id,
         emailVerifyToken: emailVerifyToken ?? null,
         emailVerifyExp: emailVerifyToken
@@ -71,6 +72,7 @@ export class UsersService {
         avatarMime: true,
         emailVerified: true,
         phone: true,
+        businessField: true,
         onboardingCompleted: true,
         twoFactorMethod: true,
         isAdmin: true,
@@ -101,6 +103,7 @@ export class UsersService {
         : null,
       emailVerified: u.emailVerified,
       phone: u.phone,
+      businessField: u.businessField,
       onboardingCompleted: u.onboardingCompleted,
       twoFactorMethod: u.twoFactorMethod,
       isAdmin: u.isAdmin,
@@ -183,6 +186,7 @@ export class UsersService {
       password?: string;
       countryCode?: string | null;
       phone?: string | null;
+      businessField?: string | null;
     },
   ) {
     const data: {
@@ -191,6 +195,7 @@ export class UsersService {
       passwordHash?: string;
       countryCode?: string | null;
       phone?: string | null;
+      businessField?: string | null;
     } = {};
 
     if (dto.name !== undefined) data.name = dto.name.trim() || null;
@@ -222,6 +227,10 @@ export class UsersService {
       data.phone = dto.phone ? dto.phone.trim() : null;
     }
 
+    if (dto.businessField !== undefined) {
+      data.businessField = dto.businessField ? dto.businessField.trim() : null;
+    }
+
     if (Object.keys(data).length === 0) return this.findById(id);
 
     const u = await this.prisma.user.update({
@@ -237,6 +246,7 @@ export class UsersService {
         avatarMime: true,
         emailVerified: true,
         phone: true,
+        businessField: true,
         onboardingCompleted: true,
         twoFactorMethod: true,
         isAdmin: true,
@@ -254,6 +264,7 @@ export class UsersService {
         : null,
       emailVerified: u.emailVerified,
       phone: u.phone,
+      businessField: u.businessField,
       onboardingCompleted: u.onboardingCompleted,
       twoFactorMethod: u.twoFactorMethod,
       isAdmin: u.isAdmin,

@@ -75,14 +75,14 @@ export const auth = {
       method: 'POST',
       body: JSON.stringify({ email, password, captchaToken, twoFactorToken }),
     }),
-  register: (email: string, password: string, name?: string, countryCode?: string, captchaToken?: string, phone?: string) =>
+  register: (email: string, password: string, name?: string, countryCode?: string, captchaToken?: string, phone?: string, businessField?: string) =>
     api<{
       accessToken: string;
-      user: { id: string; email: string; name: string | null; businessId: string; countryCode?: string };
+      user: { id: string; email: string; name: string | null; businessId: string; countryCode?: string; businessField?: string | null };
       emailVerified?: boolean;
     }>('/api/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email, password, name, countryCode, captchaToken, phone }),
+      body: JSON.stringify({ email, password, name, countryCode, captchaToken, phone, businessField }),
     }),
   verifyEmail: (token: string) =>
     api<{ verified: boolean }>('/api/auth/verify-email', { method: 'POST', body: JSON.stringify({ token }) }),
@@ -125,10 +125,11 @@ export const users = {
       avatarUrl?: string | null;
       emailVerified?: boolean;
       phone?: string | null;
+      businessField?: string | null;
       onboardingCompleted?: boolean;
       twoFactorMethod?: string | null;
     }>('/api/users/me'),
-  update: (body: { name?: string; email?: string; password?: string; countryCode?: string | null }) =>
+  update: (body: { name?: string; email?: string; password?: string; countryCode?: string | null; businessField?: string | null }) =>
     api<{
       id: string;
       email: string;
@@ -136,6 +137,7 @@ export const users = {
       businessId: string;
       countryCode?: string | null;
       avatarUrl?: string | null;
+      businessField?: string | null;
     }>('/api/users/me', {
       method: 'PUT',
       body: JSON.stringify(body),
@@ -229,7 +231,7 @@ export const categories = {
 // ═══════════════════════════════════════════════
 
 export type ParsedVoiceInput = {
-  action: 'transaction' | 'loan' | 'saving' | 'goal' | 'budget' | 'forex' | 'mortgage' | 'stock_portfolio' | 'account';
+  action: 'transaction' | 'loan' | 'saving' | 'goal' | 'budget' | 'forex' | 'mortgage' | 'stock_portfolio' | 'account' | 'client' | 'project' | 'invoice' | 'navigate';
   name?: string;
   description?: string;
   amount?: number;
@@ -255,6 +257,11 @@ export type ParsedVoiceInput = {
   totalAmount?: number;
   broker?: string;
   accountType?: string;
+  email?: string;
+  phone?: string;
+  contactName?: string;
+  clientName?: string;
+  page?: string;
 };
 
 export type TransactionItem = {

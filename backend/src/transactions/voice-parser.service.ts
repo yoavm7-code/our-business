@@ -23,7 +23,11 @@ export interface ParsedVoiceInput {
     | 'forex'
     | 'mortgage'
     | 'stock_portfolio'
-    | 'account';
+    | 'account'
+    | 'client'
+    | 'project'
+    | 'invoice'
+    | 'navigate';
 
   /* shared */
   name?: string;
@@ -67,6 +71,21 @@ export interface ParsedVoiceInput {
 
   /* account */
   accountType?: string;
+
+  /* client */
+  email?: string;
+  phone?: string;
+  contactName?: string;
+  company?: string;
+  hourlyRate?: number;
+
+  /* project */
+  clientName?: string;
+  status?: string;
+  budgetAmount?: number;
+
+  /* navigate */
+  page?: string;
 }
 
 // Simple keyword → category mapping for fallback parser
@@ -452,6 +471,61 @@ export class VoiceParserService {
       };
     }
 
+    // Client: "הוסף לקוח X" / "לקוח חדש X"
+    const clientMatch = trimmed.match(
+      /(?:הוסף לקוח|לקוח חדש|צור לקוח|add client|new client|create client)\s+(.*)/i,
+    );
+    if (clientMatch) {
+      const rest = (clientMatch[1] || '').trim();
+      return { action: 'client', name: rest || 'לקוח חדש' };
+    }
+
+    // Project: "הוסף פרויקט X" / "פרויקט חדש X"
+    const projectMatch = trimmed.match(
+      /(?:הוסף פרויקט|פרויקט חדש|צור פרויקט|add project|new project|create project)\s+(.*)/i,
+    );
+    if (projectMatch) {
+      const rest = (projectMatch[1] || '').trim();
+      return { action: 'project', name: rest || 'פרויקט חדש' };
+    }
+
+    // Invoice: "צור חשבונית" / "חשבונית חדשה"
+    const invoiceMatch = trimmed.match(
+      /(?:הוסף חשבונית|חשבונית חדשה|צור חשבונית|add invoice|new invoice|create invoice)\s*(.*)/i,
+    );
+    if (invoiceMatch) {
+      return { action: 'invoice', name: (invoiceMatch[1] || '').trim() || undefined };
+    }
+
+    // Navigate: "עבור ל-X" / "פתח X" / "go to X"
+    const navPages: Record<string, string[]> = {
+      dashboard: ['דשבורד', 'לוח בקרה', 'ראשי', 'דף ראשי', 'dashboard', 'home'],
+      transactions: ['תנועות', 'transactions'],
+      expenses: ['הוצאות', 'expenses'],
+      income: ['הכנסות', 'income'],
+      invoices: ['חשבוניות', 'invoices'],
+      clients: ['לקוחות', 'clients'],
+      projects: ['פרויקטים', 'projects'],
+      budgets: ['תקציבים', 'budgets'],
+      reports: ['דוחות', 'reports'],
+      settings: ['הגדרות', 'settings'],
+      upload: ['העלאה', 'upload'],
+      insights: ['תובנות', 'insights'],
+    };
+    const navMatch = trimmed.match(
+      /(?:עבור ל|פתח את|פתח|לך ל|תפתח|תעבור ל|go to|open|navigate to|show)\s*[-]?\s*(.*)/i,
+    );
+    if (navMatch) {
+      const target = navMatch[1].trim().toLowerCase();
+      for (const [page, keywords] of Object.entries(navPages)) {
+        for (const kw of keywords) {
+          if (target.includes(kw.toLowerCase())) {
+            return { action: 'navigate', page };
+          }
+        }
+      }
+    }
+
     // ── Fall back to expense / income parsing ──
     const txResult = this.fallbackParseTransaction(trimmed, categorySlugs);
     if (txResult) return txResult;
@@ -808,6 +882,23 @@ The app supports these action types:
    - "חשבון בנק לאומי" / "כרטיס אשראי ויזה" / "פתחתי חשבון בדיסקונט"
    - "כרטיס מאסטרקארד" / "כרטיס ישראכרט" / "חשבון פנסיה" / "קרן השתלמות"
 
+10. "client" – adding a new client
+   - "הוסף לקוח דוד כהן" / "לקוח חדש חברת גוגל" / "צור לקוח בשם אפרת"
+   - "add client David" / "new client Google"
+
+11. "project" – creating a new project
+   - "הוסף פרויקט אתר אינטרנט" / "פרויקט חדש עיצוב לוגו" / "צור פרויקט אפליקציה"
+   - "new project website redesign" / "create project mobile app"
+
+12. "invoice" – creating a new invoice
+   - "צור חשבונית" / "חשבונית חדשה" / "הוסף חשבונית"
+   - "create invoice" / "new invoice"
+
+13. "navigate" – navigating to a page in the app
+   - "עבור ללוח הבקרה" / "פתח הגדרות" / "תראה לי את ההוצאות"
+   - "go to dashboard" / "open settings" / "show expenses"
+   Valid pages: dashboard, transactions, expenses, income, invoices, clients, projects, budgets, reports, settings, upload, insights
+
 Available category slugs: ${slugList || 'groceries, transport, utilities, rent, insurance, healthcare, dining, shopping, entertainment, salary, income, subscriptions, education, gifts, travel, phone, kids, pets, fitness, beauty, home, alcohol, tobacco, charity, other'}
 
 Return ONLY valid JSON. The "action" field is REQUIRED.
@@ -839,6 +930,19 @@ For action="stock_portfolio":
 For action="account":
 {"action":"account","name":"חשבון בנק לאומי","accountType":"BANK"}
 accountType options: BANK, CREDIT_CARD, INSURANCE, PENSION, INVESTMENT, CASH
+
+For action="client":
+{"action":"client","name":"דוד כהן","email":"david@example.com","phone":"050-1234567"}
+
+For action="project":
+{"action":"project","name":"אתר אינטרנט","description":"עיצוב ופיתוח אתר"}
+
+For action="invoice":
+{"action":"invoice","name":"חשבונית חדשה"}
+
+For action="navigate":
+{"action":"navigate","page":"dashboard"}
+Valid pages: dashboard, transactions, expenses, income, invoices, clients, projects, budgets, reports, settings, upload, insights
 
 Rules:
 - Default currency is "ILS" unless user says דולר/dollar/$ (USD), יורו/euro/€ (EUR), or פאונד/לירה/pound/£ (GBP)
@@ -954,6 +1058,37 @@ Rules:
           action: 'account',
           name: parsed.name || 'חשבון חדש',
           accountType: validTypes.includes(parsed.accountType) ? parsed.accountType : 'BANK',
+        };
+      }
+
+      case 'client':
+        return {
+          action: 'client',
+          name: parsed.name || 'לקוח חדש',
+          email: parsed.email || undefined,
+          phone: parsed.phone || undefined,
+          contactName: parsed.contactName || undefined,
+        };
+
+      case 'project':
+        return {
+          action: 'project',
+          name: parsed.name || 'פרויקט חדש',
+          description: parsed.description || undefined,
+          clientName: parsed.clientName || undefined,
+        };
+
+      case 'invoice':
+        return {
+          action: 'invoice',
+          name: parsed.name || undefined,
+        };
+
+      case 'navigate': {
+        const validPages = ['dashboard', 'transactions', 'expenses', 'income', 'invoices', 'clients', 'projects', 'budgets', 'reports', 'settings', 'upload', 'insights'];
+        return {
+          action: 'navigate',
+          page: validPages.includes(parsed.page) ? parsed.page : 'dashboard',
         };
       }
 

@@ -334,6 +334,21 @@ export class InsightsService {
     return `\n\nUser's country (ISO 3166-1 alpha-2): ${code}. Tailor all recommendations to this country's market, regulations, tax rules, and currency where relevant.`;
   }
 
+  private getBusinessFieldContext(businessField?: string): string {
+    if (!businessField || typeof businessField !== 'string') return '';
+    const fieldMap: Record<string, string> = {
+      softwareDev: 'Software Development', design: 'Graphic Design', marketing: 'Marketing & Advertising',
+      consulting: 'Consulting', writing: 'Writing & Content Creation', photography: 'Photography',
+      video: 'Video Production', music: 'Music & Audio', teaching: 'Teaching & Training',
+      legal: 'Legal Services', accounting: 'Accounting & Bookkeeping', architecture: 'Architecture',
+      engineering: 'Engineering', health: 'Health & Medical Services', fitness: 'Fitness & Personal Training',
+      food: 'Food & Restaurant', fashion: 'Fashion', ecommerce: 'E-commerce',
+      realestate: 'Real Estate', translation: 'Translation Services',
+    };
+    const label = fieldMap[businessField] || businessField;
+    return `\n\nUser's business field/industry: ${label}. Tailor recommendations, tips, and insights to be specific and relevant to this industry.`;
+  }
+
   // ─── OpenAI Client ──────────────────────────────────────────────────
   private openai: OpenAI | null = null;
 
@@ -345,7 +360,7 @@ export class InsightsService {
   }
 
   // ─── All Insights ──────────────────────────────────────────────────
-  async getInsights(businessId: string, lang?: string, countryCode?: string): Promise<FinancialInsights> {
+  async getInsights(businessId: string, lang?: string, countryCode?: string, businessField?: string): Promise<FinancialInsights> {
     const data = await this.getFinancialData(businessId);
     const client = this.getOpenAIClient();
     const locale = this.normalizeLang(lang);
@@ -355,7 +370,7 @@ export class InsightsService {
     }
 
     try {
-      const systemPrompt = this.buildFullSystemPrompt(locale, countryCode);
+      const systemPrompt = this.buildFullSystemPrompt(locale, countryCode, businessField);
       const userPrompt = this.buildFullDataPrompt(data, locale, countryCode);
 
       const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
@@ -413,6 +428,7 @@ export class InsightsService {
     section: InsightSection,
     lang?: string,
     countryCode?: string,
+    businessField?: string,
   ): Promise<{ content: string }> {
     const data = await this.getFinancialData(businessId);
     const client = this.getOpenAIClient();
@@ -424,7 +440,7 @@ export class InsightsService {
     }
 
     try {
-      const systemPrompt = this.buildSectionSystemPrompt(section, locale, countryCode);
+      const systemPrompt = this.buildSectionSystemPrompt(section, locale, countryCode, businessField);
       const userPrompt = this.buildFullDataPrompt(data, locale, countryCode)
         + '\n\n' + this.buildSectionAsk(section, locale);
 
@@ -467,7 +483,7 @@ export class InsightsService {
   }
 
   // ─── System Prompt (Full) ──────────────────────────────────────────
-  private buildFullSystemPrompt(locale: 'he' | 'en', countryCode?: string): string {
+  private buildFullSystemPrompt(locale: 'he' | 'en', countryCode?: string, businessField?: string): string {
     const now = new Date();
     const currentDate = locale === 'en'
       ? now.toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })
@@ -499,7 +515,7 @@ Return a JSON object with these exact keys:
 
 Each value should be a detailed, actionable paragraph or bullet-pointed list.
 
-${langInstruction}${this.getCountryContext(countryCode)}`;
+${langInstruction}${this.getCountryContext(countryCode)}${this.getBusinessFieldContext(businessField)}`;
     }
 
     return `אתה יועץ פיננסי מומחה המתמחה בפרילנסרים ועסקים קטנים. התאריך היום: ${currentDate}.
@@ -522,11 +538,11 @@ ${langInstruction}${this.getCountryContext(countryCode)}`;
 
 כל ערך צריך להיות פסקה מפורטת ומעשית או רשימה עם נקודות.
 
-${langInstruction}${this.getCountryContext(countryCode)}`;
+${langInstruction}${this.getCountryContext(countryCode)}${this.getBusinessFieldContext(businessField)}`;
   }
 
   // ─── Section System Prompt ─────────────────────────────────────────
-  private buildSectionSystemPrompt(section: InsightSection, locale: 'he' | 'en', countryCode?: string): string {
+  private buildSectionSystemPrompt(section: InsightSection, locale: 'he' | 'en', countryCode?: string, businessField?: string): string {
     const now = new Date();
     const currentDate = locale === 'en'
       ? now.toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })
@@ -584,7 +600,7 @@ ${langInstruction}${this.getCountryContext(countryCode)}`;
       ? `You are an expert financial advisor for freelancers. Today's date: ${currentDate}. Give one focused, detailed recommendation. Return JSON with key "${section}". ${langInstruction}`
       : `אתה יועץ פיננסי מומחה לפרילנסרים. התאריך היום: ${currentDate}. תן המלצה אחת ממוקדת ומפורטת. החזר JSON עם מפתח "${section}". ${langInstruction}`;
 
-    return `${base}\n\n${guidance}${this.getCountryContext(countryCode)}`;
+    return `${base}\n\n${guidance}${this.getCountryContext(countryCode)}${this.getBusinessFieldContext(businessField)}`;
   }
 
   // ─── Section Ask ───────────────────────────────────────────────────
