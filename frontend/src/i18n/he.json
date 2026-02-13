@@ -149,6 +149,7 @@
     "business": "עסק",
     "finance": "פיננסים",
     "more": "עוד",
+    "reportsSection": "דו\"חות וניתוח",
     "planning": "תכנון",
     "assets": "נכסים",
     "analysis": "ניתוח"
@@ -319,7 +320,13 @@
     "noTransactions": "אין תנועות לתקופה זו",
     "profitMargin": "שולי רווח",
     "avgDailyExpense": "הוצאה יומית ממוצעת",
-    "avgDailyIncome": "הכנסה יומית ממוצעת"
+    "avgDailyIncome": "הכנסה יומית ממוצעת",
+    "widgetVisibility": "הצגת ווידג'טים",
+    "welcomeTitle": "ברוכים הבאים ל-FreelancerOS!",
+    "welcomeDescription": "התחל בהוספת תנועות, לקוחות וחשבוניות כדי לראות את לוח הבקרה שלך בפעולה.",
+    "uploadFile": "העלה קובץ",
+    "addManually": "הוסף ידנית",
+    "welcomeHint": "תוכל גם להשתמש בכפתור + בתפריט הצד להוספה מהירה"
   },
   "clients": {
     "title": "לקוחות",

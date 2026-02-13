@@ -40,20 +40,11 @@ const reportsItems: NavItem[] = [
   { href: '/tax', key: 'nav.tax', icon: 'percent' },
 ];
 
-const moreItems: NavItem[] = [
-  { href: '/goals', key: 'nav.goals', icon: 'target' },
-  { href: '/recurring', key: 'nav.recurring', icon: 'repeat' },
-  { href: '/forex', key: 'nav.forex', icon: 'currency' },
-  { href: '/stocks', key: 'nav.stocks', icon: 'bar-chart' },
-  { href: '/loans-savings', key: 'nav.loansSavings', icon: 'banknotes' },
-];
-
 const navGroups = [
   { id: 'main', labelKey: 'nav.main', items: mainItems },
   { id: 'business', labelKey: 'nav.business', items: businessItems },
   { id: 'finance', labelKey: 'nav.finance', items: financeItems },
   { id: 'reports', labelKey: 'nav.reportsSection', items: reportsItems },
-  { id: 'more', labelKey: 'nav.more', items: moreItems },
 ];
 
 /* ────────────────────────────────────────────── */

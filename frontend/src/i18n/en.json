@@ -149,6 +149,7 @@
     "business": "Business",
     "finance": "Finance",
     "more": "More",
+    "reportsSection": "Reports & Analysis",
     "planning": "Planning",
     "assets": "Assets",
     "analysis": "Analysis"
@@ -319,7 +320,13 @@
     "noTransactions": "No transactions for this period",
     "profitMargin": "Profit Margin",
     "avgDailyExpense": "Avg. Daily Expense",
-    "avgDailyIncome": "Avg. Daily Income"
+    "avgDailyIncome": "Avg. Daily Income",
+    "widgetVisibility": "Widget Visibility",
+    "welcomeTitle": "Welcome to FreelancerOS!",
+    "welcomeDescription": "Start by adding transactions, clients, and invoices to see your dashboard in action.",
+    "uploadFile": "Upload File",
+    "addManually": "Add Manually",
+    "welcomeHint": "You can also use the + button in the sidebar for quick adding"
   },
   "clients": {
     "title": "Clients",
