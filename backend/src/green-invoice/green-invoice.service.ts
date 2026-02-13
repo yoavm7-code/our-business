@@ -203,6 +203,54 @@ export class GreenInvoiceService {
     }
   }
 
+  /** Save login credentials (email/password) and authenticate to get API token */
+  async saveLoginCredentials(
+    businessId: string,
+    email: string,
+    password: string,
+    sandbox: boolean,
+  ) {
+    this.tokenCache.delete(businessId);
+
+    const base = this.getBaseUrl(sandbox);
+
+    // Authenticate with email/password to get a token
+    const res = await fetch(`${base}/account/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: email, secret: password }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      this.logger.error(`Green Invoice login failed: ${res.status} ${text}`);
+      throw new BadRequestException('Morning login failed. Check your email and password.');
+    }
+
+    const data = await res.json();
+    const token = data.token as string;
+
+    // Cache the token
+    this.tokenCache.set(businessId, {
+      token,
+      expiresAt: Date.now() + 50 * 60 * 1000,
+    });
+
+    // Save credentials (use the email/password as keyId/secret internally)
+    await this.prisma.business.update({
+      where: { id: businessId },
+      data: {
+        greenInvoiceKeyId: email,
+        greenInvoiceSecret: password,
+        greenInvoiceSandbox: sandbox,
+        greenInvoiceEmail: email,
+        greenInvoicePassword: password,
+      },
+    });
+
+    return { success: true };
+  }
+
   /** Save Green Invoice credentials for a business */
   async saveCredentials(
     businessId: string,

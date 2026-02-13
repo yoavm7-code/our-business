@@ -74,6 +74,9 @@ export class InvoicesController {
         unitPrice: number;
         sortOrder?: number;
       }>;
+      allocationNumber?: string;
+      allocationConfirmation?: string;
+      customFields?: Record<string, unknown>;
     },
   ) {
     return this.invoicesService.create(businessId, dto);
@@ -102,6 +105,9 @@ export class InvoicesController {
         unitPrice: number;
         sortOrder?: number;
       }>;
+      allocationNumber?: string;
+      allocationConfirmation?: string;
+      customFields?: Record<string, unknown>;
     },
   ) {
     return this.invoicesService.update(businessId, id, dto);

@@ -10,6 +10,7 @@ import {
   type InvoiceItem,
 } from '@/lib/api';
 import { useTranslation } from '@/i18n/context';
+import CustomFields from '@/components/CustomFields';
 
 // ─── Constants ───────────────────────────────────────
 const PROJECT_STATUSES = ['active', 'completed', 'on_hold', 'cancelled'] as const;
@@ -165,6 +166,7 @@ const emptyForm = {
   endDate: '',
   color: '#6366f1',
   notes: '',
+  customFields: {} as Record<string, any>,
 };
 
 const emptyQuickClient = {
@@ -492,6 +494,13 @@ function ProjectFormModal({
               placeholder={t('projects.notesPlaceholder')}
             />
           </div>
+
+          {/* Custom Fields */}
+          <CustomFields
+            entityType="project"
+            value={form.customFields}
+            onChange={(val) => setForm((f) => ({ ...f, customFields: val }))}
+          />
 
           <button type="submit" className="btn-primary w-full" disabled={saving}>
             {saving ? t('common.loading') : editingId ? t('common.save') : t('projects.addProject')}

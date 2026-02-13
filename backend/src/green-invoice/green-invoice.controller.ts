@@ -42,6 +42,20 @@ export class GreenInvoiceController {
     return this.greenInvoiceService.testConnection(businessId);
   }
 
+  /** Connect with username/password (Morning login credentials) */
+  @Post('connect-credentials')
+  async connectWithCredentials(
+    @HouseholdId() businessId: string,
+    @Body() dto: { email: string; password: string; sandbox?: boolean },
+  ) {
+    return this.greenInvoiceService.saveLoginCredentials(
+      businessId,
+      dto.email,
+      dto.password,
+      dto.sandbox ?? false,
+    );
+  }
+
   /** Disconnect (remove credentials) */
   @Delete('disconnect')
   async disconnect(@HouseholdId() businessId: string) {

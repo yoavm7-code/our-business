@@ -5,11 +5,13 @@ import {
   invoices,
   clients as clientsApi,
   projects as projectsApi,
+  greenInvoice,
   type InvoiceItem,
   type InvoiceLineItem,
   type InvoiceSummary,
   type ClientItem,
   type ProjectItem,
+  type GreenInvoiceStatus,
 } from '@/lib/api';
 import { useTranslation } from '@/i18n/context';
 import { useToast } from '@/components/Toast';
@@ -240,6 +242,8 @@ interface InvoiceForm {
   terms: string;
   notes: string;
   language: 'he' | 'en';
+  allocationNumber: string;
+  autoAllocate: boolean;
 }
 
 function createEmptyForm(): InvoiceForm {
@@ -259,6 +263,8 @@ function createEmptyForm(): InvoiceForm {
     terms: '',
     notes: '',
     language: 'he',
+    allocationNumber: '',
+    autoAllocate: false,
   };
 }
 
@@ -447,6 +453,9 @@ function InvoiceDetailPanel({
   onDuplicate,
   onDelete,
   onPrint,
+  onPushToMorning,
+  morningConnected,
+  morningPushing,
   t,
   locale,
 }: {
@@ -459,6 +468,9 @@ function InvoiceDetailPanel({
   onDuplicate: () => void;
   onDelete: () => void;
   onPrint: () => void;
+  onPushToMorning?: () => void;
+  morningConnected?: boolean;
+  morningPushing?: boolean;
   t: (k: string, vars?: Record<string, string | number>) => string;
   locale: string;
 }) {
@@ -543,7 +555,21 @@ function InvoiceDetailPanel({
               <p className="text-sm font-semibold">{invoice.project.name}</p>
             </div>
           )}
+          {invoice.allocationNumber && (
+            <div>
+              <p className="text-xs text-slate-500 mb-1">{locale === 'he' ? '\u05DE\u05E1\u05E4\u05E8 \u05D4\u05E7\u05E6\u05D0\u05D4' : 'Allocation Number'}</p>
+              <p className="text-sm font-semibold">{invoice.allocationNumber}</p>
+            </div>
+          )}
         </div>
+
+        {/* Missing allocation warning */}
+        {!invoice.allocationNumber && invoice.subtotal > 10000 && invoice.status !== 'cancelled' && (
+          <div className="mx-5 mt-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 flex items-center gap-2 text-amber-700 dark:text-amber-300 text-sm">
+            <IconAlertTriangle />
+            <span>{locale === 'he' ? '\u05D7\u05E1\u05E8 \u05DE\u05E1\u05E4\u05E8 \u05D4\u05E7\u05E6\u05D0\u05D4' : 'Missing allocation number'}</span>
+          </div>
+        )}
 
         {/* Line items table */}
         <div className="p-5 border-b border-[var(--border)]">
@@ -669,6 +695,38 @@ function InvoiceDetailPanel({
                 <IconBan /> {t('invoices.cancelInvoice')}
               </button>
             </>
+          )}
+          {/* Send to Morning button */}
+          {morningConnected && onPushToMorning && !invoice.externalId && (
+            <button
+              type="button"
+              onClick={onPushToMorning}
+              disabled={morningPushing}
+              className="btn-secondary text-sm flex items-center gap-1.5 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-900/20"
+            >
+              {morningPushing ? (
+                <span className="flex items-center gap-1.5">
+                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-green-500 border-t-transparent" />
+                  {locale === 'he' ? 'שולח...' : 'Sending...'}
+                </span>
+              ) : (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" />
+                  </svg>
+                  {locale === 'he' ? 'שלח למורנינג' : 'Send to Morning'}
+                </>
+              )}
+            </button>
+          )}
+          {/* Morning synced indicator */}
+          {morningConnected && invoice.externalId && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 11-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+              {locale === 'he' ? 'סונכרן למורנינג' : 'Synced to Morning'}
+            </span>
           )}
           <div className="flex-1" />
           <button type="button" onClick={onPrint} className="btn-secondary text-sm flex items-center gap-1.5">
@@ -1042,6 +1100,52 @@ function InvoiceFormModal({
               </div>
             </div>
 
+            {/* Allocation Number (מספר הקצאה) */}
+            <div className="border border-[var(--border)] rounded-xl p-4 space-y-3">
+              <h4 className="text-sm font-semibold flex items-center gap-2">
+                {locale === 'he' ? '\u05DE\u05E1\u05E4\u05E8 \u05D4\u05E7\u05E6\u05D0\u05D4' : 'Allocation Number'}
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium mb-1">
+                    {locale === 'he' ? '\u05DE\u05E1\u05E4\u05E8 \u05D4\u05E7\u05E6\u05D0\u05D4' : 'Allocation Number'}
+                  </label>
+                  <input
+                    className="input-sm w-full"
+                    value={form.allocationNumber}
+                    onChange={(e) => setForm((f) => ({ ...f, allocationNumber: e.target.value }))}
+                    placeholder={locale === 'he' ? '\u05DE\u05E1\u05E4\u05E8 \u05D4\u05E7\u05E6\u05D0\u05D4' : 'Allocation number'}
+                    disabled={form.autoAllocate}
+                  />
+                </div>
+                <div className="flex items-end">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer pb-1">
+                    <input
+                      type="checkbox"
+                      checked={form.autoAllocate}
+                      onChange={(e) => setForm((f) => ({ ...f, autoAllocate: e.target.checked, allocationNumber: e.target.checked ? '' : f.allocationNumber }))}
+                      className="rounded"
+                    />
+                    <span>{locale === 'he' ? '\u05D4\u05E7\u05E6\u05D0\u05D4 \u05D0\u05D5\u05D8\u05D5\u05DE\u05D8\u05D9\u05EA' : 'Auto-allocate'}</span>
+                  </label>
+                </div>
+              </div>
+              {subtotal > 10000 && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-lg px-3 py-2">
+                  {locale === 'he'
+                    ? '\u05E9\u05D9\u05DD \u05DC\u05D1: \u05D1\u05E9\u05E0\u05EA 2026, \u05E2\u05E1\u05E7\u05D4 \u05DE\u05E2\u05DC 10,000 \u05E9"\u05D7 \u05DC\u05E4\u05E0\u05D9 \u05DE\u05E2"\u05DE \u05DE\u05D7\u05D9\u05D9\u05D1\u05EA \u05DE\u05E1\u05E4\u05E8 \u05D4\u05E7\u05E6\u05D0\u05D4 \u05DE\u05E8\u05E9\u05D5\u05EA \u05D4\u05DE\u05E1\u05D9\u05DD.'
+                    : 'Note: In 2026, transactions above 10,000 ILS before VAT require an allocation number from the Tax Authority.'}
+                </p>
+              )}
+              {subtotal <= 10000 && (
+                <p className="text-xs text-slate-400">
+                  {locale === 'he'
+                    ? '\u05D1\u05E9\u05E0\u05EA 2026, \u05E0\u05D3\u05E8\u05E9 \u05DE\u05E1\u05E4\u05E8 \u05D4\u05E7\u05E6\u05D0\u05D4 \u05DC\u05E2\u05E1\u05E7\u05D0\u05D5\u05EA \u05DE\u05E2\u05DC 10,000 \u05E9"\u05D7 \u05DC\u05E4\u05E0\u05D9 \u05DE\u05E2"\u05DE.'
+                    : 'In 2026, allocation numbers are required for transactions above 10,000 ILS before VAT.'}
+                </p>
+              )}
+            </div>
+
             {/* Terms & Notes */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
@@ -1242,6 +1346,18 @@ export default function InvoicesPage() {
     action: () => void;
   } | null>(null);
 
+  // Morning (Green Invoice) integration state
+  const [morningStatus, setMorningStatus] = useState<GreenInvoiceStatus>({ connected: false, sandbox: false, lastSync: null });
+  const [morningBannerForm, setMorningBannerForm] = useState<'none' | 'api_key' | 'credentials'>('none');
+  const [morningKeyId, setMorningKeyId] = useState('');
+  const [morningSecret, setMorningSecret] = useState('');
+  const [morningEmail, setMorningEmail] = useState('');
+  const [morningPassword, setMorningPassword] = useState('');
+  const [morningSandbox, setMorningSandbox] = useState(false);
+  const [morningConnecting, setMorningConnecting] = useState(false);
+  const [morningSuccessMsg, setMorningSuccessMsg] = useState('');
+  const [morningPushing, setMorningPushing] = useState<string | null>(null);
+
   // ─── Data fetching ─────────────────────────────────
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -1268,6 +1384,13 @@ export default function InvoicesPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Fetch Morning status
+  useEffect(() => {
+    greenInvoice.getStatus()
+      .then((s) => setMorningStatus(s))
+      .catch(() => {});
+  }, []);
 
   // ─── Keyboard shortcuts ────────────────────────────
   useEffect(() => {
@@ -1362,6 +1485,8 @@ export default function InvoicesPage() {
       terms: inv.terms || '',
       notes: inv.notes || '',
       language: 'he',
+      allocationNumber: inv.allocationNumber || '',
+      autoAllocate: false,
     });
     setShowForm(true);
     setDetailInvoice(null);
@@ -1388,6 +1513,7 @@ export default function InvoicesPage() {
             quantity: li.quantity,
             unitPrice: li.unitPrice,
           })),
+        allocationNumber: form.allocationNumber || undefined,
       };
 
       if (editingId) {
@@ -1466,6 +1592,64 @@ export default function InvoicesPage() {
     window.print();
   }
 
+  // ─── Morning (Green Invoice) handlers ─────────────
+  async function handleMorningConnectApiKey() {
+    if (!morningKeyId.trim() || !morningSecret.trim()) return;
+    setMorningConnecting(true);
+    try {
+      const result = await greenInvoice.connect(morningKeyId.trim(), morningSecret.trim(), morningSandbox);
+      if (result.success) {
+        setMorningStatus({ connected: true, sandbox: morningSandbox, lastSync: null });
+        setMorningKeyId('');
+        setMorningSecret('');
+        setMorningBannerForm('none');
+        setMorningSuccessMsg(locale === 'he' ? 'חשבון מורנינג חובר בהצלחה!' : 'Morning account connected successfully!');
+        setTimeout(() => setMorningSuccessMsg(''), 5000);
+      } else {
+        toast(locale === 'he' ? 'החיבור נכשל' : 'Connection failed', 'error');
+      }
+    } catch {
+      toast(locale === 'he' ? 'החיבור נכשל' : 'Connection failed', 'error');
+    } finally {
+      setMorningConnecting(false);
+    }
+  }
+
+  async function handleMorningConnectCredentials() {
+    if (!morningEmail.trim() || !morningPassword.trim()) return;
+    setMorningConnecting(true);
+    try {
+      const result = await greenInvoice.connectWithCredentials(morningEmail.trim(), morningPassword.trim(), morningSandbox);
+      if (result.success) {
+        setMorningStatus({ connected: true, sandbox: morningSandbox, lastSync: null });
+        setMorningEmail('');
+        setMorningPassword('');
+        setMorningBannerForm('none');
+        setMorningSuccessMsg(locale === 'he' ? 'חשבון מורנינג חובר בהצלחה!' : 'Morning account connected successfully!');
+        setTimeout(() => setMorningSuccessMsg(''), 5000);
+      } else {
+        toast(locale === 'he' ? 'החיבור נכשל' : 'Connection failed', 'error');
+      }
+    } catch {
+      toast(locale === 'he' ? 'החיבור נכשל' : 'Connection failed', 'error');
+    } finally {
+      setMorningConnecting(false);
+    }
+  }
+
+  async function handlePushToMorning(invoiceId: string) {
+    setMorningPushing(invoiceId);
+    try {
+      await greenInvoice.pushInvoice(invoiceId);
+      toast(locale === 'he' ? 'החשבונית נשלחה למורנינג בהצלחה' : 'Invoice sent to Morning successfully', 'success');
+      fetchData();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : (locale === 'he' ? 'שליחה למורנינג נכשלה' : 'Failed to send to Morning'), 'error');
+    } finally {
+      setMorningPushing(null);
+    }
+  }
+
   // ─── Render: Loading ───────────────────────────────
   if (loading) {
     return <InvoicesSkeleton />;
@@ -1507,6 +1691,200 @@ export default function InvoicesPage() {
           {t('invoices.addInvoice')}
         </button>
       </div>
+
+      {/* Morning connection success message */}
+      {morningSuccessMsg && (
+        <div className="rounded-xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/30 px-4 py-3 text-sm text-green-700 dark:text-green-300 flex items-center justify-between">
+          <span className="flex items-center gap-2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 11.08V12a10 10 0 11-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
+            {morningSuccessMsg}
+          </span>
+          <button onClick={() => setMorningSuccessMsg('')} className="text-green-500 hover:text-green-700 ms-2">
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
+      )}
+
+      {/* Morning Integration Banner - shown when not connected */}
+      {!morningStatus.connected && !morningSuccessMsg && (
+        <div className="card border-green-200 dark:border-green-800 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/40 flex items-center justify-center text-green-600 dark:text-green-400 shrink-0">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-green-800 dark:text-green-200">Morning (Green Invoice)</h3>
+              <p className="text-sm text-green-700 dark:text-green-300 mt-0.5">
+                {locale === 'he'
+                  ? 'חבר את חשבון מורנינג שלך לשליחת חשבוניות אוטומטית'
+                  : 'Connect your Morning account for automatic invoice sending'}
+              </p>
+
+              {morningBannerForm === 'none' && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  <button
+                    type="button"
+                    onClick={() => setMorningBannerForm('api_key')}
+                    className="px-4 py-2 rounded-xl text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
+                      </svg>
+                      {locale === 'he' ? 'חבר עם מפתח API' : 'Connect with API Key'}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMorningBannerForm('credentials')}
+                    className="px-4 py-2 rounded-xl text-sm font-medium border border-green-300 dark:border-green-700 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" />
+                      </svg>
+                      {locale === 'he' ? 'חבר עם שם משתמש' : 'Connect with Username'}
+                    </span>
+                  </button>
+                </div>
+              )}
+
+              {/* Inline API Key form */}
+              {morningBannerForm === 'api_key' && (
+                <div className="mt-3 space-y-3 max-w-md">
+                  <div>
+                    <label className="block text-xs font-medium text-green-800 dark:text-green-200 mb-1">
+                      {locale === 'he' ? 'מזהה מפתח API' : 'API Key ID'}
+                    </label>
+                    <input
+                      className="input w-full text-sm"
+                      value={morningKeyId}
+                      onChange={(e) => setMorningKeyId(e.target.value)}
+                      placeholder="API Key ID"
+                      dir="ltr"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-green-800 dark:text-green-200 mb-1">
+                      {locale === 'he' ? 'מפתח סודי' : 'API Secret'}
+                    </label>
+                    <input
+                      type="password"
+                      className="input w-full text-sm"
+                      value={morningSecret}
+                      onChange={(e) => setMorningSecret(e.target.value)}
+                      placeholder="API Secret"
+                      dir="ltr"
+                    />
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={morningSandbox}
+                      onChange={(e) => setMorningSandbox(e.target.checked)}
+                      className="rounded border-slate-300 text-green-600 focus:ring-green-500"
+                    />
+                    <span className="text-xs text-green-700 dark:text-green-300">Sandbox</span>
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleMorningConnectApiKey}
+                      disabled={morningConnecting || !morningKeyId.trim() || !morningSecret.trim()}
+                      className="px-4 py-2 rounded-xl text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
+                    >
+                      {morningConnecting ? (
+                        <span className="flex items-center gap-2">
+                          <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                          {locale === 'he' ? 'מתחבר...' : 'Connecting...'}
+                        </span>
+                      ) : (
+                        locale === 'he' ? 'התחבר' : 'Connect'
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setMorningBannerForm('none'); setMorningKeyId(''); setMorningSecret(''); }}
+                      className="px-4 py-2 rounded-xl text-sm font-medium border border-green-300 dark:border-green-700 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
+                    >
+                      {locale === 'he' ? 'ביטול' : 'Cancel'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Inline Credentials form */}
+              {morningBannerForm === 'credentials' && (
+                <div className="mt-3 space-y-3 max-w-md">
+                  <div>
+                    <label className="block text-xs font-medium text-green-800 dark:text-green-200 mb-1">
+                      {locale === 'he' ? 'אימייל' : 'Email'}
+                    </label>
+                    <input
+                      type="email"
+                      className="input w-full text-sm"
+                      value={morningEmail}
+                      onChange={(e) => setMorningEmail(e.target.value)}
+                      placeholder="your@email.com"
+                      dir="ltr"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-green-800 dark:text-green-200 mb-1">
+                      {locale === 'he' ? 'סיסמה' : 'Password'}
+                    </label>
+                    <input
+                      type="password"
+                      className="input w-full text-sm"
+                      value={morningPassword}
+                      onChange={(e) => setMorningPassword(e.target.value)}
+                      placeholder="********"
+                      dir="ltr"
+                    />
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={morningSandbox}
+                      onChange={(e) => setMorningSandbox(e.target.checked)}
+                      className="rounded border-slate-300 text-green-600 focus:ring-green-500"
+                    />
+                    <span className="text-xs text-green-700 dark:text-green-300">Sandbox</span>
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleMorningConnectCredentials}
+                      disabled={morningConnecting || !morningEmail.trim() || !morningPassword.trim()}
+                      className="px-4 py-2 rounded-xl text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
+                    >
+                      {morningConnecting ? (
+                        <span className="flex items-center gap-2">
+                          <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                          {locale === 'he' ? 'מתחבר...' : 'Connecting...'}
+                        </span>
+                      ) : (
+                        locale === 'he' ? 'התחבר' : 'Connect'
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setMorningBannerForm('none'); setMorningEmail(''); setMorningPassword(''); }}
+                      className="px-4 py-2 rounded-xl text-sm font-medium border border-green-300 dark:border-green-700 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
+                    >
+                      {locale === 'he' ? 'ביטול' : 'Cancel'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Summary cards */}
       {summary && (
@@ -1729,7 +2107,17 @@ export default function InvoicesPage() {
                         {formatCurrency(inv.total, inv.currency, locale)}
                       </td>
                       <td className="py-3 px-4 text-center">
-                        <StatusBadge status={inv.status} t={t} />
+                        <div className="flex items-center justify-center gap-1.5">
+                          <StatusBadge status={inv.status} t={t} />
+                          {morningStatus.connected && inv.externalId && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 whitespace-nowrap">
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" />
+                              </svg>
+                              Morning
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3 px-4 text-end">
                         <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
@@ -1919,6 +2307,9 @@ export default function InvoicesPage() {
             });
           }}
           onPrint={handlePrint}
+          onPushToMorning={() => handlePushToMorning(detailInvoice.id)}
+          morningConnected={morningStatus.connected}
+          morningPushing={morningPushing === detailInvoice.id}
           t={t}
           locale={locale}
         />

@@ -28,6 +28,9 @@ import { InvoicesModule } from './invoices/invoices.module';
 import { TaxModule } from './tax/tax.module';
 import { ReportsModule } from './reports/reports.module';
 import { GreenInvoiceModule } from './green-invoice/green-invoice.module';
+import { CustomFieldsModule } from './custom-fields/custom-fields.module';
+import { ExpensesModule } from './expenses/expenses.module';
+import { ZReportModule } from './z-report/z-report.module';
 
 @Module({
   imports: [
@@ -75,6 +78,11 @@ import { GreenInvoiceModule } from './green-invoice/green-invoice.module';
     RecurringModule,
     ForexModule,
     StocksModule,
+
+    // Custom fields & expenses
+    CustomFieldsModule,
+    ExpensesModule,
+    ZReportModule,
 
     // Notifications & admin
     AlertsModule,

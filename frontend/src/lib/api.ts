@@ -611,6 +611,11 @@ export type InvoiceItem = {
   terms: string | null;
   lineItems: InvoiceLineItem[];
   createdAt: string;
+  allocationNumber?: string | null;
+  allocationConfirmation?: string | null;
+  allocationDate?: string | null;
+  externalId?: string | null;
+  externalUrl?: string | null;
 };
 
 export type InvoiceSummary = {
@@ -638,6 +643,8 @@ export const invoices = {
     notes?: string;
     terms?: string;
     lineItems: Array<{ description: string; quantity: number; unitPrice: number; taxRate?: number }>;
+    allocationNumber?: string;
+    allocationConfirmation?: string;
   }) => api<InvoiceItem>('/api/invoices', { method: 'POST', body: JSON.stringify(body) }),
   update: (id: string, body: {
     clientId?: string;
@@ -649,6 +656,8 @@ export const invoices = {
     notes?: string;
     terms?: string;
     lineItems?: Array<{ description: string; quantity: number; unitPrice: number; taxRate?: number }>;
+    allocationNumber?: string;
+    allocationConfirmation?: string;
   }) => api<InvoiceItem>(`/api/invoices/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   send: (id: string) =>
     api<InvoiceItem>(`/api/invoices/${id}/send`, { method: 'POST' }),
@@ -995,6 +1004,42 @@ export const reports = {
       monthlyForecast: monthly,
     };
   },
+};
+
+// ═══════════════════════════════════════════════
+// Z-REPORTS
+// ═══════════════════════════════════════════════
+
+export type ZReportData = {
+  id: string;
+  reportDate: string;
+  reportNumber: number;
+  totalSales: number;
+  totalCash: number;
+  totalCredit: number;
+  totalChecks: number;
+  totalTransfers: number;
+  totalRefunds: number;
+  totalVat: number;
+  netTotal: number;
+  transactionCount: number;
+  invoiceCount: number;
+  firstInvoiceNum: string | null;
+  lastInvoiceNum: string | null;
+  notes: string | null;
+  isClosed: boolean;
+  closedAt: string | null;
+};
+
+export const zReports = {
+  generate: (date: string) =>
+    api<ZReportData>('/api/reports/z-report/generate', { method: 'POST', body: JSON.stringify({ date }) }),
+  get: (date: string) =>
+    api<ZReportData>('/api/reports/z-report', { params: { date } }),
+  list: (params?: { from?: string; to?: string }) =>
+    api<ZReportData[]>('/api/reports/z-report/list', { params: params as Record<string, string | undefined> }),
+  close: (id: string) =>
+    api<ZReportData>(`/api/reports/z-report/${id}/close`, { method: 'POST' }),
 };
 
 // ═══════════════════════════════════════════════
@@ -1578,6 +1623,11 @@ export const greenInvoice = {
       method: 'POST',
       body: JSON.stringify({ keyId, secret, sandbox }),
     }),
+  connectWithCredentials: (email: string, password: string, sandbox?: boolean) =>
+    api<{ success: boolean }>('/api/integrations/green-invoice/connect-credentials', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, sandbox }),
+    }),
   testConnection: () =>
     api<{ success: boolean }>('/api/integrations/green-invoice/test', {
       method: 'POST',
@@ -1601,4 +1651,19 @@ export const greenInvoice = {
       '/api/integrations/green-invoice/documents',
       { params: { page, fromDate, toDate } },
     ),
+};
+
+// ═══════════════════════════════════════════════
+// CUSTOM FIELDS
+// ═══════════════════════════════════════════════
+
+export const customFields = {
+  getTemplates: (entityType: string) =>
+    api<Array<{ id: string; name: string; entityType: string; fields: Array<{ name: string; type: string; required: boolean; options?: string[] }>; isDefault: boolean }>>('/api/custom-fields/templates', { params: { entityType } }),
+  saveTemplate: (body: { name: string; entityType: string; fields: Array<{ name: string; type: string; required: boolean; options?: string[] }> }) =>
+    api<{ id: string }>('/api/custom-fields/templates', { method: 'POST', body: JSON.stringify(body) }),
+  deleteTemplate: (id: string) =>
+    api<unknown>(`/api/custom-fields/templates/${id}`, { method: 'DELETE' }),
+  setDefault: (id: string) =>
+    api<unknown>(`/api/custom-fields/templates/${id}/set-default`, { method: 'POST' }),
 };
