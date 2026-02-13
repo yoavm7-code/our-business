@@ -79,6 +79,7 @@ export const auth = {
     api<{
       accessToken: string;
       user: { id: string; email: string; name: string | null; businessId: string; countryCode?: string };
+      emailVerified?: boolean;
     }>('/api/auth/register', {
       method: 'POST',
       body: JSON.stringify({ email, password, name, countryCode, captchaToken, phone }),
