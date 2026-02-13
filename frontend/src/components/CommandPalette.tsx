@@ -26,11 +26,6 @@ const PAGES = [
   { href: '/reports', key: 'nav.reports', icon: 'file-text' },
   { href: '/insights', key: 'nav.insights', icon: 'sparkles' },
   { href: '/tax', key: 'nav.tax', icon: 'percent' },
-  { href: '/goals', key: 'nav.goals', icon: 'target' },
-  { href: '/recurring', key: 'nav.recurring', icon: 'repeat' },
-  { href: '/forex', key: 'nav.forex', icon: 'currency' },
-  { href: '/stocks', key: 'nav.stocks', icon: 'bar-chart' },
-  { href: '/loans-savings', key: 'nav.loansSavings', icon: 'banknotes' },
   { href: '/settings', key: 'nav.settings', icon: 'settings' },
 ];
 

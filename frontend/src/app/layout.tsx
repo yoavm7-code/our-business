@@ -1,8 +1,15 @@
 import type { Metadata } from 'next';
+import { Heebo } from 'next/font/google';
 import './globals.css';
 import LanguageProvider from '@/components/LanguageProvider';
 import { ToastProvider } from '@/components/Toast';
 import { ThemeProvider } from '@/components/ThemeProvider';
+
+const heebo = Heebo({
+  subsets: ['hebrew', 'latin'],
+  variable: '--font-geist-sans',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'FreelancerOS - \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05e2\u05e1\u05e7 \u05e9\u05dc\u05d9',
@@ -20,7 +27,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="he" dir="rtl" suppressHydrationWarning>
+    <html lang="he" dir="rtl" suppressHydrationWarning className={heebo.variable}>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#4f46e5" />
