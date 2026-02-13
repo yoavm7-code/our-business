@@ -1040,6 +1040,8 @@ export const zReports = {
     api<ZReportData[]>('/api/reports/z-report/list', { params: params as Record<string, string | undefined> }),
   close: (id: string) =>
     api<ZReportData>(`/api/reports/z-report/${id}/close`, { method: 'POST' }),
+  generateMonthly: (year: number, month: number) =>
+    api<ZReportData & { type: 'monthly'; monthName: string; dailyReportCount: number; dailyReports: ZReportData[] }>('/api/reports/z-report/generate-monthly', { method: 'POST', body: JSON.stringify({ year, month }) }),
 };
 
 // ═══════════════════════════════════════════════

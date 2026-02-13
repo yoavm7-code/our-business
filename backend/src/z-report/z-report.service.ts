@@ -197,6 +197,94 @@ export class ZReportService {
     return this.formatReport(updated);
   }
 
+  /** Generate a monthly Z-Report by aggregating all daily data for a month */
+  async generateMonthly(businessId: string, year: number, month: number) {
+    const startOfMonth = new Date(year, month - 1, 1);
+    const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
+
+    // Aggregate transactions for the month
+    const transactions = await this.prisma.transaction.findMany({
+      where: {
+        businessId,
+        date: { gte: startOfMonth, lte: endOfMonth },
+      },
+      include: { account: true },
+    });
+
+    // Aggregate invoices for the month
+    const invoices = await this.prisma.invoice.findMany({
+      where: {
+        businessId,
+        issueDate: { gte: startOfMonth, lte: endOfMonth },
+        status: { notIn: ['CANCELLED'] },
+      },
+      orderBy: { invoiceNumber: 'asc' },
+    });
+
+    // Calculate totals
+    let totalSales = 0;
+    let totalCash = 0;
+    let totalCredit = 0;
+    let totalChecks = 0;
+    let totalTransfers = 0;
+    let totalRefunds = 0;
+    let totalVat = 0;
+
+    for (const tx of transactions) {
+      const amount = Number(tx.amount);
+      if (amount > 0) {
+        totalSales += amount;
+        const accType = tx.account?.type;
+        if (accType === 'CASH') totalCash += amount;
+        else if (accType === 'CREDIT_CARD') totalCredit += amount;
+        else if (accType === 'BANK') totalTransfers += amount;
+        else totalTransfers += amount;
+      } else {
+        totalRefunds += Math.abs(amount);
+      }
+      if (tx.vatAmount) totalVat += Number(tx.vatAmount);
+    }
+
+    for (const inv of invoices) {
+      if (inv.vatAmount) totalVat += Number(inv.vatAmount);
+    }
+
+    const netTotal = totalSales - totalRefunds;
+    const firstInvoiceNum = invoices.length > 0 ? invoices[0].invoiceNumber : null;
+    const lastInvoiceNum = invoices.length > 0 ? invoices[invoices.length - 1].invoiceNumber : null;
+
+    // Get daily reports for this month
+    const dailyReports = await this.prisma.zReport.findMany({
+      where: {
+        businessId,
+        reportDate: { gte: startOfMonth, lte: endOfMonth },
+      },
+      orderBy: { reportDate: 'asc' },
+    });
+
+    return {
+      type: 'monthly' as const,
+      year,
+      month,
+      monthName: startOfMonth.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' }),
+      reportDate: startOfMonth.toISOString().slice(0, 10),
+      totalSales,
+      totalCash,
+      totalCredit,
+      totalChecks,
+      totalTransfers,
+      totalRefunds,
+      totalVat,
+      netTotal,
+      transactionCount: transactions.length,
+      invoiceCount: invoices.length,
+      firstInvoiceNum,
+      lastInvoiceNum,
+      dailyReportCount: dailyReports.length,
+      dailyReports: dailyReports.map((r) => this.formatReport(r)),
+    };
+  }
+
   private formatReport(report: any) {
     return {
       id: report.id,

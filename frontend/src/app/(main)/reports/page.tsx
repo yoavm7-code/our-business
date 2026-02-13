@@ -707,6 +707,12 @@ export default function ReportsPage() {
           t={t}
           from={from}
           to={to}
+          pnlData={pnlData}
+          cashFlowData={cashFlowData}
+          clientData={clientData}
+          catExpenseData={catExpenseData}
+          taxData={taxData}
+          forecastData={forecastData}
         />
       )}
     </div>
@@ -1649,6 +1655,12 @@ function ReportExportModal({
   t,
   from,
   to,
+  pnlData,
+  cashFlowData,
+  clientData,
+  catExpenseData,
+  taxData,
+  forecastData,
 }: {
   format: ExportFormat;
   onFormatChange: (f: ExportFormat) => void;
@@ -1659,6 +1671,12 @@ function ReportExportModal({
   t: (key: string, vars?: Record<string, string | number>) => string;
   from: string;
   to: string;
+  pnlData: PnlData | null;
+  cashFlowData: CashFlowData | null;
+  clientData: ClientRevenueData | null;
+  catExpenseData: CategoryData | null;
+  taxData: TaxData | null;
+  forecastData: ForecastData | null;
 }) {
   const [logoPosition, setLogoPosition] = useState<LogoPosition>('right');
   const [titleStyle, setTitleStyle] = useState<TitleStyle>('bold');
@@ -1815,20 +1833,100 @@ function ReportExportModal({
                 {tabLabels[activeTab]}
               </h3>
               <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">{from} - {to}</p>
-              {/* Preview data placeholder */}
-              <div className="space-y-2">
-                <div className="h-3 w-full bg-slate-100 dark:bg-slate-800 rounded" />
-                <div className="h-3 w-3/4 bg-slate-100 dark:bg-slate-800 rounded" />
-                <div className="h-3 w-5/6 bg-slate-100 dark:bg-slate-800 rounded" />
-                {includeCharts && (
-                  <div className="mt-3 h-20 bg-gradient-to-r from-green-100 to-blue-100 dark:from-green-900/20 dark:to-blue-900/20 rounded-lg flex items-center justify-center">
-                    <span className="text-xs text-slate-400 dark:text-slate-500">
-                      <ChartBarIcon />
-                    </span>
+              {/* Actual data preview table */}
+              <div className="overflow-x-auto">
+                {activeTab === 'pnl' && pnlData ? (
+                  <table className="w-full text-xs border-collapse">
+                    <thead><tr className="border-b border-slate-200 dark:border-slate-700">
+                      <th className="text-start py-1.5 px-2 font-semibold text-slate-500">{t('reports.month')}</th>
+                      <th className="text-end py-1.5 px-2 font-semibold text-slate-500">{t('reports.income')}</th>
+                      <th className="text-end py-1.5 px-2 font-semibold text-slate-500">{t('reports.expenses')}</th>
+                      <th className="text-end py-1.5 px-2 font-semibold text-slate-500">{t('reports.netProfit')}</th>
+                    </tr></thead>
+                    <tbody>{pnlData.byMonth.slice(0, 5).map((m, i) => (
+                      <tr key={i} className="border-b border-slate-100 dark:border-slate-800">
+                        <td className="py-1 px-2">{m.month}</td>
+                        <td className="py-1 px-2 text-end text-green-600">{fmtCurrency(m.income, locale)}</td>
+                        <td className="py-1 px-2 text-end text-red-500">{fmtCurrency(m.expenses, locale)}</td>
+                        <td className="py-1 px-2 text-end font-semibold">{fmtCurrency(m.net, locale)}</td>
+                      </tr>
+                    ))}</tbody>
+                    {pnlData.byMonth.length > 5 && <tfoot><tr><td colSpan={4} className="py-1 px-2 text-center text-slate-400 text-[10px]">...{locale === 'he' ? `\u05D5\u05E2\u05D5\u05D3 ${pnlData.byMonth.length - 5} \u05E9\u05D5\u05E8\u05D5\u05EA` : `and ${pnlData.byMonth.length - 5} more rows`}</td></tr></tfoot>}
+                  </table>
+                ) : activeTab === 'cashflow' && cashFlowData ? (
+                  <table className="w-full text-xs border-collapse">
+                    <thead><tr className="border-b border-slate-200 dark:border-slate-700">
+                      <th className="text-start py-1.5 px-2 font-semibold text-slate-500">{t('reports.month')}</th>
+                      <th className="text-end py-1.5 px-2 font-semibold text-slate-500">{t('reports.inflows')}</th>
+                      <th className="text-end py-1.5 px-2 font-semibold text-slate-500">{t('reports.outflows')}</th>
+                      <th className="text-end py-1.5 px-2 font-semibold text-slate-500">{t('reports.net')}</th>
+                    </tr></thead>
+                    <tbody>{cashFlowData.byMonth.slice(0, 5).map((m, i) => (
+                      <tr key={i} className="border-b border-slate-100 dark:border-slate-800">
+                        <td className="py-1 px-2">{m.month}</td>
+                        <td className="py-1 px-2 text-end text-green-600">{fmtCurrency(m.inflows, locale)}</td>
+                        <td className="py-1 px-2 text-end text-red-500">{fmtCurrency(m.outflows, locale)}</td>
+                        <td className="py-1 px-2 text-end font-semibold">{fmtCurrency(m.net, locale)}</td>
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                ) : activeTab === 'clients' && clientData ? (
+                  <table className="w-full text-xs border-collapse">
+                    <thead><tr className="border-b border-slate-200 dark:border-slate-700">
+                      <th className="text-start py-1.5 px-2 font-semibold text-slate-500">{t('reports.clientName')}</th>
+                      <th className="text-end py-1.5 px-2 font-semibold text-slate-500">{t('reports.invoiceCount')}</th>
+                      <th className="text-end py-1.5 px-2 font-semibold text-slate-500">{t('reports.totalInvoiced')}</th>
+                      <th className="text-end py-1.5 px-2 font-semibold text-slate-500">{t('reports.totalPaid')}</th>
+                      <th className="text-end py-1.5 px-2 font-semibold text-slate-500">{t('reports.outstanding')}</th>
+                    </tr></thead>
+                    <tbody>{clientData.slice(0, 5).map((c, i) => (
+                      <tr key={i} className="border-b border-slate-100 dark:border-slate-800">
+                        <td className="py-1 px-2">{c.clientName}</td>
+                        <td className="py-1 px-2 text-end">{c.invoiceCount}</td>
+                        <td className="py-1 px-2 text-end">{fmtCurrency(c.totalInvoiced, locale)}</td>
+                        <td className="py-1 px-2 text-end text-green-600">{fmtCurrency(c.totalPaid, locale)}</td>
+                        <td className="py-1 px-2 text-end text-amber-600">{fmtCurrency(c.outstanding, locale)}</td>
+                      </tr>
+                    ))}</tbody>
+                    {clientData.length > 5 && <tfoot><tr><td colSpan={5} className="py-1 px-2 text-center text-slate-400 text-[10px]">...{locale === 'he' ? `\u05D5\u05E2\u05D5\u05D3 ${clientData.length - 5} \u05DC\u05E7\u05D5\u05D7\u05D5\u05EA` : `and ${clientData.length - 5} more clients`}</td></tr></tfoot>}
+                  </table>
+                ) : activeTab === 'tax' && taxData ? (
+                  <table className="w-full text-xs border-collapse">
+                    <thead><tr className="border-b border-slate-200 dark:border-slate-700">
+                      <th className="text-start py-1.5 px-2 font-semibold text-slate-500">{t('reports.quarter')}</th>
+                      <th className="text-end py-1.5 px-2 font-semibold text-slate-500">{t('reports.income')}</th>
+                      <th className="text-end py-1.5 px-2 font-semibold text-slate-500">{t('reports.expenses')}</th>
+                      <th className="text-end py-1.5 px-2 font-semibold text-slate-500">{t('reports.tax')}</th>
+                    </tr></thead>
+                    <tbody>{taxData.quarterlyBreakdown.map((q, i) => (
+                      <tr key={i} className="border-b border-slate-100 dark:border-slate-800">
+                        <td className="py-1 px-2">Q{q.quarter}</td>
+                        <td className="py-1 px-2 text-end text-green-600">{fmtCurrency(q.income, locale)}</td>
+                        <td className="py-1 px-2 text-end text-red-500">{fmtCurrency(q.expenses, locale)}</td>
+                        <td className="py-1 px-2 text-end font-semibold">{fmtCurrency(q.tax, locale)}</td>
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="h-3 w-full bg-slate-100 dark:bg-slate-800 rounded" />
+                    <div className="h-3 w-3/4 bg-slate-100 dark:bg-slate-800 rounded" />
+                    <div className="h-3 w-5/6 bg-slate-100 dark:bg-slate-800 rounded" />
                   </div>
                 )}
-                <div className="h-3 w-2/3 bg-slate-100 dark:bg-slate-800 rounded" />
               </div>
+              {/* Format indicator */}
+              <div className="mt-3 flex items-center gap-2 text-[10px] text-slate-400">
+                <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-mono uppercase">{format}</span>
+                <span>{format === 'csv' ? (locale === 'he' ? '\u05E7\u05D5\u05D1\u05E5 \u05DE\u05D5\u05E4\u05E8\u05D3 \u05D1\u05E4\u05E1\u05D9\u05E7\u05D9\u05DD (UTF-8)' : 'Comma-separated values (UTF-8)') : format === 'excel' ? (locale === 'he' ? '\u05E7\u05D5\u05D1\u05E5 \u05DE\u05D5\u05E4\u05E8\u05D3 \u05D1\u05D8\u05D0\u05D1\u05D9\u05DD (Tab-separated)' : 'Tab-separated values for Excel') : (locale === 'he' ? '\u05DE\u05E1\u05DE\u05DA PDF \u05DC\u05D4\u05D3\u05E4\u05E1\u05D4' : 'PDF document for printing')}</span>
+              </div>
+              {includeCharts && (
+                <div className="mt-3 h-16 bg-gradient-to-r from-green-100 to-blue-100 dark:from-green-900/20 dark:to-blue-900/20 rounded-lg flex items-center justify-center">
+                  <span className="text-xs text-slate-400 dark:text-slate-500">
+                    <ChartBarIcon />
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1866,6 +1964,13 @@ function ZReportTab({
   const [loadingList, setLoadingList] = useState(true);
   const [loadingGenerate, setLoadingGenerate] = useState(false);
   const [detailReport, setDetailReport] = useState<ZReportData | null>(null);
+  const [reportMode, setReportMode] = useState<'daily' | 'monthly'>('daily');
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [monthlyReport, setMonthlyReport] = useState<any>(null);
+  const [loadingMonthly, setLoadingMonthly] = useState(false);
 
   // Mock data for today's summary (used when no actual report exists yet)
   const mockTodaySummary: ZReportData = useMemo(() => ({
@@ -1944,6 +2049,20 @@ function ZReportTab({
       toast(t('reports.zReport.closeSuccess'), 'success');
     } catch {
       toast(t('reports.zReport.closeSuccess'), 'error');
+    }
+  }
+
+  async function handleGenerateMonthly() {
+    const [yearStr, monthStr] = selectedMonth.split('-');
+    setLoadingMonthly(true);
+    try {
+      const report = await zReports.generateMonthly(parseInt(yearStr, 10), parseInt(monthStr, 10));
+      setMonthlyReport(report);
+      toast(locale === 'he' ? '\u05D3\u05D5\u05D7 \u05D6\u05D3 \u05D7\u05D5\u05D3\u05E9\u05D9 \u05E0\u05D5\u05E6\u05E8 \u05D1\u05D4\u05E6\u05DC\u05D7\u05D4' : 'Monthly Z-Report generated successfully', 'success');
+    } catch {
+      toast(locale === 'he' ? '\u05E9\u05D2\u05D9\u05D0\u05D4 \u05D1\u05D9\u05E6\u05D9\u05E8\u05EA \u05D3\u05D5\u05D7 \u05D6\u05D3 \u05D7\u05D5\u05D3\u05E9\u05D9' : 'Error generating monthly Z-Report', 'error');
+    } finally {
+      setLoadingMonthly(false);
     }
   }
 
@@ -2042,34 +2161,201 @@ function ZReportTab({
 
       {/* Generate Z-Report */}
       <div className="card">
-        <h3 className="text-base font-semibold mb-4">{t('reports.zReport.generateReport')}</h3>
-        <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">
-              {t('reports.zReport.selectDate')}
-            </label>
-            <input
-              type="date"
-              value={selectedDate}
-              max={today}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="input w-full sm:w-56"
-            />
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-base font-semibold">{t('reports.zReport.generateReport')}</h3>
+          {/* Mode toggle: daily / monthly */}
+          <div className="flex rounded-lg border border-[var(--border)] overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setReportMode('daily')}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                reportMode === 'daily'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-[var(--card)] hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400'
+              }`}
+            >
+              {locale === 'he' ? '\u05D9\u05D5\u05DE\u05D9' : 'Daily'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setReportMode('monthly')}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors border-s border-[var(--border)] ${
+                reportMode === 'monthly'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-[var(--card)] hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400'
+              }`}
+            >
+              {locale === 'he' ? '\u05D7\u05D5\u05D3\u05E9\u05D9' : 'Monthly'}
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={handleGenerate}
-            disabled={loadingGenerate}
-            className="btn-primary flex items-center gap-2 text-sm px-5 py-2.5"
-          >
-            <ReceiptIcon />
-            {loadingGenerate ? '...' : t('reports.zReport.generate')}
-          </button>
         </div>
-        {alreadyHasReport && (
-          <div className="mt-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40">
-            <p className="text-sm text-amber-700 dark:text-amber-300">{t('reports.zReport.alreadyExists')}</p>
-          </div>
+
+        {reportMode === 'daily' ? (
+          <>
+            <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">
+                  {t('reports.zReport.selectDate')}
+                </label>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  max={today}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="input w-full sm:w-56"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleGenerate}
+                disabled={loadingGenerate}
+                className="btn-primary flex items-center gap-2 text-sm px-5 py-2.5"
+              >
+                <ReceiptIcon />
+                {loadingGenerate ? '...' : t('reports.zReport.generate')}
+              </button>
+            </div>
+            {alreadyHasReport && (
+              <div className="mt-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40">
+                <p className="text-sm text-amber-700 dark:text-amber-300">{t('reports.zReport.alreadyExists')}</p>
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">
+                  {locale === 'he' ? '\u05D1\u05D7\u05E8 \u05D7\u05D5\u05D3\u05E9' : 'Select month'}
+                </label>
+                <input
+                  type="month"
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  className="input w-full sm:w-56"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleGenerateMonthly}
+                disabled={loadingMonthly}
+                className="btn-primary flex items-center gap-2 text-sm px-5 py-2.5"
+              >
+                <ReceiptIcon />
+                {loadingMonthly ? '...' : (locale === 'he' ? '\u05D4\u05E4\u05E7 \u05D3\u05D5\u05D7 \u05D7\u05D5\u05D3\u05E9\u05D9' : 'Generate Monthly Report')}
+              </button>
+            </div>
+
+            {/* Monthly report result */}
+            {monthlyReport && (
+              <div className="mt-4 space-y-4">
+                <div className="p-4 rounded-xl bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800/40">
+                  <h4 className="text-sm font-bold text-primary-700 dark:text-primary-300 mb-3">
+                    {locale === 'he' ? '\u05D3\u05D5\u05D7 \u05D6\u05D3 \u05D7\u05D5\u05D3\u05E9\u05D9' : 'Monthly Z-Report'} - {monthlyReport.monthName}
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="text-center">
+                      <p className="text-xs text-slate-500 mb-1">{t('reports.zReport.totalSales')}</p>
+                      <p className="text-sm font-bold text-green-600 dark:text-green-400">{fmtCurrency(monthlyReport.totalSales, locale)}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-slate-500 mb-1">{t('reports.zReport.totalRefunds')}</p>
+                      <p className="text-sm font-bold text-red-600 dark:text-red-400">{fmtCurrency(monthlyReport.totalRefunds, locale)}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-slate-500 mb-1">{t('reports.zReport.totalVat')}</p>
+                      <p className="text-sm font-bold text-amber-600 dark:text-amber-400">{fmtCurrency(monthlyReport.totalVat, locale)}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-slate-500 mb-1">{t('reports.zReport.netTotal')}</p>
+                      <p className="text-sm font-bold text-primary-600 dark:text-primary-400">{fmtCurrency(monthlyReport.netTotal, locale)}</p>
+                    </div>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                    <div className="text-center">
+                      <span className="text-slate-500">{t('reports.zReport.transactionCount')}: </span>
+                      <span className="font-semibold">{monthlyReport.transactionCount}</span>
+                    </div>
+                    <div className="text-center">
+                      <span className="text-slate-500">{t('reports.zReport.invoiceCount')}: </span>
+                      <span className="font-semibold">{monthlyReport.invoiceCount}</span>
+                    </div>
+                    <div className="text-center">
+                      <span className="text-slate-500">{locale === 'he' ? '\u05D3\u05D5\u05D7\u05D5\u05EA \u05D9\u05D5\u05DE\u05D9\u05D9\u05DD' : 'Daily reports'}: </span>
+                      <span className="font-semibold">{monthlyReport.dailyReportCount}</span>
+                    </div>
+                    <div className="text-center">
+                      <span className="text-slate-500">{t('reports.zReport.invoiceRange')}: </span>
+                      <span className="font-semibold">
+                        {monthlyReport.firstInvoiceNum && monthlyReport.lastInvoiceNum
+                          ? `${monthlyReport.firstInvoiceNum} - ${monthlyReport.lastInvoiceNum}`
+                          : t('reports.zReport.na')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payment breakdown for monthly */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="p-3 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/40 text-center">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{t('reports.zReport.cashPayments')}</p>
+                    <p className="text-sm font-bold text-green-600 dark:text-green-400">{fmtCurrency(monthlyReport.totalCash, locale)}</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/40 text-center">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{t('reports.zReport.creditPayments')}</p>
+                    <p className="text-sm font-bold text-blue-600 dark:text-blue-400">{fmtCurrency(monthlyReport.totalCredit, locale)}</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800/40 text-center">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{t('reports.zReport.checkPayments')}</p>
+                    <p className="text-sm font-bold text-purple-600 dark:text-purple-400">{fmtCurrency(monthlyReport.totalChecks, locale)}</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800/40 text-center">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{t('reports.zReport.transferPayments')}</p>
+                    <p className="text-sm font-bold text-cyan-600 dark:text-cyan-400">{fmtCurrency(monthlyReport.totalTransfers, locale)}</p>
+                  </div>
+                </div>
+
+                {/* Daily reports list within monthly */}
+                {monthlyReport.dailyReports?.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold mb-2">{locale === 'he' ? '\u05E4\u05D9\u05E8\u05D5\u05D8 \u05D9\u05D5\u05DE\u05D9' : 'Daily breakdown'}</h4>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="border-b border-[var(--border)]">
+                            <th className="text-start py-2 font-semibold text-slate-500">{t('reports.zReport.date')}</th>
+                            <th className="text-end py-2 font-semibold text-slate-500">{t('reports.zReport.totalSales')}</th>
+                            <th className="text-end py-2 font-semibold text-slate-500">{t('reports.zReport.totalRefunds')}</th>
+                            <th className="text-end py-2 font-semibold text-slate-500">{t('reports.zReport.netTotal')}</th>
+                            <th className="text-center py-2 font-semibold text-slate-500">{t('reports.zReport.status')}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {monthlyReport.dailyReports.map((dr: ZReportData) => (
+                            <tr key={dr.id} className="table-row">
+                              <td className="py-1.5">{fmtDate(dr.reportDate)}</td>
+                              <td className="py-1.5 text-end font-medium">{fmtCurrency(dr.totalSales, locale)}</td>
+                              <td className="py-1.5 text-end text-red-500">{fmtCurrency(dr.totalRefunds, locale)}</td>
+                              <td className="py-1.5 text-end font-semibold">{fmtCurrency(dr.netTotal, locale)}</td>
+                              <td className="py-1.5 text-center">
+                                <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                                  dr.isClosed
+                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                                    : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
+                                }`}>
+                                  {dr.isClosed ? t('reports.zReport.closed') : t('reports.zReport.open')}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
 
