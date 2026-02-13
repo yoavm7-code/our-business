@@ -97,6 +97,7 @@ export default function LoginPage() {
   // 2FA state
   const [needs2FA, setNeeds2FA] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [userEmailVerified, setUserEmailVerified] = useState(false);
 
   useEffect(() => {
     if (!RECAPTCHA_SITE_KEY) return;
@@ -173,6 +174,7 @@ export default function LoginPage() {
       const res = await auth.register(email, password, name || undefined, countryCode || undefined, captchaToken, phone || undefined);
       if (typeof window !== 'undefined' && res.accessToken) {
         localStorage.setItem('accessToken', res.accessToken);
+        setUserEmailVerified(!!res.emailVerified);
 
         // Upload avatar if one was selected
         if (avatarFile) {
@@ -549,15 +551,17 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 flex items-start gap-3">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-blue-500 shrink-0 mt-0.5">
-                  <rect x="2" y="4" width="20" height="16" rx="2" />
-                  <path d="M22 7l-10 7L2 7" />
-                </svg>
-                <p className="text-sm text-blue-800 dark:text-blue-200">
-                  {t('login.verifyEmailSent')}
-                </p>
-              </div>
+              {!userEmailVerified && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 flex items-start gap-3">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-blue-500 shrink-0 mt-0.5">
+                    <rect x="2" y="4" width="20" height="16" rx="2" />
+                    <path d="M22 7l-10 7L2 7" />
+                  </svg>
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    {t('login.verifyEmailSent')}
+                  </p>
+                </div>
+              )}
 
               <button
                 type="button"
