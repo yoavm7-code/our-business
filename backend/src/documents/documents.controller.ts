@@ -12,7 +12,14 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { HouseholdId } from '../common/decorators/household.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { DocumentsService } from './documents.service';
+
+interface RequestUser {
+  userId: string;
+  email: string;
+  businessId: string;
+}
 
 @Controller('api/documents')
 @UseGuards(JwtAuthGuard)
@@ -28,6 +35,7 @@ export class DocumentsController {
   @UseInterceptors(FileInterceptor('file'))
   async upload(
     @HouseholdId() businessId: string,
+    @CurrentUser() user: RequestUser,
     @Body('accountId') accountId: string,
     @UploadedFile() file: Express.Multer.File,
   ) {
@@ -37,7 +45,7 @@ export class DocumentsController {
     if (!file) {
       throw new BadRequestException('file is required');
     }
-    return this.documentsService.createFromFile(businessId, accountId, file);
+    return this.documentsService.createFromFile(businessId, accountId, file, user.userId);
   }
 
   /**

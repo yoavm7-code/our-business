@@ -100,6 +100,27 @@ export class UsersController {
     return this.usersService.updateNotificationSettings(user.userId, body);
   }
 
+  /** GET /api/users/me/upload-preferences - get upload & categorization prefs */
+  @Get('me/upload-preferences')
+  async getUploadPreferences(@CurrentUser() user: RequestUser) {
+    return this.usersService.getUploadPreferences(user.userId);
+  }
+
+  /** PUT /api/users/me/upload-preferences - update upload & categorization prefs */
+  @Put('me/upload-preferences')
+  async updateUploadPreferences(
+    @CurrentUser() user: RequestUser,
+    @Body()
+    body: {
+      confirmUploads?: boolean;
+      autoCreateCategories?: boolean;
+      skipCategories?: string[];
+      skipAccountTypes?: string[];
+    },
+  ) {
+    return this.usersService.updateUploadPreferences(user.userId, body);
+  }
+
   /** POST /api/users/me/complete-onboarding - mark onboarding done */
   @Post('me/complete-onboarding')
   async completeOnboarding(@CurrentUser() user: RequestUser) {

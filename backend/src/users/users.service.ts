@@ -341,6 +341,56 @@ export class UsersService {
     return this.getNotificationSettings(id);
   }
 
+  /** Get upload & categorization preferences. */
+  async getUploadPreferences(id: string) {
+    const u = await this.prisma.user.findUnique({
+      where: { id },
+      select: {
+        confirmUploads: true,
+        autoCreateCategories: true,
+        uploadConfirmSkipRules: true,
+      },
+    });
+    if (!u) return null;
+    const skipRules = (u.uploadConfirmSkipRules as { skipCategories?: string[]; skipAccountTypes?: string[] } | null) ?? {};
+    return {
+      confirmUploads: u.confirmUploads,
+      autoCreateCategories: u.autoCreateCategories,
+      skipCategories: skipRules.skipCategories ?? [],
+      skipAccountTypes: skipRules.skipAccountTypes ?? [],
+    };
+  }
+
+  /** Update upload & categorization preferences. */
+  async updateUploadPreferences(
+    id: string,
+    prefs: {
+      confirmUploads?: boolean;
+      autoCreateCategories?: boolean;
+      skipCategories?: string[];
+      skipAccountTypes?: string[];
+    },
+  ) {
+    const data: Record<string, unknown> = {};
+    if (prefs.confirmUploads !== undefined) data.confirmUploads = prefs.confirmUploads;
+    if (prefs.autoCreateCategories !== undefined) data.autoCreateCategories = prefs.autoCreateCategories;
+    if (prefs.skipCategories !== undefined || prefs.skipAccountTypes !== undefined) {
+      // Merge with existing rules
+      const existing = await this.prisma.user.findUnique({
+        where: { id },
+        select: { uploadConfirmSkipRules: true },
+      });
+      const current = (existing?.uploadConfirmSkipRules as { skipCategories?: string[]; skipAccountTypes?: string[] } | null) ?? {};
+      data.uploadConfirmSkipRules = {
+        skipCategories: prefs.skipCategories ?? current.skipCategories ?? [],
+        skipAccountTypes: prefs.skipAccountTypes ?? current.skipAccountTypes ?? [],
+      };
+    }
+    if (Object.keys(data).length === 0) return this.getUploadPreferences(id);
+    await this.prisma.user.update({ where: { id }, data });
+    return this.getUploadPreferences(id);
+  }
+
   /** Mark user onboarding as completed. */
   async completeOnboarding(id: string) {
     await this.prisma.user.update({

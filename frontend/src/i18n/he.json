@@ -1440,7 +1440,17 @@
     "balanceDate": "תאריך יתרה",
     "saved": "ההגדרות נשמרו",
     "accountDeleted": "החשבון נמחק",
-    "accountSaved": "החשבון נשמר"
+    "accountSaved": "החשבון נשמר",
+    "uploadPreferences": "העדפות העלאה וסיווג",
+    "uploadPreferencesDesc": "הגדר כיצד המערכת תטפל בהעלאות מסמכים וסיווג אוטומטי",
+    "confirmUploads": "אישור לפני ייבוא",
+    "confirmUploadsDesc": "הצג את התנועות שזוהו לאישור לפני הייבוא לחשבון",
+    "autoCreateCategories": "יצירת קטגוריות חדשות אוטומטית",
+    "autoCreateCategoriesDesc": "כשהבינה המלאכותית מזהה קטגוריה חדשה שלא קיימת, צור אותה אוטומטית",
+    "skipCategories": "דלג על אישור עבור קטגוריות",
+    "skipCategoriesDesc": "תנועות בקטגוריות אלה ייובאו ללא אישור",
+    "skipAccountTypes": "דלג על אישור עבור סוגי חשבון",
+    "skipAccountTypesDesc": "תנועות מחשבונות מסוג זה ייובאו ללא אישור"
   },
   "profile": {
     "editProfile": "ערוך פרופיל",
@@ -1717,7 +1727,12 @@
     "transactionsFound": "נמצאו {{count}} תנועות",
     "upload": "העלה",
     "uploadFailed": "ההעלאה נכשלה",
-    "uploadingProcessing": "מעלה ומעבד..."
+    "uploadingProcessing": "מעלה ומעבד...",
+    "rememberChoice": "זכור את הבחירה שלי",
+    "dontAskAgain": "אל תשאל אותי שוב (ייבוא אוטומטי)",
+    "dontAskForCategory": "אל תשאל עבור הקטגוריות בהעלאה הזו",
+    "dontAskForAccountType": "אל תשאל עבור סוג חשבון זה",
+    "duplicateReviewIntro": "נמצאו תנועות בקובץ {{file}}. בדוק ובחר אילו תנועות לייבא."
   },
   "dateRange": {
     "today": "היום",

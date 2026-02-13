@@ -1492,7 +1492,17 @@
       "cash": "Cash",
       "investment": "Investment",
       "other": "Other"
-    }
+    },
+    "uploadPreferences": "Upload & Categorization Preferences",
+    "uploadPreferencesDesc": "Configure how the system handles document uploads and auto-categorization",
+    "confirmUploads": "Confirm before importing",
+    "confirmUploadsDesc": "Show extracted transactions for review before importing to the account",
+    "autoCreateCategories": "Auto-create new categories",
+    "autoCreateCategoriesDesc": "When AI detects a new category that doesn't exist, create it automatically",
+    "skipCategories": "Skip confirmation for categories",
+    "skipCategoriesDesc": "Transactions in these categories will be imported without confirmation",
+    "skipAccountTypes": "Skip confirmation for account types",
+    "skipAccountTypesDesc": "Transactions from accounts of this type will be imported without confirmation"
   },
   "profile": {
     "editProfile": "Edit Profile",
@@ -1785,7 +1795,12 @@
     "uploadFailed": "Upload failed",
     "uploadingPercent": "Uploading... {{percent}}%",
     "uploadingProcessing": "Uploading and processing...",
-    "addOnlyNew": "Add only new"
+    "addOnlyNew": "Add only new",
+    "rememberChoice": "Remember my choice",
+    "dontAskAgain": "Don't ask me again (auto-import)",
+    "dontAskForCategory": "Don't ask for the categories in this upload",
+    "dontAskForAccountType": "Don't ask for this account type",
+    "duplicateReviewIntro": "Transactions found in {{file}}. Review and select which to import."
   },
   "dateRange": {
     "today": "Today",
