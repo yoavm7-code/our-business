@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -118,7 +119,9 @@ export class ExpensesService {
         isTaxDeductible: dto.isTaxDeductible ?? true,
         deductionRate: dto.deductionRate ?? null,
         notes: dto.notes ?? null,
-        customFields: dto.customFields ?? null,
+        customFields: dto.customFields
+          ? (dto.customFields as Prisma.InputJsonValue)
+          : Prisma.JsonNull,
       },
     });
   }

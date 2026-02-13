@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -124,7 +125,9 @@ export class ClientsService {
         hourlyRate: dto.hourlyRate ?? null,
         currency: dto.currency ?? 'ILS',
         color: dto.color ?? null,
-        customFields: dto.customFields ?? null,
+        customFields: dto.customFields
+          ? (dto.customFields as Prisma.InputJsonValue)
+          : Prisma.JsonNull,
       },
     });
   }
