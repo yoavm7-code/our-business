@@ -146,12 +146,10 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    // Check if email is verified (only enforce when an email provider is configured)
-    if (!user.emailVerified && this.emailService.isConfigured) {
-      throw new UnauthorizedException(
-        'Please verify your email address before logging in. Check your inbox for the verification link.',
-      );
-    }
+    // Email verification is informational only – never block login.
+    // When an email provider is configured and the user hasn't verified,
+    // we still let them in but include the flag in the response so the
+    // frontend can show a gentle reminder if desired.
 
     // Handle 2FA
     if (user.twoFactorEnabled) {
