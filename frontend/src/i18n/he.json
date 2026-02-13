@@ -1603,5 +1603,24 @@
     "CA": "קנדה",
     "DE": "גרמניה",
     "FR": "צרפת"
+  },
+  "help": {
+    "title": "עזרה ותמיכה",
+    "gettingStarted": "תחילת עבודה",
+    "faq": "שאלות נפוצות",
+    "contactSupport": "פנייה לתמיכה",
+    "documentation": "תיעוד",
+    "tutorials": "מדריכים",
+    "keyboardShortcuts": "קיצורי מקלדת",
+    "whatsNew": "מה חדש",
+    "reportBug": "דיווח על באג",
+    "featureRequest": "בקשת תכונה",
+    "community": "קהילה",
+    "searchHelp": "חפש במאמרי עזרה...",
+    "noResults": "לא נמצאו מאמרי עזרה",
+    "backToHelp": "חזרה לעזרה",
+    "wasHelpful": "האם זה היה מועיל?",
+    "relatedArticles": "מאמרים קשורים",
+    "reports": "צפה בדוחות פיננסיים מפורטים: רווח והפסד, תזרים מזומנים, הכנסות לפי לקוח, פילוח לפי קטגוריה, סיכום מס ותחזית"
   }
 }

@@ -791,59 +791,167 @@ export const dashboard = {
 // REPORTS
 // ═══════════════════════════════════════════════
 
+// Types expected by the reports page
+type PnlFrontend = {
+  income: number;
+  expenses: number;
+  netProfit: number;
+  incomeByCategory: Array<{ category: string; total: number }>;
+  expensesByCategory: Array<{ category: string; total: number }>;
+  byMonth: Array<{ month: string; income: number; expenses: number; net: number }>;
+};
+type CashFlowFrontend = {
+  inflows: number;
+  outflows: number;
+  net: number;
+  byMonth: Array<{ month: string; inflows: number; outflows: number; net: number }>;
+};
+type ClientRevenueFrontend = Array<{
+  clientId: string;
+  clientName: string;
+  totalInvoiced: number;
+  totalPaid: number;
+  outstanding: number;
+  invoiceCount: number;
+}>;
+type CategoryFrontend = Array<{
+  categoryId: string;
+  categoryName: string;
+  categoryColor: string | null;
+  total: number;
+  percentage: number;
+  transactionCount: number;
+}>;
+type TaxFrontend = {
+  income: number;
+  deductions: number;
+  taxableIncome: number;
+  estimatedTax: number;
+  vatCollected: number;
+  vatDeductible: number;
+  vatPayable: number;
+  quarterlyBreakdown: Array<{ quarter: number; income: number; expenses: number; tax: number }>;
+};
+type ForecastFrontend = {
+  projectedIncome: number;
+  projectedExpenses: number;
+  projectedNet: number;
+  monthlyForecast: Array<{ month: string; income: number; expenses: number; net: number; confidence: number }>;
+};
+
 export const reports = {
-  getProfitLoss: (params: { from: string; to: string }) =>
-    api<{
-      income: number;
-      expenses: number;
-      netProfit: number;
-      incomeByCategory: Array<{ category: string; total: number }>;
-      expensesByCategory: Array<{ category: string; total: number }>;
-      byMonth: Array<{ month: string; income: number; expenses: number; net: number }>;
-    }>('/api/reports/profit-loss', { params }),
-  getCashFlow: (params: { from: string; to: string }) =>
-    api<{
-      inflows: number;
-      outflows: number;
-      net: number;
-      byMonth: Array<{ month: string; inflows: number; outflows: number; net: number }>;
-    }>('/api/reports/cash-flow', { params }),
-  getClientRevenue: (params?: { from?: string; to?: string }) =>
-    api<Array<{
-      clientId: string;
-      clientName: string;
-      totalInvoiced: number;
-      totalPaid: number;
-      outstanding: number;
-      invoiceCount: number;
-    }>>('/api/reports/client-revenue', { params: params as Record<string, string | undefined> }),
-  getCategoryBreakdown: (params: { from: string; to: string; type?: 'income' | 'expense' }) =>
-    api<Array<{
-      categoryId: string;
-      categoryName: string;
-      categoryColor: string | null;
-      total: number;
-      percentage: number;
-      transactionCount: number;
-    }>>('/api/reports/category-breakdown', { params: params as Record<string, string | undefined> }),
-  getTaxSummary: (params: { year: number }) =>
-    api<{
-      income: number;
-      deductions: number;
-      taxableIncome: number;
-      estimatedTax: number;
-      vatCollected: number;
-      vatDeductible: number;
-      vatPayable: number;
-      quarterlyBreakdown: Array<{ quarter: number; income: number; expenses: number; tax: number }>;
-    }>('/api/reports/tax-summary', { params }),
-  getForecast: (params?: { months?: number }) =>
-    api<{
-      projectedIncome: number;
-      projectedExpenses: number;
-      projectedNet: number;
-      monthlyForecast: Array<{ month: string; income: number; expenses: number; net: number; confidence: number }>;
-    }>('/api/reports/forecast', { params: params as Record<string, string | number | undefined> }),
+  getProfitLoss: async (params: { from: string; to: string }): Promise<PnlFrontend> => {
+    const raw = await api<any>('/api/reports/profit-loss', { params });
+    // Backend returns nested: revenue.totalRevenue, totalOperatingExpenses, operatingExpenses[], monthlyBreakdown[]
+    const income = raw.revenue?.totalRevenue ?? raw.income ?? 0;
+    const expenses = raw.totalOperatingExpenses ?? raw.expenses ?? 0;
+    return {
+      income,
+      expenses,
+      netProfit: raw.netProfit ?? income - expenses,
+      incomeByCategory: (raw.incomeByCategory ?? []),
+      expensesByCategory: (raw.operatingExpenses ?? raw.expensesByCategory ?? []).map((e: any) => ({
+        category: e.category ?? e.name ?? 'Other',
+        total: Math.abs(e.total ?? 0),
+      })),
+      byMonth: (raw.monthlyBreakdown ?? raw.byMonth ?? []).map((m: any) => ({
+        month: m.month,
+        income: m.income ?? 0,
+        expenses: Math.abs(m.expenses ?? 0),
+        net: m.profit ?? m.net ?? (m.income ?? 0) - Math.abs(m.expenses ?? 0),
+      })),
+    };
+  },
+  getCashFlow: async (params: { from: string; to: string }): Promise<CashFlowFrontend> => {
+    const raw = await api<any>('/api/reports/cash-flow', { params });
+    // Backend returns nested: inflows.total, outflows.total, netCashFlow, monthlyBreakdown[]
+    const inflows = typeof raw.inflows === 'object' ? (raw.inflows?.total ?? 0) : (raw.inflows ?? 0);
+    const outflows = typeof raw.outflows === 'object' ? (raw.outflows?.total ?? 0) : (raw.outflows ?? 0);
+    return {
+      inflows,
+      outflows,
+      net: raw.netCashFlow ?? raw.net ?? inflows - outflows,
+      byMonth: (raw.monthlyBreakdown ?? raw.byMonth ?? []).map((m: any) => ({
+        month: m.month,
+        inflows: m.inflows ?? 0,
+        outflows: Math.abs(m.outflows ?? 0),
+        net: m.net ?? (m.inflows ?? 0) - Math.abs(m.outflows ?? 0),
+      })),
+    };
+  },
+  getClientRevenue: async (params?: { from?: string; to?: string }): Promise<ClientRevenueFrontend> => {
+    const raw = await api<any>('/api/reports/client-revenue', { params: params as Record<string, string | undefined> });
+    // Backend returns { clients: [...] } with totalRevenue instead of totalInvoiced
+    const clientList = raw.clients ?? (Array.isArray(raw) ? raw : []);
+    return clientList.map((c: any) => ({
+      clientId: c.clientId ?? '',
+      clientName: c.clientName ?? '',
+      totalInvoiced: c.totalRevenue ?? c.totalInvoiced ?? 0,
+      totalPaid: c.totalPaid ?? (c.totalRevenue ?? 0) - (c.outstandingAmount ?? c.outstanding ?? 0),
+      outstanding: c.outstandingAmount ?? c.outstanding ?? 0,
+      invoiceCount: c.invoiceCount ?? 0,
+    }));
+  },
+  getCategoryBreakdown: async (params: { from: string; to: string; type?: 'income' | 'expense' }): Promise<CategoryFrontend> => {
+    const raw = await api<any>('/api/reports/category-breakdown', { params: params as Record<string, string | undefined> });
+    // Backend returns { expenses: { categories }, income: { categories } }
+    if (Array.isArray(raw)) return raw;
+    const type = params.type ?? 'expense';
+    const bucket = type === 'income' ? (raw.income ?? raw) : (raw.expenses ?? raw);
+    const cats = bucket?.categories ?? (Array.isArray(bucket) ? bucket : []);
+    return cats.map((c: any) => ({
+      categoryId: c.categoryId ?? '',
+      categoryName: c.categoryName ?? c.name ?? '',
+      categoryColor: c.categoryColor ?? c.color ?? null,
+      total: c.total ?? 0,
+      percentage: c.percentage ?? 0,
+      transactionCount: c.count ?? c.transactionCount ?? 0,
+    }));
+  },
+  getTaxSummary: async (params: { year: number }): Promise<TaxFrontend> => {
+    const raw = await api<any>('/api/reports/tax-summary', { params });
+    // Backend returns nested: revenue.totalRevenue, vat.vatCollected, expenses.totalDeductibleExpenses, quarterlyData[]
+    const income = raw.revenue?.totalRevenue ?? raw.income ?? 0;
+    const deductions = raw.expenses?.totalDeductibleExpenses ?? raw.deductions ?? 0;
+    const taxableIncome = raw.taxableIncome ?? income - deductions;
+    // Estimate tax at ~30% if not provided
+    const estimatedTax = raw.estimatedTax ?? Math.round(Math.max(0, taxableIncome) * 0.3 * 100) / 100;
+    const quarterlyData = raw.quarterlyData ?? raw.quarterlyBreakdown ?? [];
+    return {
+      income,
+      deductions,
+      taxableIncome,
+      estimatedTax,
+      vatCollected: raw.vat?.vatCollected ?? raw.vatCollected ?? 0,
+      vatDeductible: raw.vat?.vatOnExpenses ?? raw.vatDeductible ?? 0,
+      vatPayable: raw.vat?.netVat ?? raw.vatPayable ?? 0,
+      quarterlyBreakdown: quarterlyData.map((q: any, i: number) => ({
+        quarter: q.quarter ?? i + 1,
+        income: q.income ?? q.revenue ?? 0,
+        expenses: Math.abs(q.expenses ?? 0),
+        tax: q.tax ?? q.taxAdvance ?? q.vatDue ?? 0,
+      })),
+    };
+  },
+  getForecast: async (params?: { months?: number }): Promise<ForecastFrontend> => {
+    const raw = await api<any>('/api/reports/forecast', { params: params as Record<string, string | number | undefined> });
+    // Backend returns { forecast: [...], historicalMonths: [...] } with projectedIncome/projectedExpenses/confidence as string
+    const forecastArr = raw.forecast ?? raw.monthlyForecast ?? [];
+    const confMap: Record<string, number> = { high: 0.85, medium: 0.6, low: 0.35 };
+    const monthly = forecastArr.map((m: any) => ({
+      month: m.month,
+      income: m.projectedIncome ?? m.income ?? 0,
+      expenses: Math.abs(m.projectedExpenses ?? m.expenses ?? 0),
+      net: m.projectedProfit ?? m.net ?? (m.projectedIncome ?? 0) - Math.abs(m.projectedExpenses ?? 0),
+      confidence: typeof m.confidence === 'number' ? m.confidence : (confMap[m.confidence] ?? 0.5),
+    }));
+    return {
+      projectedIncome: raw.projectedIncome ?? monthly.reduce((s: number, m: any) => s + m.income, 0),
+      projectedExpenses: raw.projectedExpenses ?? monthly.reduce((s: number, m: any) => s + m.expenses, 0),
+      projectedNet: raw.projectedNet ?? monthly.reduce((s: number, m: any) => s + m.net, 0),
+      monthlyForecast: monthly,
+    };
+  },
 };
 
 // ═══════════════════════════════════════════════
