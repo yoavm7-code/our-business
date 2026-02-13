@@ -202,7 +202,7 @@ export default function BudgetsPage() {
       {/* ── Header ── */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">
+          <h1 className="text-xl sm:text-2xl font-bold">
             {t('budgets.title')} <HelpTooltip text={t('help.budgets')} className="ms-1" />
           </h1>
           <p className="text-sm text-slate-500 mt-1">{t('budgets.subtitle')}</p>

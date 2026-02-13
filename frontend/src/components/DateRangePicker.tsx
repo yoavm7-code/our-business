@@ -159,23 +159,23 @@ export default function DateRangePicker({ from, to, onChange, className = '' }: 
 
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
         <input
           type="date"
-          className="input w-auto min-w-[130px]"
+          className="input w-full sm:w-auto sm:min-w-[130px] text-sm"
           value={from}
           onChange={(e) => onChange(e.target.value, to)}
         />
-        <span className="text-slate-400">--</span>
+        <span className="text-slate-400 hidden sm:inline">--</span>
         <input
           type="date"
-          className="input w-auto min-w-[130px]"
+          className="input w-full sm:w-auto sm:min-w-[130px] text-sm"
           value={to}
           onChange={(e) => onChange(from, e.target.value)}
         />
         <button
           type="button"
-          className="flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg border border-[var(--border)] hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          className="flex items-center gap-1.5 text-xs sm:text-sm px-2.5 sm:px-3 py-2 rounded-lg border border-[var(--border)] hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors w-full sm:w-auto justify-center sm:justify-start"
           onClick={() => setShowDropdown(!showDropdown)}
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -192,7 +192,7 @@ export default function DateRangePicker({ from, to, onChange, className = '' }: 
       </div>
 
       {showDropdown && (
-        <div className="absolute top-full mt-2 end-0 z-40 bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-xl p-4 min-w-[320px]">
+        <div className="absolute top-full mt-2 start-0 sm:start-auto sm:end-0 z-40 bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-xl p-3 sm:p-4 w-[calc(100vw-2rem)] sm:w-auto sm:min-w-[320px] max-w-[400px]">
           {/* Recent */}
           <div className="mb-4">
             <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">{t('dateRange.recent')}</p>

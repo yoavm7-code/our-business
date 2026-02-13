@@ -862,12 +862,12 @@ export default function TransactionsPage() {
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* ── Header ── */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
           {t('transactions.title')}
           <HelpTooltip text={t('help.transactions')} className="ms-2" />
         </h1>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             className="btn-secondary flex items-center gap-2 text-sm"
@@ -914,11 +914,13 @@ export default function TransactionsPage() {
       </div>
 
       {/* ── Filters Card ── */}
-      <div className="card p-4 space-y-4">
+      <div className="card p-3 sm:p-4 space-y-3 sm:space-y-4">
         {/* Row 1: Date range + Search */}
-        <div className="flex flex-wrap gap-4 items-center">
-          <DateRangePicker from={from} to={to} onChange={handleDateRangeChange} />
-          <div className="relative flex-1 min-w-[200px] max-w-[300px]">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 items-stretch sm:items-center">
+          <div className="w-full sm:w-auto">
+            <DateRangePicker from={from} to={to} onChange={handleDateRangeChange} />
+          </div>
+          <div className="relative flex-1 min-w-0 sm:min-w-[200px] sm:max-w-[300px]">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="16"
@@ -945,12 +947,12 @@ export default function TransactionsPage() {
         </div>
 
         {/* Row 2: Filter dropdowns */}
-        <div className="flex flex-wrap gap-3 items-center pt-3 border-t border-[var(--border)]">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3 items-center pt-3 border-t border-[var(--border)]">
           {/* Account */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-1.5">
             <span className="text-xs font-medium text-slate-500">{t('common.account')}:</span>
             <select
-              className="input w-auto min-w-[130px] py-1.5 text-sm"
+              className="input w-full sm:w-auto sm:min-w-[130px] py-1.5 text-sm"
               value={accountId}
               onChange={(e) => {
                 setAccountId(e.target.value);
@@ -967,10 +969,10 @@ export default function TransactionsPage() {
           </div>
 
           {/* Category */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-1.5">
             <span className="text-xs font-medium text-slate-500">{t('common.category')}:</span>
             <select
-              className="input w-auto min-w-[130px] py-1.5 text-sm"
+              className="input w-full sm:w-auto sm:min-w-[130px] py-1.5 text-sm"
               value={categoryId}
               onChange={(e) => {
                 setCategoryId(e.target.value);
@@ -987,10 +989,10 @@ export default function TransactionsPage() {
           </div>
 
           {/* Client */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-1.5">
             <span className="text-xs font-medium text-slate-500">{t('common.client')}:</span>
             <select
-              className="input w-auto min-w-[120px] py-1.5 text-sm"
+              className="input w-full sm:w-auto sm:min-w-[120px] py-1.5 text-sm"
               value={clientId}
               onChange={(e) => {
                 setClientId(e.target.value);
@@ -1008,10 +1010,10 @@ export default function TransactionsPage() {
           </div>
 
           {/* Project */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-1.5">
             <span className="text-xs font-medium text-slate-500">{t('common.project')}:</span>
             <select
-              className="input w-auto min-w-[120px] py-1.5 text-sm"
+              className="input w-full sm:w-auto sm:min-w-[120px] py-1.5 text-sm"
               value={projectId}
               onChange={(e) => {
                 setProjectId(e.target.value);
@@ -1028,10 +1030,10 @@ export default function TransactionsPage() {
           </div>
 
           {/* Type */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-1.5">
             <span className="text-xs font-medium text-slate-500">{t('common.type')}:</span>
             <select
-              className="input w-auto min-w-[100px] py-1.5 text-sm"
+              className="input w-full sm:w-auto sm:min-w-[100px] py-1.5 text-sm"
               value={typeFilter}
               onChange={(e) => {
                 setTypeFilter(e.target.value as '' | 'income' | 'expense');
@@ -1223,19 +1225,19 @@ export default function TransactionsPage() {
                       {t('common.description')}
                       <SortIcon field="description" />
                     </th>
-                    <th className="text-end py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    <th className="hidden sm:table-cell text-end py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                       {t('common.category')}
                     </th>
-                    <th className="text-end py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    <th className="hidden md:table-cell text-end py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                       {t('common.account')}
                     </th>
-                    <th className="text-end py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    <th className="hidden lg:table-cell text-end py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                       {t('common.client')}
                     </th>
-                    <th className="text-end py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    <th className="hidden lg:table-cell text-end py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                       {t('common.project')}
                     </th>
-                    <th className="text-center py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    <th className="hidden sm:table-cell text-center py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                       {t('common.type')}
                     </th>
                     <th
@@ -1245,10 +1247,10 @@ export default function TransactionsPage() {
                       {t('common.amount')}
                       <SortIcon field="amount" />
                     </th>
-                    <th className="text-center py-3 px-3 w-16 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    <th className="hidden sm:table-cell text-center py-3 px-3 w-16 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                       {t('transactions.payments')}
                     </th>
-                    <th className="text-center py-3 px-3 w-20" aria-label={t('common.actions')}></th>
+                    <th className="text-center py-3 px-2 sm:px-3 w-12 sm:w-20" aria-label={t('common.actions')}></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1291,7 +1293,7 @@ export default function TransactionsPage() {
                         {/* Description + category icon */}
                         <td className="py-3 px-3 text-end">
                           <div className="flex items-center gap-2 justify-end">
-                            <span className="font-medium text-sm truncate max-w-[200px]" title={tx.description}>
+                            <span className="font-medium text-sm truncate max-w-[120px] sm:max-w-[200px]" title={tx.description}>
                               {tx.description}
                             </span>
                             <span
@@ -1305,7 +1307,7 @@ export default function TransactionsPage() {
                         </td>
 
                         {/* Category quick-change */}
-                        <td className="py-3 px-3 text-end">
+                        <td className="hidden sm:table-cell py-3 px-3 text-end">
                           <div className="flex items-center gap-1 justify-end">
                             <select
                               className="input py-1 px-2 text-xs min-w-[110px]"
@@ -1343,22 +1345,22 @@ export default function TransactionsPage() {
                         </td>
 
                         {/* Account */}
-                        <td className="py-3 px-3 text-end text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                        <td className="hidden md:table-cell py-3 px-3 text-end text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">
                           {tx.account?.name || '\u2013'}
                         </td>
 
                         {/* Client */}
-                        <td className="py-3 px-3 text-end text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                        <td className="hidden lg:table-cell py-3 px-3 text-end text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">
                           {tx.clientName || '\u2013'}
                         </td>
 
                         {/* Project */}
-                        <td className="py-3 px-3 text-end text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                        <td className="hidden lg:table-cell py-3 px-3 text-end text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">
                           {tx.projectName || '\u2013'}
                         </td>
 
                         {/* Type badge */}
-                        <td className="py-3 px-3 text-center">
+                        <td className="hidden sm:table-cell py-3 px-3 text-center">
                           <span
                             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                               isIncome
@@ -1382,7 +1384,7 @@ export default function TransactionsPage() {
                         </td>
 
                         {/* Installment */}
-                        <td className="py-3 px-3 text-center text-xs text-slate-500 whitespace-nowrap">
+                        <td className="hidden sm:table-cell py-3 px-3 text-center text-xs text-slate-500 whitespace-nowrap">
                           {tx.installmentCurrent != null && tx.installmentTotal != null ? (
                             <span
                               dir="ltr"

@@ -270,7 +270,7 @@ export default function ForexPage() {
       {/* ── Header ── */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">
+          <h1 className="text-xl sm:text-2xl font-bold">
             {t('forex.title')} <HelpTooltip text={t('help.forex')} className="ms-1" />
           </h1>
           <p className="text-sm text-slate-500 mt-1">{t('forex.subtitle')}</p>

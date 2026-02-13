@@ -621,7 +621,7 @@ export default function UploadPage() {
     <div className="space-y-8 animate-fadeIn">
       {/* ── Header ── */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
           {t('upload.title')}
           <HelpTooltip text={t('help.upload')} className="ms-2" />
         </h1>
@@ -1091,13 +1091,13 @@ export default function UploadPage() {
       {pendingReview && (
         <div className="modal-overlay" role="dialog" aria-modal="true">
           <div
-            className="bg-[var(--card)] rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-scaleIn mx-4"
+            className="bg-[var(--card)] rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-scaleIn mx-2 sm:mx-4"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="p-5 border-b border-[var(--border)]">
+            <div className="p-3 sm:p-5 border-b border-[var(--border)]">
               <div className="flex items-center justify-between">
-                <h2 className="font-semibold text-lg">{t('upload.duplicateReviewTitle')}</h2>
+                <h2 className="font-semibold text-base sm:text-lg">{t('upload.duplicateReviewTitle')}</h2>
                 <button
                   type="button"
                   onClick={() => setPendingReview(null)}
