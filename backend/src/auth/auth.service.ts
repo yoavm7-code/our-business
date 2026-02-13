@@ -60,6 +60,7 @@ export class AuthService {
             ? dto.countryCode.toUpperCase().slice(0, 2)
             : null,
           phone: dto.phone?.trim() || null,
+          businessField: dto.businessField?.trim() || null,
           businessId: business.id,
           emailVerifyToken,
           emailVerifyExp,
@@ -293,6 +294,8 @@ export class AuthService {
         email: true,
         businessId: true,
         isAdmin: true,
+        countryCode: true,
+        businessField: true,
       },
     });
 
@@ -305,6 +308,8 @@ export class AuthService {
       email: user.email,
       businessId: user.businessId,
       isAdmin: user.isAdmin,
+      countryCode: user.countryCode,
+      businessField: user.businessField,
     };
   }
 }

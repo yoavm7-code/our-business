@@ -150,7 +150,7 @@ export default function SettingsPage() {
   const [msg, setMsg] = useState('');
 
   /* ── Profile state ── */
-  const [profileForm, setProfileForm] = useState({ name: '', email: '', phone: '', countryCode: '', currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [profileForm, setProfileForm] = useState({ name: '', email: '', phone: '', countryCode: '', businessField: '', currentPassword: '', newPassword: '', confirmPassword: '' });
   const [updatingProfile, setUpdatingProfile] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarCropFile, setAvatarCropFile] = useState<File | null>(null);
@@ -240,6 +240,7 @@ export default function SettingsPage() {
           email: u.email,
           phone: u.phone ?? '',
           countryCode: u.countryCode ?? '',
+          businessField: (u as any).businessField ?? '',
         }));
       })
       .catch(() => {})
@@ -300,6 +301,7 @@ export default function SettingsPage() {
       if (profileForm.email.trim()) body.email = profileForm.email.trim();
       if (profileForm.newPassword) body.password = profileForm.newPassword;
       body.countryCode = profileForm.countryCode || null;
+      body.businessField = profileForm.businessField || null;
 
       await users.update(body as Parameters<typeof users.update>[0]);
       setUser((u) =>
@@ -842,6 +844,20 @@ export default function SettingsPage() {
                       <option key={code} value={code}>{t(`countries.${code}`)}</option>
                     ))}
                   </select>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium mb-1.5">{t('businessField.title')}</label>
+                  <select
+                    className="input w-full"
+                    value={profileForm.businessField}
+                    onChange={(e) => setProfileForm((f) => ({ ...f, businessField: e.target.value }))}
+                  >
+                    <option value="">{t('businessField.placeholder')}</option>
+                    {['softwareDev','design','marketing','consulting','writing','photography','video','music','teaching','legal','accounting','architecture','engineering','health','fitness','food','fashion','ecommerce','realestate','translation','other'].map((key) => (
+                      <option key={key} value={key}>{t(`businessField.${key}`)}</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-slate-500 mt-1">{t('businessField.description')}</p>
                 </div>
               </div>
 

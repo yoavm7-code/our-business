@@ -87,6 +87,7 @@ export default function LoginPage() {
   const [name, setName] = useState('');
   const [countryCode, setCountryCode] = useState<string>('IL');
   const [phone, setPhone] = useState('');
+  const [businessField, setBusinessField] = useState('');
 
   // Avatar state
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -171,7 +172,7 @@ export default function LoginPage() {
       return;
     }
     try {
-      const res = await auth.register(email, password, name || undefined, countryCode || undefined, captchaToken, phone || undefined);
+      const res = await auth.register(email, password, name || undefined, countryCode || undefined, captchaToken, phone || undefined, businessField || undefined);
       if (typeof window !== 'undefined' && res.accessToken) {
         localStorage.setItem('accessToken', res.accessToken);
         setUserEmailVerified(!!res.emailVerified);
@@ -463,6 +464,21 @@ export default function LoginPage() {
                   ))}
                 </select>
                 <p className="text-xs text-slate-500 mt-1">{t('login.countryWhy')}</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">{t('businessField.title')}</label>
+                <select
+                  className="input w-full"
+                  value={businessField}
+                  onChange={(e) => setBusinessField(e.target.value)}
+                >
+                  <option value="">{t('businessField.placeholder')}</option>
+                  {['softwareDev','design','marketing','consulting','writing','photography','video','music','teaching','legal','accounting','architecture','engineering','health','fitness','food','fashion','ecommerce','realestate','translation','other'].map((key) => (
+                    <option key={key} value={key}>{t(`businessField.${key}`)}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-slate-500 mt-1">{t('businessField.description')}</p>
               </div>
 
               <div>

@@ -14,9 +14,9 @@ export class InsightsController {
   getInsights(
     @HouseholdId() businessId: string,
     @Query('lang') lang?: string,
-    @CurrentUser() user?: { countryCode?: string | null },
+    @CurrentUser() user?: { countryCode?: string | null; businessField?: string | null },
   ) {
-    return this.insightsService.getInsights(businessId, lang, user?.countryCode ?? undefined);
+    return this.insightsService.getInsights(businessId, lang, user?.countryCode ?? undefined, user?.businessField ?? undefined);
   }
 
   @Get(':section')
@@ -24,11 +24,11 @@ export class InsightsController {
     @HouseholdId() businessId: string,
     @Param('section') section: string,
     @Query('lang') lang?: string,
-    @CurrentUser() user?: { countryCode?: string | null },
+    @CurrentUser() user?: { countryCode?: string | null; businessField?: string | null },
   ) {
     if (!INSIGHT_SECTIONS.includes(section as InsightSection)) {
       throw new BadRequestException(`Invalid section: ${section}. Valid sections: ${INSIGHT_SECTIONS.join(', ')}`);
     }
-    return this.insightsService.getInsightSection(businessId, section as InsightSection, lang, user?.countryCode ?? undefined);
+    return this.insightsService.getInsightSection(businessId, section as InsightSection, lang, user?.countryCode ?? undefined, user?.businessField ?? undefined);
   }
 }
