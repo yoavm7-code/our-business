@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { users, accounts, categories, twoFactor, type NotificationSettings, type AccountItem, type CategoryItem } from '@/lib/api';
+import { users, accounts, categories, twoFactor, type NotificationSettings, type UploadPreferences, type AccountItem, type CategoryItem } from '@/lib/api';
 import { COUNTRY_CODES } from '@/lib/countries';
 import { useTranslation } from '@/i18n/context';
 import AvatarCropper from '@/components/AvatarCropper';
@@ -215,6 +215,16 @@ export default function SettingsPage() {
   const [notifLoading, setNotifLoading] = useState(true);
   const notifSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  /* ── Upload preferences state ── */
+  const [uploadPrefs, setUploadPrefs] = useState<UploadPreferences>({
+    confirmUploads: true,
+    autoCreateCategories: false,
+    skipCategories: [],
+    skipAccountTypes: [],
+  });
+  const [uploadPrefsLoading, setUploadPrefsLoading] = useState(true);
+  const uploadPrefsSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   /* ══════════════════════════════════════════════════════════════
      DATA LOADING
      ══════════════════════════════════════════════════════════════ */
@@ -250,6 +260,11 @@ export default function SettingsPage() {
       .then((ns) => setNotifSettings((prev) => ({ ...prev, ...ns })))
       .catch(() => {})
       .finally(() => setNotifLoading(false));
+
+    users.getUploadPreferences()
+      .then((up) => setUploadPrefs(up))
+      .catch(() => {})
+      .finally(() => setUploadPrefsLoading(false));
   }, []);
 
   /* ══════════════════════════════════════════════════════════════
@@ -634,6 +649,41 @@ export default function SettingsPage() {
     setNotifSettings((prev) => {
       const updated = { ...prev, largeTransactionThreshold: num };
       saveNotifSettings(updated as NotificationSettings);
+      return updated;
+    });
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     UPLOAD PREFERENCES HANDLERS
+     ══════════════════════════════════════════════════════════════ */
+
+  const saveUploadPrefs = useCallback((updated: Partial<UploadPreferences>) => {
+    if (uploadPrefsSaveTimerRef.current) clearTimeout(uploadPrefsSaveTimerRef.current);
+    uploadPrefsSaveTimerRef.current = setTimeout(() => {
+      users.updateUploadPreferences(updated).catch(() => {});
+    }, 500);
+  }, []);
+
+  function handleUploadPrefToggle(key: 'confirmUploads' | 'autoCreateCategories') {
+    setUploadPrefs((prev) => {
+      const updated = { ...prev, [key]: !prev[key] };
+      saveUploadPrefs(updated);
+      return updated;
+    });
+  }
+
+  function handleRemoveSkipCategory(slug: string) {
+    setUploadPrefs((prev) => {
+      const updated = { ...prev, skipCategories: prev.skipCategories.filter((s) => s !== slug) };
+      saveUploadPrefs(updated);
+      return updated;
+    });
+  }
+
+  function handleRemoveSkipAccountType(type: string) {
+    setUploadPrefs((prev) => {
+      const updated = { ...prev, skipAccountTypes: prev.skipAccountTypes.filter((t) => t !== type) };
+      saveUploadPrefs(updated);
       return updated;
     });
   }
@@ -1850,6 +1900,92 @@ export default function SettingsPage() {
                   </div>
                   <Toggle checked={notifSettings.notifyMonthlyReport} onChange={() => handleNotifToggle('notifyMonthlyReport')} />
                 </div>
+              </div>
+            )}
+          </div>
+
+          {/* ── Upload & Categorization Preferences ── */}
+          <div className="card mt-6">
+            <h2 className="font-semibold mb-1">{t('settings.uploadPreferences')}</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+              {t('settings.uploadPreferencesDesc')}
+            </p>
+
+            {uploadPrefsLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary-500 border-t-transparent" />
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {/* Confirm uploads */}
+                <div className="flex items-center justify-between gap-4 py-3 border-b border-[var(--border)]">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">{t('settings.confirmUploads')}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{t('settings.confirmUploadsDesc')}</p>
+                  </div>
+                  <Toggle checked={uploadPrefs.confirmUploads} onChange={() => handleUploadPrefToggle('confirmUploads')} />
+                </div>
+
+                {/* Auto create categories */}
+                <div className="flex items-center justify-between gap-4 py-3 border-b border-[var(--border)]">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">{t('settings.autoCreateCategories')}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{t('settings.autoCreateCategoriesDesc')}</p>
+                  </div>
+                  <Toggle checked={uploadPrefs.autoCreateCategories} onChange={() => handleUploadPrefToggle('autoCreateCategories')} />
+                </div>
+
+                {/* Skip categories */}
+                {uploadPrefs.skipCategories.length > 0 && (
+                  <div className="py-3 border-b border-[var(--border)]">
+                    <p className="text-sm font-medium mb-2">{t('settings.skipCategories')}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{t('settings.skipCategoriesDesc')}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {uploadPrefs.skipCategories.map((slug) => {
+                        const cat = categoriesList.find((c) => c.slug === slug);
+                        const label = t('categories.' + slug) !== 'categories.' + slug ? t('categories.' + slug) : (cat?.name || slug);
+                        return (
+                          <span key={slug} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                            {label}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveSkipCategory(slug)}
+                              className="ms-0.5 text-slate-400 hover:text-red-500"
+                            >
+                              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                            </button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Skip account types */}
+                {uploadPrefs.skipAccountTypes.length > 0 && (
+                  <div className="py-3">
+                    <p className="text-sm font-medium mb-2">{t('settings.skipAccountTypes')}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{t('settings.skipAccountTypesDesc')}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {uploadPrefs.skipAccountTypes.map((type) => {
+                        const labelKey = ACCOUNT_TYPE_LABELS[type];
+                        const label = labelKey ? t(labelKey) : type;
+                        return (
+                          <span key={type} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                            {label}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveSkipAccountType(type)}
+                              className="ms-0.5 text-slate-400 hover:text-red-500"
+                            >
+                              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                            </button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

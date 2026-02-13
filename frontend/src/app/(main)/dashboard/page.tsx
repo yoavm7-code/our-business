@@ -1443,7 +1443,11 @@ export default function DashboardPage() {
           </select>
           <select className="input w-auto min-w-[140px]" value={categoryId} onChange={(e) => setCategoryId(e.target.value)} title={t('common.categories')}>
             <option value="">{t('common.allCategories')}</option>
-            {categoriesList.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {categoriesList.map((c) => {
+              const catKey = c.slug ? `categories.${c.slug}` : '';
+              const catLabel = catKey && t(catKey) !== catKey ? t(catKey) : c.name;
+              return <option key={c.id} value={c.id}>{catLabel}</option>;
+            })}
           </select>
         </div>
       </div>

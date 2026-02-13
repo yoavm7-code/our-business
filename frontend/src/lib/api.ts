@@ -104,6 +104,13 @@ export type NotificationSettings = {
   largeTransactionThreshold: number | null;
 };
 
+export type UploadPreferences = {
+  confirmUploads: boolean;
+  autoCreateCategories: boolean;
+  skipCategories: string[];
+  skipAccountTypes: string[];
+};
+
 export type WidgetConfig = {
   id: string;
   type: 'stat' | 'bar-chart' | 'pie-chart' | 'fixed-list' | 'recent-tx' | 'forex-accounts' | 'goals' | 'budgets' | 'recurring' | 'clients' | 'invoices' | 'projects';
@@ -161,6 +168,13 @@ export const users = {
     api<{ ok: boolean }>('/api/users/me/dashboard-config', {
       method: 'PUT',
       body: JSON.stringify(config),
+    }),
+  getUploadPreferences: () =>
+    api<UploadPreferences>('/api/users/me/upload-preferences'),
+  updateUploadPreferences: (prefs: Partial<UploadPreferences>) =>
+    api<UploadPreferences>('/api/users/me/upload-preferences', {
+      method: 'PUT',
+      body: JSON.stringify(prefs),
     }),
 };
 

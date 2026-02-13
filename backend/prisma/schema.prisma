@@ -83,6 +83,11 @@ model User {
 
   businessField    String?  @map("business_field") // e.g. "software_dev", "consulting"
 
+  // Upload & categorization preferences
+  confirmUploads        Boolean @default(true) @map("confirm_uploads")       // show confirmation after upload
+  autoCreateCategories  Boolean @default(false) @map("auto_create_categories") // auto-create new categories from AI
+  uploadConfirmSkipRules Json?  @map("upload_confirm_skip_rules")             // { skipCategories: string[], skipAccountTypes: string[] }
+
   onboardingCompleted Boolean @default(false) @map("onboarding_completed")
   isAdmin          Boolean  @default(false) @map("is_admin")
 

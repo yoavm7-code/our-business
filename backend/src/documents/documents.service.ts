@@ -58,6 +58,7 @@ export class DocumentsService {
     businessId: string,
     accountId: string,
     file: Express.Multer.File,
+    userId?: string,
   ) {
     if (!ALLOWED_MIMES.includes(file.mimetype)) {
       throw new Error(
@@ -83,7 +84,7 @@ export class DocumentsService {
     });
 
     // Trigger async processing (fire-and-forget)
-    this.processDocument(businessId, accountId, doc.id).catch((err) => {
+    this.processDocument(businessId, accountId, doc.id, userId).catch((err) => {
       this.logger.error('Document processing error:', err);
     });
 
@@ -94,7 +95,7 @@ export class DocumentsService {
   //  Document Processing Pipeline
   // ──────────────────────────────────────────────
 
-  async processDocument(businessId: string, accountId: string, documentId: string) {
+  async processDocument(businessId: string, accountId: string, documentId: string, userId?: string) {
     await this.prisma.document.updateMany({
       where: { id: documentId, businessId },
       data: { status: 'PROCESSING' },
@@ -226,8 +227,47 @@ export class DocumentsService {
         }
       }
 
-      // If duplicates found, set PENDING_REVIEW for user confirmation
-      if (hasAnyDuplicate) {
+      // ── Check user confirmation preferences ──
+      let shouldConfirm = hasAnyDuplicate; // Default: only confirm for duplicates
+      if (userId) {
+        try {
+          const userPrefs = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { confirmUploads: true, autoCreateCategories: true, uploadConfirmSkipRules: true },
+          });
+          if (userPrefs?.confirmUploads) {
+            shouldConfirm = true;
+            // Check skip rules
+            const skipRules = userPrefs.uploadConfirmSkipRules as {
+              skipCategories?: string[];
+              skipAccountTypes?: string[];
+            } | null;
+            if (skipRules) {
+              // Check account type skip
+              const account = await this.prisma.account.findFirst({
+                where: { id: accountId, businessId },
+                select: { type: true },
+              });
+              if (account?.type && skipRules.skipAccountTypes?.includes(account.type)) {
+                shouldConfirm = hasAnyDuplicate; // Revert to default
+              }
+              // Check category skip
+              if (shouldConfirm && skipRules.skipCategories?.length && enriched.length > 0) {
+                const allCatsSkipped = enriched.every(
+                  (e) => e.categorySlug && skipRules.skipCategories!.includes(e.categorySlug),
+                );
+                if (allCatsSkipped) {
+                  shouldConfirm = hasAnyDuplicate; // Revert to default
+                }
+              }
+            }
+          }
+        } catch {
+          // ignore preference errors - proceed with default behavior
+        }
+      }
+
+      if (shouldConfirm) {
         await this.prisma.document.updateMany({
           where: { id: documentId, businessId },
           data: {
@@ -239,7 +279,7 @@ export class DocumentsService {
         return;
       }
 
-      // No duplicates - create all transactions
+      // No confirmation needed - create all transactions
       await this.transactionsService.createMany(
         businessId,
         accountId,
@@ -328,10 +368,22 @@ export class DocumentsService {
   //  User Context (for AI extraction)
   // ──────────────────────────────────────────────
 
-  /** Build context from user's rules and recent transactions so the AI can learn their preferences. */
+  /** Build context from user's rules, categories, and recent transactions so the AI can learn their preferences. */
   private async buildUserContext(businessId: string): Promise<string> {
     const parts: string[] = [];
     try {
+      // Include the business's actual categories so AI can use them
+      const allCategories = await this.prisma.category.findMany({
+        where: { businessId },
+        select: { slug: true, name: true, isIncome: true },
+        orderBy: { sortOrder: 'asc' },
+      });
+      if (allCategories.length > 0) {
+        const catLines = allCategories.map(c => `${c.slug}: ${c.name} (${c.isIncome ? 'income' : 'expense'})`);
+        parts.push('Available business categories (PREFER these): ' + catLines.join(', '));
+        parts.push('You may suggest a new category slug if none of the above fit well. Use lowercase_with_underscores format.');
+      }
+
       const rules = await this.rulesService.findAll(businessId);
       if (rules.length > 0) {
         const ruleLines = rules

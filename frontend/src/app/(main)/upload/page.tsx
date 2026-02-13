@@ -5,6 +5,7 @@ import {
   documents,
   accounts,
   categories,
+  users,
   type ExtractedItem,
   type DocumentWithCount,
   type AccountItem,
@@ -189,6 +190,9 @@ export default function UploadPage() {
   /* ── pending review ── */
   const [pendingReview, setPendingReview] = useState<PendingReview | null>(null);
   const [confirmingImport, setConfirmingImport] = useState(false);
+  const [dontAskAgain, setDontAskAgain] = useState(false);
+  const [dontAskForCategory, setDontAskForCategory] = useState(false);
+  const [dontAskForAccountType, setDontAskForAccountType] = useState(false);
 
   /* ── inline account creation ── */
   const [addingSourceForSlot, setAddingSourceForSlot] = useState<string | null>(null);
@@ -535,7 +539,43 @@ export default function UploadPage() {
         action,
         selectedIndices,
       });
+
+      // Save "don't ask" preferences
+      if (dontAskAgain) {
+        users.updateUploadPreferences({ confirmUploads: false }).catch(() => {});
+      } else if (dontAskForCategory || dontAskForAccountType) {
+        const updates: Record<string, unknown> = {};
+        if (dontAskForCategory) {
+          const uniqueSlugs = [...new Set(pendingReview.items.map((i) => i.categorySlug).filter(Boolean))] as string[];
+          if (uniqueSlugs.length > 0) {
+            try {
+              const current = await users.getUploadPreferences();
+              updates.skipCategories = [...new Set([...(current.skipCategories || []), ...uniqueSlugs])];
+            } catch {
+              updates.skipCategories = uniqueSlugs;
+            }
+          }
+        }
+        if (dontAskForAccountType) {
+          const account = accountsList.find((a) => a.id === pendingReview.accountId);
+          if (account?.type) {
+            try {
+              const current = await users.getUploadPreferences();
+              updates.skipAccountTypes = [...new Set([...(current.skipAccountTypes || []), account.type])];
+            } catch {
+              updates.skipAccountTypes = [account.type];
+            }
+          }
+        }
+        if (Object.keys(updates).length > 0) {
+          users.updateUploadPreferences(updates as { skipCategories?: string[]; skipAccountTypes?: string[] }).catch(() => {});
+        }
+      }
+
       setPendingReview(null);
+      setDontAskAgain(false);
+      setDontAskForCategory(false);
+      setDontAskForAccountType(false);
       setMessage({ type: 'success', text: t('upload.importConfirmed') });
       documents.list().then(setRecent).catch(() => {});
     } catch (e) {
@@ -1201,6 +1241,48 @@ export default function UploadPage() {
                 </li>
               ))}
             </ul>
+
+            {/* "Don't ask again" options */}
+            <div className="px-4 py-3 border-t border-[var(--border)] bg-amber-50/50 dark:bg-amber-900/10 space-y-2">
+              <p className="text-xs font-medium text-slate-600 dark:text-slate-400">{t('upload.rememberChoice')}</p>
+              <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={dontAskAgain}
+                  onChange={(e) => {
+                    setDontAskAgain(e.target.checked);
+                    if (e.target.checked) {
+                      setDontAskForCategory(false);
+                      setDontAskForAccountType(false);
+                    }
+                  }}
+                  className="rounded border-slate-300"
+                />
+                {t('upload.dontAskAgain')}
+              </label>
+              {!dontAskAgain && (
+                <>
+                  <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={dontAskForCategory}
+                      onChange={(e) => setDontAskForCategory(e.target.checked)}
+                      className="rounded border-slate-300"
+                    />
+                    {t('upload.dontAskForCategory')}
+                  </label>
+                  <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={dontAskForAccountType}
+                      onChange={(e) => setDontAskForAccountType(e.target.checked)}
+                      className="rounded border-slate-300"
+                    />
+                    {t('upload.dontAskForAccountType')}
+                  </label>
+                </>
+              )}
+            </div>
 
             {/* Action buttons */}
             <div className="p-4 border-t border-[var(--border)] bg-slate-50/50 dark:bg-slate-800/30">
