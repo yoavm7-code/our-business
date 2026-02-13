@@ -25,6 +25,13 @@ model Business {
   logoMime      String?  @map("logo_mime")
   defaultCurrency String @default("ILS") @map("default_currency")
   vatRate       Decimal  @default(17) @map("vat_rate") @db.Decimal(5, 2) // default VAT rate %
+
+  // Green Invoice (Morning) integration
+  greenInvoiceKeyId     String?  @map("green_invoice_key_id")
+  greenInvoiceSecret    String?  @map("green_invoice_secret") @db.Text
+  greenInvoiceSandbox   Boolean  @default(false) @map("green_invoice_sandbox")
+  greenInvoiceLastSync  DateTime? @map("green_invoice_last_sync")
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -188,6 +195,9 @@ model Invoice {
   paidDate        DateTime? @map("paid_date") @db.Date
   paidAmount      Decimal? @map("paid_amount") @db.Decimal(14, 2)
   language        String   @default("he") // invoice language
+  externalId      String?  @map("external_id") // Green Invoice document ID
+  externalSource  String?  @map("external_source") // e.g. "greeninvoice"
+  externalUrl     String?  @map("external_url") // link to view in external system
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -200,6 +210,7 @@ model Invoice {
   @@index([businessId])
   @@index([clientId])
   @@index([status])
+  @@index([externalId])
 }
 
 model InvoiceItem {

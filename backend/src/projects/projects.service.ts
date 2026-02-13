@@ -2,6 +2,19 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProjectStatus } from '@prisma/client';
 
+/** Convert status to Prisma enum format (uppercase) */
+function toDbStatus(status?: string): ProjectStatus | undefined {
+  if (!status) return undefined;
+  const upper = status.toUpperCase() as ProjectStatus;
+  const valid: ProjectStatus[] = ['ACTIVE', 'COMPLETED', 'ON_HOLD', 'CANCELLED'];
+  return valid.includes(upper) ? upper : undefined;
+}
+
+/** Convert status from Prisma enum to frontend format (lowercase) */
+function toFrontendStatus(status: ProjectStatus): string {
+  return status.toLowerCase();
+}
+
 @Injectable()
 export class ProjectsService {
   constructor(private prisma: PrismaService) {}
@@ -18,7 +31,7 @@ export class ProjectsService {
       where.clientId = filters.clientId;
     }
     if (filters?.status) {
-      where.status = filters.status as ProjectStatus;
+      where.status = toDbStatus(filters.status) ?? filters.status;
     }
 
     const projects = await this.prisma.project.findMany({
@@ -91,19 +104,39 @@ export class ProjectsService {
       const transactionIncome = incomeMap.get(project.id) ?? 0;
       const transactionExpenses = expenseMap.get(project.id) ?? 0;
       const invoiceRevenue = invoiceRevenueMap.get(project.id) ?? 0;
-      const budgetAmount = project.budgetAmount
+      const budget = project.budgetAmount
         ? Number(project.budgetAmount)
         : null;
       const budgetUsed = transactionExpenses;
       const budgetRemaining =
-        budgetAmount != null ? budgetAmount - budgetUsed : null;
+        budget != null ? budget - budgetUsed : null;
+      const hourlyRate = project.hourlyRate
+        ? Number(project.hourlyRate)
+        : null;
 
       return {
-        ...project,
+        id: project.id,
+        name: project.name,
+        clientId: project.clientId,
+        client: project.client,
+        description: project.description,
+        status: toFrontendStatus(project.status),
+        budget,
+        hourlyRate,
+        currency: project.currency,
+        startDate: project.startDate,
+        endDate: project.endDate,
+        color: project.color,
+        notes: project.notes,
+        isActive: project.isActive,
+        createdAt: project.createdAt,
+        updatedAt: project.updatedAt,
         transactionIncome,
         transactionExpenses,
         invoiceRevenue,
         totalRevenue: invoiceRevenue || transactionIncome,
+        totalInvoiced: invoiceRevenue,
+        totalPaid: invoiceRevenue,
         budgetUsed,
         budgetRemaining,
         transactionCount: project._count.transactions,
@@ -155,26 +188,50 @@ export class ProjectsService {
     const transactionIncome = Number(incomeAgg._sum.amount ?? 0);
     const transactionExpenses = Math.abs(Number(expenseAgg._sum.amount ?? 0));
     const invoiceRevenue = Number(invoiceAgg._sum.total ?? 0);
-    const budgetAmount = project.budgetAmount
+    const budget = project.budgetAmount
       ? Number(project.budgetAmount)
+      : null;
+    const hourlyRate = project.hourlyRate
+      ? Number(project.hourlyRate)
       : null;
     const budgetUsed = transactionExpenses;
     const budgetRemaining =
-      budgetAmount != null ? budgetAmount - budgetUsed : null;
+      budget != null ? budget - budgetUsed : null;
     const budgetPercentUsed =
-      budgetAmount != null && budgetAmount > 0
-        ? Math.round((budgetUsed / budgetAmount) * 100)
+      budget != null && budget > 0
+        ? Math.round((budgetUsed / budget) * 100)
         : null;
 
     return {
-      ...project,
+      id: project.id,
+      name: project.name,
+      clientId: project.clientId,
+      client: project.client,
+      description: project.description,
+      status: toFrontendStatus(project.status),
+      budget,
+      hourlyRate,
+      currency: project.currency,
+      startDate: project.startDate,
+      endDate: project.endDate,
+      color: project.color,
+      notes: project.notes,
+      isActive: project.isActive,
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
+      transactions: project.transactions,
+      invoices: project.invoices,
       transactionIncome,
       transactionExpenses,
       invoiceRevenue,
       totalRevenue: invoiceRevenue || transactionIncome,
+      totalInvoiced: invoiceRevenue,
+      totalPaid: invoiceRevenue,
       budgetUsed,
       budgetRemaining,
       budgetPercentUsed,
+      transactionCount: project._count.transactions,
+      invoiceCount: project._count.invoices,
     };
   }
 
@@ -204,13 +261,13 @@ export class ProjectsService {
       }
     }
 
-    return this.prisma.project.create({
+    const created = await this.prisma.project.create({
       data: {
         businessId,
         clientId: dto.clientId ?? null,
         name: dto.name,
         description: dto.description ?? null,
-        status: (dto.status as ProjectStatus) ?? 'ACTIVE',
+        status: toDbStatus(dto.status) ?? 'ACTIVE',
         budgetAmount: dto.budgetAmount ?? null,
         hourlyRate: dto.hourlyRate ?? null,
         currency: dto.currency ?? 'ILS',
@@ -225,6 +282,12 @@ export class ProjectsService {
         },
       },
     });
+    return {
+      ...created,
+      status: toFrontendStatus(created.status),
+      budget: created.budgetAmount ? Number(created.budgetAmount) : null,
+      hourlyRate: created.hourlyRate ? Number(created.hourlyRate) : null,
+    };
   }
 
   async update(
@@ -265,7 +328,7 @@ export class ProjectsService {
     if (dto.name !== undefined) data.name = dto.name;
     if (dto.clientId !== undefined) data.clientId = dto.clientId || null;
     if (dto.description !== undefined) data.description = dto.description || null;
-    if (dto.status !== undefined) data.status = dto.status as ProjectStatus;
+    if (dto.status !== undefined) data.status = toDbStatus(dto.status) ?? dto.status;
     if (dto.budgetAmount !== undefined) data.budgetAmount = dto.budgetAmount ?? null;
     if (dto.hourlyRate !== undefined) data.hourlyRate = dto.hourlyRate ?? null;
     if (dto.currency !== undefined) data.currency = dto.currency;
@@ -276,7 +339,7 @@ export class ProjectsService {
     if (dto.color !== undefined) data.color = dto.color || null;
     if (dto.notes !== undefined) data.notes = dto.notes || null;
 
-    return this.prisma.project.update({
+    const updated = await this.prisma.project.update({
       where: { id },
       data,
       include: {
@@ -285,6 +348,12 @@ export class ProjectsService {
         },
       },
     });
+    return {
+      ...updated,
+      status: toFrontendStatus(updated.status),
+      budget: updated.budgetAmount ? Number(updated.budgetAmount) : null,
+      hourlyRate: updated.hourlyRate ? Number(updated.hourlyRate) : null,
+    };
   }
 
   async remove(businessId: string, id: string) {

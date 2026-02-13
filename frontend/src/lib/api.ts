@@ -528,8 +528,8 @@ export const clients = {
 export type ProjectItem = {
   id: string;
   name: string;
-  clientId: string;
-  client?: { id: string; name: string };
+  clientId: string | null;
+  client?: { id: string; name: string } | null;
   description: string | null;
   status: 'active' | 'completed' | 'on_hold' | 'cancelled';
   startDate: string | null;
@@ -551,7 +551,7 @@ export const projects = {
   get: (id: string) => api<ProjectItem>(`/api/projects/${id}`),
   create: (body: {
     name: string;
-    clientId: string;
+    clientId?: string;
     description?: string;
     status?: string;
     startDate?: string;
@@ -1539,4 +1539,66 @@ export const admin = {
       });
     },
   },
+};
+
+// ═══════════════════════════════════════════════
+// GREEN INVOICE INTEGRATION
+// ═══════════════════════════════════════════════
+
+export type GreenInvoiceStatus = {
+  connected: boolean;
+  sandbox: boolean;
+  lastSync: string | null;
+};
+
+export type GreenInvoiceSyncResult = {
+  imported: number;
+  skipped: number;
+  total: number;
+};
+
+export type GreenInvoiceDocument = {
+  id: string;
+  number: number;
+  type: number;
+  typeName: string;
+  status: number;
+  amount: number;
+  currency: string;
+  clientName: string;
+  createdAt: string;
+  url: string;
+};
+
+export const greenInvoice = {
+  getStatus: () =>
+    api<GreenInvoiceStatus>('/api/integrations/green-invoice/status'),
+  connect: (keyId: string, secret: string, sandbox?: boolean) =>
+    api<{ success: boolean }>('/api/integrations/green-invoice/connect', {
+      method: 'POST',
+      body: JSON.stringify({ keyId, secret, sandbox }),
+    }),
+  testConnection: () =>
+    api<{ success: boolean }>('/api/integrations/green-invoice/test', {
+      method: 'POST',
+    }),
+  disconnect: () =>
+    api<{ success: boolean }>('/api/integrations/green-invoice/disconnect', {
+      method: 'DELETE',
+    }),
+  sync: (fromDate?: string, toDate?: string) =>
+    api<GreenInvoiceSyncResult>('/api/integrations/green-invoice/sync', {
+      method: 'POST',
+      body: JSON.stringify({ fromDate, toDate }),
+    }),
+  pushInvoice: (invoiceId: string) =>
+    api<{ externalId: string; externalUrl: string; documentNumber: number }>(
+      '/api/integrations/green-invoice/push',
+      { method: 'POST', body: JSON.stringify({ invoiceId }) },
+    ),
+  listDocuments: (page?: number, fromDate?: string, toDate?: string) =>
+    api<{ items: GreenInvoiceDocument[]; total: number; page: number }>(
+      '/api/integrations/green-invoice/documents',
+      { params: { page, fromDate, toDate } },
+    ),
 };
