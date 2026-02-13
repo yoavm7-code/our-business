@@ -167,6 +167,12 @@ const emptyForm = {
   notes: '',
 };
 
+const emptyQuickClient = {
+  name: '',
+  email: '',
+  phone: '',
+};
+
 // ─── Skeleton Loader ─────────────────────────────────
 function ProjectsSkeleton() {
   return (
@@ -257,6 +263,12 @@ function ProjectFormModal({
   onClose,
   onSave,
   saving,
+  showQuickClient,
+  setShowQuickClient,
+  quickClient,
+  setQuickClient,
+  onQuickCreateClient,
+  creatingClient,
   t,
 }: {
   open: boolean;
@@ -267,16 +279,22 @@ function ProjectFormModal({
   onClose: () => void;
   onSave: (e: React.FormEvent) => void;
   saving: boolean;
+  showQuickClient: boolean;
+  setShowQuickClient: (v: boolean) => void;
+  quickClient: typeof emptyQuickClient;
+  setQuickClient: React.Dispatch<React.SetStateAction<typeof emptyQuickClient>>;
+  onQuickCreateClient: () => void;
+  creatingClient: boolean;
   t: (key: string) => string;
 }) {
   if (!open) return null;
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
-        className="bg-[var(--card)] rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-scaleIn"
+        className="bg-[var(--card)] rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-scaleIn mx-2"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-5 border-b border-[var(--border)]">
+        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-[var(--border)]">
           <h3 className="font-semibold text-lg">
             {editingId ? t('projects.editProject') : t('projects.addProject')}
           </h3>
@@ -284,7 +302,7 @@ function ProjectFormModal({
             <IconClose />
           </button>
         </div>
-        <form onSubmit={onSave} className="p-5 space-y-4">
+        <form onSubmit={onSave} className="p-4 sm:p-5 space-y-4">
           {/* Name */}
           <div>
             <label className="block text-sm font-medium mb-1">{t('projects.projectName')} *</label>
@@ -309,20 +327,70 @@ function ProjectFormModal({
           </div>
 
           {/* Client & Status */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium mb-1">{t('projects.client')} *</label>
+              <label className="block text-sm font-medium mb-1">{t('projects.client')}</label>
               <select
                 className="input w-full"
                 value={form.clientId}
                 onChange={(e) => setForm((f) => ({ ...f, clientId: e.target.value }))}
-                required
               >
-                <option value="">{t('projects.selectClient')}</option>
+                <option value="">{t('projects.noClient')}</option>
                 {clientsList.map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
+              {!showQuickClient && (
+                <button
+                  type="button"
+                  onClick={() => setShowQuickClient(true)}
+                  className="mt-1.5 text-xs text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                  {t('projects.quickCreateClient')}
+                </button>
+              )}
+              {/* Inline quick-create client */}
+              {showQuickClient && (
+                <div className="mt-2 p-3 rounded-xl border border-primary-200 dark:border-primary-800 bg-primary-50/50 dark:bg-primary-900/10 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-primary-700 dark:text-primary-300">{t('projects.newClient')}</span>
+                    <button type="button" onClick={() => setShowQuickClient(false)} className="text-slate-400 hover:text-slate-600">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                  </div>
+                  <input
+                    className="input w-full text-sm"
+                    value={quickClient.name}
+                    onChange={(e) => setQuickClient((c) => ({ ...c, name: e.target.value }))}
+                    placeholder={t('clients.namePlaceholder')}
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      className="input w-full text-sm"
+                      value={quickClient.email}
+                      onChange={(e) => setQuickClient((c) => ({ ...c, email: e.target.value }))}
+                      placeholder={t('clients.email')}
+                    />
+                    <input
+                      className="input w-full text-sm"
+                      value={quickClient.phone}
+                      onChange={(e) => setQuickClient((c) => ({ ...c, phone: e.target.value }))}
+                      placeholder={t('clients.phone')}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={onQuickCreateClient}
+                    disabled={!quickClient.name.trim() || creatingClient}
+                    className="btn-primary text-xs py-1.5 px-3 w-full"
+                  >
+                    {creatingClient ? t('common.loading') : t('projects.createAndSelect')}
+                  </button>
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">{t('projects.status')}</label>
@@ -756,6 +824,11 @@ export default function ProjectsPage() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
+  // Inline quick-create client
+  const [showQuickClient, setShowQuickClient] = useState(false);
+  const [quickClient, setQuickClient] = useState(emptyQuickClient);
+  const [creatingClient, setCreatingClient] = useState(false);
+
   // Detail panel
   const [detailProject, setDetailProject] = useState<ProjectItem | null>(null);
   const [detailInvoices, setDetailInvoices] = useState<InvoiceItem[]>([]);
@@ -827,8 +900,32 @@ export default function ProjectsPage() {
   function openAdd() {
     setEditingId(null);
     setForm(emptyForm);
+    setShowQuickClient(false);
+    setQuickClient(emptyQuickClient);
     setShowForm(true);
     setMsg(null);
+  }
+
+  async function handleQuickCreateClient() {
+    if (!quickClient.name.trim()) return;
+    setCreatingClient(true);
+    try {
+      const newClient = await clientsApi.create({
+        name: quickClient.name.trim(),
+        email: quickClient.email.trim() || undefined,
+        phone: quickClient.phone.trim() || undefined,
+      });
+      // Add to clients list and select it
+      setClientsList((prev) => [...prev, newClient]);
+      setForm((f) => ({ ...f, clientId: newClient.id }));
+      setShowQuickClient(false);
+      setQuickClient(emptyQuickClient);
+      setMsg({ text: t('projects.clientCreated'), type: 'success' });
+    } catch {
+      setMsg({ text: t('common.somethingWentWrong'), type: 'error' });
+    } finally {
+      setCreatingClient(false);
+    }
   }
 
   function openEdit(p: ProjectItem) {
@@ -836,7 +933,7 @@ export default function ProjectsPage() {
     setForm({
       name: p.name,
       description: p.description || '',
-      clientId: p.clientId,
+      clientId: p.clientId || '',
       status: p.status,
       budget: p.budget != null ? String(p.budget) : '',
       hourlyRate: p.hourlyRate != null ? String(p.hourlyRate) : '',
@@ -846,19 +943,21 @@ export default function ProjectsPage() {
       color: '#6366f1',
       notes: p.notes || '',
     });
+    setShowQuickClient(false);
+    setQuickClient(emptyQuickClient);
     setShowForm(true);
     setMsg(null);
   }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.name.trim() || !form.clientId) return;
+    if (!form.name.trim()) return;
     setSaving(true);
     try {
       const body = {
         name: form.name.trim(),
         description: form.description.trim() || undefined,
-        clientId: form.clientId,
+        clientId: form.clientId || undefined,
         status: form.status,
         budget: form.budget ? parseFloat(form.budget) : undefined,
         hourlyRate: form.hourlyRate ? parseFloat(form.hourlyRate) : undefined,
@@ -1270,6 +1369,12 @@ export default function ProjectsPage() {
         onClose={() => setShowForm(false)}
         onSave={handleSave}
         saving={saving}
+        showQuickClient={showQuickClient}
+        setShowQuickClient={setShowQuickClient}
+        quickClient={quickClient}
+        setQuickClient={setQuickClient}
+        onQuickCreateClient={handleQuickCreateClient}
+        creatingClient={creatingClient}
         t={t}
       />
 

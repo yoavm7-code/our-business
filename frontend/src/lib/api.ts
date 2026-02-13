@@ -528,8 +528,8 @@ export const clients = {
 export type ProjectItem = {
   id: string;
   name: string;
-  clientId: string;
-  client?: { id: string; name: string };
+  clientId: string | null;
+  client?: { id: string; name: string } | null;
   description: string | null;
   status: 'active' | 'completed' | 'on_hold' | 'cancelled';
   startDate: string | null;
@@ -551,7 +551,7 @@ export const projects = {
   get: (id: string) => api<ProjectItem>(`/api/projects/${id}`),
   create: (body: {
     name: string;
-    clientId: string;
+    clientId?: string;
     description?: string;
     status?: string;
     startDate?: string;

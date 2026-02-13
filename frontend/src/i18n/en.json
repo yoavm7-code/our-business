@@ -557,7 +557,16 @@
     "relatedInvoices": "Related Invoices",
     "searchPlaceholder": "Search projects...",
     "statusChanged": "Status changed successfully",
-    "subtitle": "Manage projects and track progress"
+    "subtitle": "Manage projects and track progress",
+    "status_active": "Active",
+    "status_completed": "Completed",
+    "status_on_hold": "On Hold",
+    "status_cancelled": "Cancelled",
+    "noClient": "No client",
+    "quickCreateClient": "Create new client",
+    "newClient": "New Client",
+    "createAndSelect": "Create & Select",
+    "clientCreated": "Client created and selected"
   },
   "transactions": {
     "title": "Transactions",

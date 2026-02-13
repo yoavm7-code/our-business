@@ -564,7 +564,12 @@
     "status_active": "פעיל",
     "status_completed": "הושלם",
     "status_on_hold": "בהמתנה",
-    "status_cancelled": "בוטל"
+    "status_cancelled": "בוטל",
+    "noClient": "ללא לקוח",
+    "quickCreateClient": "צור לקוח חדש",
+    "newClient": "לקוח חדש",
+    "createAndSelect": "צור ובחר",
+    "clientCreated": "הלקוח נוצר ונבחר"
   },
   "transactions": {
     "title": "תנועות",

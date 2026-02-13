@@ -41,6 +41,7 @@ export class ProjectsController {
       clientId?: string;
       description?: string;
       status?: string;
+      budget?: number;
       budgetAmount?: number;
       hourlyRate?: number;
       currency?: string;
@@ -50,7 +51,12 @@ export class ProjectsController {
       notes?: string;
     },
   ) {
-    return this.projectsService.create(businessId, dto);
+    // Accept both 'budget' and 'budgetAmount' from frontend
+    const normalized = {
+      ...dto,
+      budgetAmount: dto.budgetAmount ?? dto.budget,
+    };
+    return this.projectsService.create(businessId, normalized);
   }
 
   @Put(':id')
@@ -63,6 +69,7 @@ export class ProjectsController {
       clientId?: string;
       description?: string;
       status?: string;
+      budget?: number;
       budgetAmount?: number;
       hourlyRate?: number;
       currency?: string;
@@ -72,7 +79,11 @@ export class ProjectsController {
       notes?: string;
     },
   ) {
-    return this.projectsService.update(businessId, id, dto);
+    const normalized = {
+      ...dto,
+      budgetAmount: dto.budgetAmount ?? dto.budget,
+    };
+    return this.projectsService.update(businessId, id, normalized);
   }
 
   @Delete(':id')
