@@ -751,6 +751,7 @@ export type FixedItem = {
   description: string;
   amount: number;
   categoryName: string | null;
+  categorySlug: string | null;
   installmentCurrent: number | null;
   installmentTotal: number | null;
   expectedEndDate: string | null;
@@ -804,7 +805,7 @@ export const dashboard = {
     ),
   search: (query: string) =>
     api<{
-      transactions: Array<{ id: string; description: string; amount: number; date: string }>;
+      transactions: Array<{ id: string; description: string; amount: number; date: string; categoryName?: string | null; categorySlug?: string | null }>;
       accounts: Array<{ id: string; name: string; type: string }>;
       categories: Array<{ id: string; name: string; slug: string }>;
       clients: Array<{ id: string; name: string }>;
@@ -843,6 +844,7 @@ type ClientRevenueFrontend = Array<{
 type CategoryFrontend = Array<{
   categoryId: string;
   categoryName: string;
+  categorySlug: string | null;
   categoryColor: string | null;
   total: number;
   percentage: number;
@@ -928,6 +930,7 @@ export const reports = {
     return cats.map((c: any) => ({
       categoryId: c.categoryId ?? '',
       categoryName: c.categoryName ?? c.name ?? '',
+      categorySlug: c.categorySlug ?? c.slug ?? null,
       categoryColor: c.categoryColor ?? c.color ?? null,
       total: c.total ?? 0,
       percentage: c.percentage ?? 0,
@@ -1173,7 +1176,7 @@ export const budgets = {
       percentUsed: number;
       budgetCount: number;
       overBudgetCount: number;
-      overBudget: Array<{ categoryName: string; amount: number; spent: number }>;
+      overBudget: Array<{ categoryName: string; categorySlug?: string | null; amount: number; spent: number }>;
     }>('/api/budgets/summary', { params: month ? { month } : undefined }),
 };
 
