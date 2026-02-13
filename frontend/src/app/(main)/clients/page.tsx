@@ -10,6 +10,7 @@ import {
   type InvoiceItem,
 } from '@/lib/api';
 import { useTranslation } from '@/i18n/context';
+import CustomFields from '@/components/CustomFields';
 
 // ─── Constants ───────────────────────────────────────
 const CLIENT_COLORS = [
@@ -157,6 +158,7 @@ const emptyForm = {
   notes: '',
   website: '',
   company: '',
+  customFields: {} as Record<string, any>,
 };
 
 // ─── Skeleton Loader ─────────────────────────────────
@@ -425,6 +427,13 @@ function ClientFormModal({
               placeholder={t('clients.notesPlaceholder')}
             />
           </div>
+
+          {/* Custom Fields */}
+          <CustomFields
+            entityType="client"
+            value={form.customFields}
+            onChange={(val) => setForm((f) => ({ ...f, customFields: val }))}
+          />
 
           <button type="submit" className="btn-primary w-full" disabled={saving}>
             {saving ? t('common.loading') : editingId ? t('common.save') : t('clients.addClient')}

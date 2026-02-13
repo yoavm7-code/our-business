@@ -108,6 +108,7 @@ export class ClientsService {
       hourlyRate?: number;
       currency?: string;
       color?: string;
+      customFields?: Record<string, unknown>;
     },
   ) {
     return this.prisma.client.create({
@@ -123,6 +124,7 @@ export class ClientsService {
         hourlyRate: dto.hourlyRate ?? null,
         currency: dto.currency ?? 'ILS',
         color: dto.color ?? null,
+        customFields: dto.customFields ?? null,
       },
     });
   }
@@ -162,6 +164,7 @@ export class ClientsService {
     if (dto.hourlyRate !== undefined) data.hourlyRate = dto.hourlyRate ?? null;
     if (dto.currency !== undefined) data.currency = dto.currency;
     if (dto.color !== undefined) data.color = dto.color || null;
+    if ((dto as any).customFields !== undefined) data.customFields = (dto as any).customFields;
 
     return this.prisma.client.update({
       where: { id },

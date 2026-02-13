@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { reports } from '@/lib/api';
+import { reports, zReports } from '@/lib/api';
+import type { ZReportData } from '@/lib/api';
 import { useTranslation } from '@/i18n/context';
 import DateRangePicker, { getQuickRangeDates } from '@/components/DateRangePicker';
 import HelpTooltip from '@/components/HelpTooltip';
@@ -26,7 +27,10 @@ import {
 } from 'recharts';
 
 // ─── Types ───────────────────────────────────────────────────
-type ReportTab = 'pnl' | 'cashflow' | 'clients' | 'categories' | 'tax' | 'forecast';
+type ReportTab = 'pnl' | 'cashflow' | 'clients' | 'categories' | 'tax' | 'forecast' | 'zreport';
+type ExportFormat = 'pdf' | 'excel' | 'csv';
+type LogoPosition = 'left' | 'center' | 'right';
+type TitleStyle = 'normal' | 'bold' | 'larger';
 
 type PnlData = Awaited<ReturnType<typeof reports.getProfitLoss>>;
 type CashFlowData = Awaited<ReturnType<typeof reports.getCashFlow>>;
@@ -119,6 +123,37 @@ const ForecastIcon = () => (
   </svg>
 );
 
+const ReceiptIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z" />
+    <path d="M8 7h8" /><path d="M8 11h8" /><path d="M8 15h5" />
+  </svg>
+);
+
+const ChevronDownIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="6 9 12 15 18 9" />
+  </svg>
+);
+
+const CloseIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
+
+const FileTextIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" />
+  </svg>
+);
+
+const TableIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="3" y1="15" x2="21" y2="15" /><line x1="9" y1="3" x2="9" y2="21" /><line x1="15" y1="3" x2="15" y2="21" />
+  </svg>
+);
+
 const PrintIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="6 9 6 2 18 2 18 9" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect x="6" y="14" width="12" height="8" />
@@ -169,6 +204,7 @@ const TABS: TabConfig[] = [
   { id: 'categories', labelKey: 'reports.tabs.categories', icon: <PieChartIcon /> },
   { id: 'tax', labelKey: 'reports.tabs.tax', icon: <TaxIcon /> },
   { id: 'forecast', labelKey: 'reports.tabs.forecast', icon: <ForecastIcon /> },
+  { id: 'zreport', labelKey: 'reports.tabs.zreport', icon: <ReceiptIcon /> },
 ];
 
 // ─── Shimmer skeleton ────────────────────────────────────────
@@ -288,6 +324,12 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Export states
+  const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [exportFormat, setExportFormat] = useState<ExportFormat>('pdf');
+  const exportDropdownRef = useRef<HTMLDivElement>(null);
+
   // Tax year derived from the date range
   const taxYear = useMemo(() => {
     return new Date(from).getFullYear();
@@ -333,6 +375,10 @@ export default function ReportsPage() {
           setForecastData(data);
           break;
         }
+        case 'zreport': {
+          // Z-Report manages its own data fetching
+          break;
+        }
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : t('common.failedToLoad');
@@ -360,6 +406,25 @@ export default function ReportsPage() {
 
   function handlePrint() {
     window.print();
+  }
+
+  // Close export dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (exportDropdownRef.current && !exportDropdownRef.current.contains(e.target as Node)) {
+        setExportDropdownOpen(false);
+      }
+    }
+    if (exportDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [exportDropdownOpen]);
+
+  function handleOpenExportModal(format: ExportFormat) {
+    setExportFormat(format);
+    setExportModalOpen(true);
+    setExportDropdownOpen(false);
   }
 
   function handleExportCSV() {
@@ -411,6 +476,74 @@ export default function ReportsPage() {
     toast(t('reports.exportSuccess'), 'success');
   }
 
+  function handleExportExcel() {
+    // Generate CSV with BOM for Excel compatibility with Hebrew
+    let csvContent = '';
+    const BOM = '\uFEFF';
+    const SEP = '\t'; // Tab-separated for better Excel import
+
+    if (activeTab === 'pnl' && pnlData) {
+      csvContent = `${t('reports.month')}${SEP}${t('reports.income')}${SEP}${t('reports.expenses')}${SEP}${t('reports.netProfit')}\n`;
+      pnlData.byMonth.forEach((m) => {
+        csvContent += `${m.month}${SEP}${m.income}${SEP}${m.expenses}${SEP}${m.net}\n`;
+      });
+    } else if (activeTab === 'cashflow' && cashFlowData) {
+      csvContent = `${t('reports.month')}${SEP}${t('reports.inflows')}${SEP}${t('reports.outflows')}${SEP}${t('reports.net')}\n`;
+      cashFlowData.byMonth.forEach((m) => {
+        csvContent += `${m.month}${SEP}${m.inflows}${SEP}${m.outflows}${SEP}${m.net}\n`;
+      });
+    } else if (activeTab === 'clients' && clientData) {
+      csvContent = `${t('reports.clientName')}${SEP}${t('reports.invoiceCount')}${SEP}${t('reports.totalInvoiced')}${SEP}${t('reports.totalPaid')}${SEP}${t('reports.outstanding')}\n`;
+      clientData.forEach((c) => {
+        csvContent += `${c.clientName}${SEP}${c.invoiceCount}${SEP}${c.totalInvoiced}${SEP}${c.totalPaid}${SEP}${c.outstanding}\n`;
+      });
+    } else if (activeTab === 'categories' && catExpenseData) {
+      csvContent = `${t('common.category')}${SEP}${t('common.amount')}${SEP}${t('reports.percentage')}${SEP}${t('reports.transactionCount')}\n`;
+      catExpenseData.forEach((c) => {
+        csvContent += `${getCategoryDisplayName(c.categoryName, c.categorySlug, t)}${SEP}${c.total}${SEP}${c.percentage}${SEP}${c.transactionCount}\n`;
+      });
+    } else if (activeTab === 'tax' && taxData) {
+      csvContent = `${t('reports.quarter')}${SEP}${t('reports.income')}${SEP}${t('reports.expenses')}${SEP}${t('reports.tax')}\n`;
+      taxData.quarterlyBreakdown.forEach((q) => {
+        csvContent += `Q${q.quarter}${SEP}${q.income}${SEP}${q.expenses}${SEP}${q.tax}\n`;
+      });
+    } else if (activeTab === 'forecast' && forecastData) {
+      csvContent = `${t('reports.month')}${SEP}${t('reports.income')}${SEP}${t('reports.expenses')}${SEP}${t('reports.net')}${SEP}${t('reports.confidence')}\n`;
+      forecastData.monthlyForecast.forEach((m) => {
+        csvContent += `${m.month}${SEP}${m.income}${SEP}${m.expenses}${SEP}${m.net}${SEP}${(m.confidence * 100).toFixed(0)}%\n`;
+      });
+    }
+
+    if (!csvContent) return;
+
+    const blob = new Blob([BOM + csvContent], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `report-${activeTab}-${from}-${to}.xlsx`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast(t('reports.exportSuccess'), 'success');
+  }
+
+  function handleExportPDF() {
+    window.print();
+  }
+
+  function handleExport(format: ExportFormat) {
+    switch (format) {
+      case 'pdf':
+        handleExportPDF();
+        break;
+      case 'excel':
+        handleExportExcel();
+        break;
+      case 'csv':
+        handleExportCSV();
+        break;
+    }
+  }
+
   // ─── Previous period comparison for P&L ─────────────────
   const pnlPrevComparison = useMemo(() => {
     if (!pnlData) return null;
@@ -448,9 +581,44 @@ export default function ReportsPage() {
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('reports.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2 no-print">
-          <button type="button" className="btn-secondary flex items-center gap-1.5 text-sm" onClick={handleExportCSV}>
-            <DownloadIcon /> {t('reports.exportCsv')}
-          </button>
+          {/* Export Dropdown */}
+          <div className="relative" ref={exportDropdownRef}>
+            <button
+              type="button"
+              className="btn-secondary flex items-center gap-1.5 text-sm"
+              onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
+            >
+              <DownloadIcon /> {t('reports.exportDropdown')} <ChevronDownIcon />
+            </button>
+            {exportDropdownOpen && (
+              <div className="absolute end-0 top-full mt-1.5 w-48 bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-xl z-50 overflow-hidden animate-fadeIn">
+                <button
+                  type="button"
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  onClick={() => handleOpenExportModal('pdf')}
+                >
+                  <FileTextIcon />
+                  <span>{t('reports.exportPdf')}</span>
+                </button>
+                <button
+                  type="button"
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  onClick={() => handleOpenExportModal('excel')}
+                >
+                  <TableIcon />
+                  <span>{t('reports.exportExcel')}</span>
+                </button>
+                <button
+                  type="button"
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  onClick={() => handleOpenExportModal('csv')}
+                >
+                  <DownloadIcon />
+                  <span>{t('reports.exportCsv')}</span>
+                </button>
+              </div>
+            )}
+          </div>
           <button type="button" className="btn-secondary flex items-center gap-1.5 text-sm" onClick={handlePrint}>
             <PrintIcon /> {t('reports.print')}
           </button>
@@ -505,9 +673,10 @@ export default function ReportsPage() {
             )}
             {activeTab === 'tax' && taxData && <TaxReport data={taxData} locale={locale} t={t} year={taxYear} />}
             {activeTab === 'forecast' && forecastData && <ForecastReport data={forecastData} locale={locale} t={t} />}
+            {activeTab === 'zreport' && <ZReportTab locale={locale} t={t} toast={toast} />}
 
             {/* Empty state */}
-            {!loading && !error && (
+            {!loading && !error && activeTab !== 'zreport' && (
               (activeTab === 'pnl' && !pnlData) ||
               (activeTab === 'cashflow' && !cashFlowData) ||
               (activeTab === 'clients' && !clientData) ||
@@ -525,6 +694,21 @@ export default function ReportsPage() {
           </>
         )}
       </div>
+
+      {/* Export Preview Modal */}
+      {exportModalOpen && (
+        <ReportExportModal
+          format={exportFormat}
+          onFormatChange={setExportFormat}
+          activeTab={activeTab}
+          onExport={handleExport}
+          onClose={() => setExportModalOpen(false)}
+          locale={locale}
+          t={t}
+          from={from}
+          to={to}
+        />
+      )}
     </div>
   );
 }
@@ -1448,6 +1632,619 @@ function ForecastReport({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ═════════════════════════════════════════════════════════════
+// REPORT EXPORT MODAL
+// ═════════════════════════════════════════════════════════════
+function ReportExportModal({
+  format,
+  onFormatChange,
+  activeTab,
+  onExport,
+  onClose,
+  locale,
+  t,
+  from,
+  to,
+}: {
+  format: ExportFormat;
+  onFormatChange: (f: ExportFormat) => void;
+  activeTab: ReportTab;
+  onExport: (format: ExportFormat) => void;
+  onClose: () => void;
+  locale: string;
+  t: (key: string, vars?: Record<string, string | number>) => string;
+  from: string;
+  to: string;
+}) {
+  const [logoPosition, setLogoPosition] = useState<LogoPosition>('right');
+  const [titleStyle, setTitleStyle] = useState<TitleStyle>('bold');
+  const [includeCharts, setIncludeCharts] = useState(true);
+
+  const tabLabels: Record<ReportTab, string> = {
+    pnl: t('reports.tabs.pnl'),
+    cashflow: t('reports.tabs.cashflow'),
+    clients: t('reports.tabs.clients'),
+    categories: t('reports.tabs.categories'),
+    tax: t('reports.tabs.tax'),
+    forecast: t('reports.tabs.forecast'),
+    zreport: t('reports.tabs.zreport'),
+  };
+
+  const formatLabels: { id: ExportFormat; label: string; icon: React.ReactNode }[] = [
+    { id: 'pdf', label: t('reports.exportPdf'), icon: <FileTextIcon /> },
+    { id: 'excel', label: t('reports.exportExcel'), icon: <TableIcon /> },
+    { id: 'csv', label: t('reports.exportCsv'), icon: <DownloadIcon /> },
+  ];
+
+  const logoPositions: { id: LogoPosition; label: string }[] = [
+    { id: 'left', label: t('reports.logoLeft') },
+    { id: 'center', label: t('reports.logoCenter') },
+    { id: 'right', label: t('reports.logoRight') },
+  ];
+
+  const titleStyles: { id: TitleStyle; label: string }[] = [
+    { id: 'normal', label: t('reports.titleNormal') },
+    { id: 'bold', label: t('reports.titleBold') },
+    { id: 'larger', label: t('reports.titleLarger') },
+  ];
+
+  function handleConfirmExport() {
+    onExport(format);
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fadeIn" onClick={onClose}>
+      <div
+        className="bg-[var(--card)] border border-[var(--border)] rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)]">
+          <h2 className="text-lg font-bold">{t('reports.exportPreview')}</h2>
+          <button type="button" onClick={onClose} className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+            <CloseIcon />
+          </button>
+        </div>
+
+        <div className="px-6 py-5 space-y-6">
+          {/* Format Selector */}
+          <div>
+            <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">{t('reports.exportFormat')}</label>
+            <div className="flex gap-2">
+              {formatLabels.map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => onFormatChange(f.id)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                    format === f.id
+                      ? 'bg-primary-600 text-white shadow-md shadow-primary-600/20'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  {f.icon} {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Logo Position */}
+          <div>
+            <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">{t('reports.logoPosition')}</label>
+            <div className="flex gap-3">
+              {logoPositions.map((pos) => (
+                <button
+                  key={pos.id}
+                  type="button"
+                  onClick={() => setLogoPosition(pos.id)}
+                  className={`flex-1 rounded-xl border-2 p-3 transition-all ${
+                    logoPosition === pos.id
+                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/30'
+                      : 'border-[var(--border)] hover:border-slate-300 dark:hover:border-slate-600'
+                  }`}
+                >
+                  <div className="h-8 flex items-center mb-1.5" style={{ justifyContent: pos.id === 'left' ? 'flex-start' : pos.id === 'center' ? 'center' : 'flex-end' }}>
+                    <div className={`w-8 h-6 rounded bg-slate-300 dark:bg-slate-600 ${logoPosition === pos.id ? 'bg-primary-400 dark:bg-primary-500' : ''}`} />
+                  </div>
+                  <p className="text-xs text-center font-medium text-slate-500 dark:text-slate-400">{pos.label}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Title Style */}
+          <div>
+            <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">{t('reports.titleStyle')}</label>
+            <div className="flex gap-2">
+              {titleStyles.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => setTitleStyle(s.id)}
+                  className={`px-4 py-2 rounded-xl text-sm transition-all ${
+                    titleStyle === s.id
+                      ? 'bg-primary-600 text-white shadow-md shadow-primary-600/20'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  }`}
+                  style={{
+                    fontWeight: s.id === 'bold' || s.id === 'larger' ? 700 : 400,
+                    fontSize: s.id === 'larger' ? '1rem' : '0.875rem',
+                  }}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Include Charts Toggle */}
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium text-slate-600 dark:text-slate-300">{t('reports.includeCharts')}</label>
+            <button
+              type="button"
+              onClick={() => setIncludeCharts(!includeCharts)}
+              className={`relative w-11 h-6 rounded-full transition-colors ${includeCharts ? 'bg-primary-600' : 'bg-slate-300 dark:bg-slate-600'}`}
+            >
+              <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${includeCharts ? 'start-[22px]' : 'start-0.5'}`} />
+            </button>
+          </div>
+
+          {/* Preview */}
+          <div>
+            <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">{t('reports.reportPreview')}</label>
+            <div className="border border-[var(--border)] rounded-xl bg-white dark:bg-slate-900 p-5 min-h-[200px]">
+              {/* Preview header with logo position */}
+              <div className="flex items-start mb-4" style={{ justifyContent: logoPosition === 'left' ? 'flex-start' : logoPosition === 'center' ? 'center' : 'flex-end' }}>
+                <div className="w-16 h-12 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs text-slate-400 dark:text-slate-500">
+                  {t('reports.noLogo')}
+                </div>
+              </div>
+              {/* Preview title */}
+              <h3
+                className="mb-2 text-slate-800 dark:text-slate-200"
+                style={{
+                  fontWeight: titleStyle === 'bold' || titleStyle === 'larger' ? 700 : 400,
+                  fontSize: titleStyle === 'larger' ? '1.25rem' : titleStyle === 'bold' ? '1.1rem' : '1rem',
+                }}
+              >
+                {tabLabels[activeTab]}
+              </h3>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">{from} - {to}</p>
+              {/* Preview data placeholder */}
+              <div className="space-y-2">
+                <div className="h-3 w-full bg-slate-100 dark:bg-slate-800 rounded" />
+                <div className="h-3 w-3/4 bg-slate-100 dark:bg-slate-800 rounded" />
+                <div className="h-3 w-5/6 bg-slate-100 dark:bg-slate-800 rounded" />
+                {includeCharts && (
+                  <div className="mt-3 h-20 bg-gradient-to-r from-green-100 to-blue-100 dark:from-green-900/20 dark:to-blue-900/20 rounded-lg flex items-center justify-center">
+                    <span className="text-xs text-slate-400 dark:text-slate-500">
+                      <ChartBarIcon />
+                    </span>
+                  </div>
+                )}
+                <div className="h-3 w-2/3 bg-slate-100 dark:bg-slate-800 rounded" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[var(--border)]">
+          <button type="button" onClick={onClose} className="btn-secondary text-sm px-5 py-2">
+            {t('reports.cancel')}
+          </button>
+          <button type="button" onClick={handleConfirmExport} className="btn-primary text-sm px-5 py-2 flex items-center gap-1.5">
+            <DownloadIcon /> {t('reports.export')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═════════════════════════════════════════════════════════════
+// Z-REPORT (END OF DAY) TAB
+// ═════════════════════════════════════════════════════════════
+function ZReportTab({
+  locale,
+  t,
+  toast,
+}: {
+  locale: string;
+  t: (key: string, vars?: Record<string, string | number>) => string;
+  toast: (msg: string, type: 'success' | 'error' | 'info') => void;
+}) {
+  const today = new Date().toISOString().slice(0, 10);
+  const [selectedDate, setSelectedDate] = useState(today);
+  const [zReportList, setZReportList] = useState<ZReportData[]>([]);
+  const [currentReport, setCurrentReport] = useState<ZReportData | null>(null);
+  const [loadingList, setLoadingList] = useState(true);
+  const [loadingGenerate, setLoadingGenerate] = useState(false);
+  const [detailReport, setDetailReport] = useState<ZReportData | null>(null);
+
+  // Mock data for today's summary (used when no actual report exists yet)
+  const mockTodaySummary: ZReportData = useMemo(() => ({
+    id: 'mock-today',
+    reportDate: today,
+    reportNumber: 0,
+    totalSales: 0,
+    totalCash: 0,
+    totalCredit: 0,
+    totalChecks: 0,
+    totalTransfers: 0,
+    totalRefunds: 0,
+    totalVat: 0,
+    netTotal: 0,
+    transactionCount: 0,
+    invoiceCount: 0,
+    firstInvoiceNum: null,
+    lastInvoiceNum: null,
+    notes: null,
+    isClosed: false,
+    closedAt: null,
+  }), [today]);
+
+  // Fetch Z-Report list
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingList(true);
+    zReports.list()
+      .then((data) => { if (!cancelled) setZReportList(data); })
+      .catch(() => { /* API not ready yet - use empty list */ })
+      .finally(() => { if (!cancelled) setLoadingList(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Fetch current report for today
+  useEffect(() => {
+    let cancelled = false;
+    zReports.get(today)
+      .then((data) => { if (!cancelled) setCurrentReport(data); })
+      .catch(() => { /* no report for today yet */ });
+    return () => { cancelled = true; };
+  }, [today]);
+
+  const displayReport = currentReport || mockTodaySummary;
+  const alreadyHasReport = useMemo(
+    () => zReportList.some((r) => r.reportDate === selectedDate),
+    [zReportList, selectedDate],
+  );
+
+  async function handleGenerate() {
+    if (alreadyHasReport) {
+      toast(t('reports.zReport.alreadyExists'), 'error');
+      return;
+    }
+    setLoadingGenerate(true);
+    try {
+      const report = await zReports.generate(selectedDate);
+      setZReportList((prev) => [report, ...prev]);
+      if (selectedDate === today) {
+        setCurrentReport(report);
+      }
+      toast(t('reports.zReport.generateSuccess'), 'success');
+    } catch {
+      toast(t('reports.zReport.generateSuccess'), 'error');
+    } finally {
+      setLoadingGenerate(false);
+    }
+  }
+
+  async function handleClose(id: string) {
+    try {
+      const updated = await zReports.close(id);
+      setZReportList((prev) => prev.map((r) => (r.id === id ? updated : r)));
+      if (currentReport?.id === id) setCurrentReport(updated);
+      if (detailReport?.id === id) setDetailReport(updated);
+      toast(t('reports.zReport.closeSuccess'), 'success');
+    } catch {
+      toast(t('reports.zReport.closeSuccess'), 'error');
+    }
+  }
+
+  function fmtDate(dateStr: string) {
+    try {
+      return new Date(dateStr).toLocaleDateString(locale === 'he' ? 'he-IL' : 'en-IL', {
+        year: 'numeric', month: 'long', day: 'numeric',
+      });
+    } catch {
+      return dateStr;
+    }
+  }
+
+  return (
+    <div className="space-y-6 animate-fadeIn">
+      {/* Today's Summary */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-lg font-bold">{t('reports.zReport.todaySummary')}</h3>
+          <div className="text-sm font-medium text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-950/30 px-3 py-1 rounded-lg">
+            {fmtDate(today)}
+          </div>
+        </div>
+
+        {/* Summary cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+          <StatCard
+            label={t('reports.zReport.totalSales')}
+            value={fmtCurrency(displayReport.totalSales, locale)}
+            colorClass="text-green-600 dark:text-green-400"
+            cardClass="stat-card-green"
+          />
+          <StatCard
+            label={t('reports.zReport.totalRefunds')}
+            value={fmtCurrency(displayReport.totalRefunds, locale)}
+            colorClass="text-red-600 dark:text-red-400"
+            cardClass="stat-card-red"
+          />
+          <StatCard
+            label={t('reports.zReport.totalVat')}
+            value={fmtCurrency(displayReport.totalVat, locale)}
+            colorClass="text-amber-600 dark:text-amber-400"
+            cardClass="stat-card-amber"
+          />
+          <StatCard
+            label={t('reports.zReport.netTotal')}
+            value={fmtCurrency(displayReport.netTotal, locale)}
+            colorClass="text-primary-600 dark:text-primary-400"
+            cardClass="stat-card-indigo"
+          />
+        </div>
+
+        {/* Payment breakdown */}
+        <div className="mb-4">
+          <h4 className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-3">{t('reports.zReport.paymentBreakdown')}</h4>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-3 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/40 text-center">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{t('reports.zReport.cashPayments')}</p>
+              <p className="text-base font-bold text-green-600 dark:text-green-400">{fmtCurrency(displayReport.totalCash, locale)}</p>
+            </div>
+            <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/40 text-center">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{t('reports.zReport.creditPayments')}</p>
+              <p className="text-base font-bold text-blue-600 dark:text-blue-400">{fmtCurrency(displayReport.totalCredit, locale)}</p>
+            </div>
+            <div className="p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800/40 text-center">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{t('reports.zReport.checkPayments')}</p>
+              <p className="text-base font-bold text-purple-600 dark:text-purple-400">{fmtCurrency(displayReport.totalChecks, locale)}</p>
+            </div>
+            <div className="p-3 rounded-xl bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800/40 text-center">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{t('reports.zReport.transferPayments')}</p>
+              <p className="text-base font-bold text-cyan-600 dark:text-cyan-400">{fmtCurrency(displayReport.totalTransfers, locale)}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Transaction & Invoice info */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+            <span className="text-sm text-slate-500 dark:text-slate-400">{t('reports.zReport.transactionCount')}:</span>
+            <span className="font-bold">{displayReport.transactionCount}</span>
+          </div>
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+            <span className="text-sm text-slate-500 dark:text-slate-400">{t('reports.zReport.invoiceRange')}:</span>
+            <span className="font-bold">
+              {displayReport.firstInvoiceNum && displayReport.lastInvoiceNum
+                ? `${displayReport.firstInvoiceNum} - ${displayReport.lastInvoiceNum}`
+                : t('reports.zReport.na')}
+            </span>
+          </div>
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+            <span className="text-sm text-slate-500 dark:text-slate-400">{t('reports.zReport.invoiceCount')}:</span>
+            <span className="font-bold">{displayReport.invoiceCount}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Generate Z-Report */}
+      <div className="card">
+        <h3 className="text-base font-semibold mb-4">{t('reports.zReport.generateReport')}</h3>
+        <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1.5">
+              {t('reports.zReport.selectDate')}
+            </label>
+            <input
+              type="date"
+              value={selectedDate}
+              max={today}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="input w-full sm:w-56"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={handleGenerate}
+            disabled={loadingGenerate}
+            className="btn-primary flex items-center gap-2 text-sm px-5 py-2.5"
+          >
+            <ReceiptIcon />
+            {loadingGenerate ? '...' : t('reports.zReport.generate')}
+          </button>
+        </div>
+        {alreadyHasReport && (
+          <div className="mt-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40">
+            <p className="text-sm text-amber-700 dark:text-amber-300">{t('reports.zReport.alreadyExists')}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Z-Report History */}
+      <div className="card overflow-x-auto">
+        <h3 className="text-base font-semibold mb-4">{t('reports.zReport.history')}</h3>
+        {loadingList ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full" />)}
+          </div>
+        ) : zReportList.length > 0 ? (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b-2 border-[var(--border)]">
+                <th className="text-start pb-3 font-semibold text-slate-500 dark:text-slate-400">{t('reports.zReport.reportNumber')}</th>
+                <th className="text-start pb-3 font-semibold text-slate-500 dark:text-slate-400">{t('reports.zReport.date')}</th>
+                <th className="text-end pb-3 font-semibold text-slate-500 dark:text-slate-400">{t('reports.zReport.total')}</th>
+                <th className="text-end pb-3 font-semibold text-slate-500 dark:text-slate-400">{t('reports.zReport.transactionCount')}</th>
+                <th className="text-end pb-3 font-semibold text-slate-500 dark:text-slate-400">{t('reports.zReport.invoiceRange')}</th>
+                <th className="text-center pb-3 font-semibold text-slate-500 dark:text-slate-400">{t('reports.zReport.status')}</th>
+                <th className="pb-3"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {zReportList.map((report) => (
+                <tr key={report.id} className="table-row">
+                  <td className="py-2.5 font-medium">#{report.reportNumber}</td>
+                  <td className="py-2.5">{fmtDate(report.reportDate)}</td>
+                  <td className="py-2.5 text-end font-semibold">{fmtCurrency(report.totalSales, locale)}</td>
+                  <td className="py-2.5 text-end">{report.transactionCount}</td>
+                  <td className="py-2.5 text-end text-sm text-slate-500 dark:text-slate-400">
+                    {report.firstInvoiceNum && report.lastInvoiceNum
+                      ? `${report.firstInvoiceNum} - ${report.lastInvoiceNum}`
+                      : t('reports.zReport.na')}
+                  </td>
+                  <td className="py-2.5 text-center">
+                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      report.isClosed
+                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                        : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
+                    }`}>
+                      {report.isClosed ? t('reports.zReport.closed') : t('reports.zReport.open')}
+                    </span>
+                  </td>
+                  <td className="py-2.5 text-end">
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setDetailReport(report)}
+                        className="text-xs text-primary-600 dark:text-primary-400 hover:underline"
+                      >
+                        {t('reports.zReport.viewDetails')}
+                      </button>
+                      {!report.isClosed && (
+                        <button
+                          type="button"
+                          onClick={() => handleClose(report.id)}
+                          className="text-xs text-red-600 dark:text-red-400 hover:underline"
+                        >
+                          {t('reports.zReport.closeReport')}
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <div className="text-center py-12">
+            <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-3">
+              <ReceiptIcon />
+            </div>
+            <p className="text-sm text-slate-400 dark:text-slate-500">{t('reports.zReport.noReports')}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Detail Modal */}
+      {detailReport && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fadeIn" onClick={() => setDetailReport(null)}>
+          <div
+            className="bg-[var(--card)] border border-[var(--border)] rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)]">
+              <h2 className="text-lg font-bold">{t('reports.zReport.title')} #{detailReport.reportNumber}</h2>
+              <button type="button" onClick={() => setDetailReport(null)} className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                <CloseIcon />
+              </button>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500 dark:text-slate-400">{t('reports.zReport.date')}</span>
+                <span className="font-medium">{fmtDate(detailReport.reportDate)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500 dark:text-slate-400">{t('reports.zReport.totalSales')}</span>
+                <span className="font-bold text-green-600 dark:text-green-400">{fmtCurrency(detailReport.totalSales, locale)}</span>
+              </div>
+              <hr className="border-[var(--border)]" />
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500 dark:text-slate-400">{t('reports.zReport.cashPayments')}</span>
+                <span className="font-medium">{fmtCurrency(detailReport.totalCash, locale)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500 dark:text-slate-400">{t('reports.zReport.creditPayments')}</span>
+                <span className="font-medium">{fmtCurrency(detailReport.totalCredit, locale)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500 dark:text-slate-400">{t('reports.zReport.checkPayments')}</span>
+                <span className="font-medium">{fmtCurrency(detailReport.totalChecks, locale)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500 dark:text-slate-400">{t('reports.zReport.transferPayments')}</span>
+                <span className="font-medium">{fmtCurrency(detailReport.totalTransfers, locale)}</span>
+              </div>
+              <hr className="border-[var(--border)]" />
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500 dark:text-slate-400">{t('reports.zReport.totalRefunds')}</span>
+                <span className="font-medium text-red-600 dark:text-red-400">{fmtCurrency(detailReport.totalRefunds, locale)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500 dark:text-slate-400">{t('reports.zReport.totalVat')}</span>
+                <span className="font-medium text-amber-600 dark:text-amber-400">{fmtCurrency(detailReport.totalVat, locale)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500 dark:text-slate-400">{t('reports.zReport.netTotal')}</span>
+                <span className="font-bold text-primary-600 dark:text-primary-400">{fmtCurrency(detailReport.netTotal, locale)}</span>
+              </div>
+              <hr className="border-[var(--border)]" />
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500 dark:text-slate-400">{t('reports.zReport.transactionCount')}</span>
+                <span className="font-medium">{detailReport.transactionCount}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500 dark:text-slate-400">{t('reports.zReport.invoiceCount')}</span>
+                <span className="font-medium">{detailReport.invoiceCount}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500 dark:text-slate-400">{t('reports.zReport.firstInvoice')}</span>
+                <span className="font-medium">{detailReport.firstInvoiceNum || t('reports.zReport.na')}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500 dark:text-slate-400">{t('reports.zReport.lastInvoice')}</span>
+                <span className="font-medium">{detailReport.lastInvoiceNum || t('reports.zReport.na')}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500 dark:text-slate-400">{t('reports.zReport.status')}</span>
+                <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  detailReport.isClosed
+                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                    : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
+                }`}>
+                  {detailReport.isClosed ? t('reports.zReport.closed') : t('reports.zReport.open')}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[var(--border)]">
+              {!detailReport.isClosed && (
+                <button
+                  type="button"
+                  onClick={() => handleClose(detailReport.id)}
+                  className="btn-primary text-sm px-5 py-2 bg-red-600 hover:bg-red-700"
+                >
+                  {t('reports.zReport.closeReport')}
+                </button>
+              )}
+              <button type="button" onClick={() => setDetailReport(null)} className="btn-secondary text-sm px-5 py-2">
+                {t('reports.cancel')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

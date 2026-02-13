@@ -227,6 +227,9 @@ export class InvoicesService {
         notes: dto.notes ?? null,
         paymentTerms: dto.paymentTerms ?? null,
         language: dto.language ?? 'he',
+        ...((dto as any).allocationNumber && { allocationNumber: (dto as any).allocationNumber }),
+        ...((dto as any).allocationConfirmation && { allocationConfirmation: (dto as any).allocationConfirmation }),
+        ...((dto as any).customFields && { customFields: (dto as any).customFields }),
         items: {
           create: dto.items.map((item, index) => ({
             description: item.description,

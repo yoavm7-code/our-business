@@ -31,6 +31,8 @@ model Business {
   greenInvoiceSecret    String?  @map("green_invoice_secret") @db.Text
   greenInvoiceSandbox   Boolean  @default(false) @map("green_invoice_sandbox")
   greenInvoiceLastSync  DateTime? @map("green_invoice_last_sync")
+  greenInvoiceEmail     String?  @map("green_invoice_email")
+  greenInvoicePassword  String?  @map("green_invoice_password") @db.Text
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -54,6 +56,9 @@ model Business {
   invoices           Invoice[]
   taxPeriods         TaxPeriod[]
   mortgages          Mortgage[]
+  customFieldTemplates CustomFieldTemplate[]
+  expenses           Expense[]
+  zReports           ZReport[]
 
   @@map("Household")
 }
@@ -124,6 +129,7 @@ model Client {
   currency       String   @default("ILS")
   color          String?  // hex color for UI
   isActive       Boolean  @default(true) @map("is_active")
+  customFields   Json?    @map("custom_fields")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -153,6 +159,7 @@ model Project {
   color        String?  // hex color for UI
   notes        String?  @db.Text
   isActive     Boolean  @default(true) @map("is_active")
+  customFields Json?    @map("custom_fields")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -198,6 +205,10 @@ model Invoice {
   externalId      String?  @map("external_id") // Green Invoice document ID
   externalSource  String?  @map("external_source") // e.g. "greeninvoice"
   externalUrl     String?  @map("external_url") // link to view in external system
+  allocationNumber String? @map("allocation_number") // number from Israel Tax Authority
+  allocationConfirmation String? @map("allocation_confirmation") // confirmation code
+  allocationDate  DateTime? @map("allocation_date") // when allocation was received
+  customFields    Json?    @map("custom_fields")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -722,4 +733,84 @@ model MortgageTrack {
   mortgage Mortgage @relation(fields: [mortgageId], references: [id], onDelete: Cascade)
 
   @@index([mortgageId])
+}
+
+// --------------------------------------------
+// Custom Field Templates
+// --------------------------------------------
+model CustomFieldTemplate {
+  id          String   @id @default(uuid())
+  businessId  String   @map("household_id")
+  name        String   // template name
+  entityType  String   @map("entity_type") // 'client', 'project', 'invoice', 'expense'
+  fields      Json     // array of { name, type, required, options? }
+  isDefault   Boolean  @default(false) @map("is_default")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([entityType])
+}
+
+// --------------------------------------------
+// Expenses (dedicated expense tracking)
+// --------------------------------------------
+model Expense {
+  id              String   @id @default(uuid())
+  businessId      String   @map("household_id")
+  accountId       String   @map("account_id")
+  categoryId      String?  @map("category_id")
+  date            DateTime @db.Date
+  description     String
+  amount          Decimal  @db.Decimal(14, 2) // always positive
+  currency        String   @default("ILS")
+  vendor          String?  // supplier/vendor name
+  receiptUrl      String?  @map("receipt_url") @db.Text
+  vatAmount       Decimal? @map("vat_amount") @db.Decimal(14, 2)
+  isRecurring     Boolean  @default(false) @map("is_recurring")
+  isTaxDeductible Boolean  @default(true) @map("is_tax_deductible")
+  deductionRate   Decimal? @map("deduction_rate") @db.Decimal(5, 2)
+  notes           String?  @db.Text
+  customFields    Json?    @map("custom_fields") // user-defined fields
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, date])
+  @@index([categoryId])
+}
+
+// --------------------------------------------
+// Z-Reports (end-of-day reports)
+// --------------------------------------------
+model ZReport {
+  id              String    @id @default(uuid())
+  businessId      String    @map("household_id")
+  reportDate      DateTime  @map("report_date") @db.Date
+  reportNumber    Int       @map("report_number")
+  totalSales      Decimal   @default(0) @map("total_sales") @db.Decimal(14, 2)
+  totalCash       Decimal   @default(0) @map("total_cash") @db.Decimal(14, 2)
+  totalCredit     Decimal   @default(0) @map("total_credit") @db.Decimal(14, 2)
+  totalChecks     Decimal   @default(0) @map("total_checks") @db.Decimal(14, 2)
+  totalTransfers  Decimal   @default(0) @map("total_transfers") @db.Decimal(14, 2)
+  totalRefunds    Decimal   @default(0) @map("total_refunds") @db.Decimal(14, 2)
+  totalVat        Decimal   @default(0) @map("total_vat") @db.Decimal(14, 2)
+  netTotal        Decimal   @default(0) @map("net_total") @db.Decimal(14, 2)
+  transactionCount Int      @default(0) @map("transaction_count")
+  invoiceCount    Int       @default(0) @map("invoice_count")
+  firstInvoiceNum String?   @map("first_invoice_num")
+  lastInvoiceNum  String?   @map("last_invoice_num")
+  notes           String?   @db.Text
+  isClosed        Boolean   @default(false) @map("is_closed")
+  closedAt        DateTime? @map("closed_at")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, reportDate])
+  @@index([businessId])
 }

@@ -42,6 +42,7 @@ export class ClientsController {
       hourlyRate?: number;
       currency?: string;
       color?: string;
+      customFields?: Record<string, unknown>;
     },
   ) {
     return this.clientsService.create(businessId, dto);
@@ -63,6 +64,7 @@ export class ClientsController {
       hourlyRate?: number;
       currency?: string;
       color?: string;
+      customFields?: Record<string, unknown>;
     },
   ) {
     return this.clientsService.update(businessId, id, dto);
