@@ -69,13 +69,24 @@ export class AuthService {
       return { business, user };
     });
 
-    // Send verification email (non-blocking)
-    const locale = dto.countryCode === 'IL' ? 'he' : 'en';
-    this.emailService
-      .sendVerificationEmail(dto.email, emailVerifyToken, locale)
-      .catch((err) => {
-        this.logger.error(`Failed to send verification email: ${err.message}`);
+    // If no email provider is configured, auto-verify the user
+    if (!this.emailService.isConfigured) {
+      this.logger.warn(
+        'No email provider configured – auto-verifying user on registration',
+      );
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { emailVerified: true, emailVerifyToken: null, emailVerifyExp: null },
       });
+    } else {
+      // Send verification email (non-blocking)
+      const locale = dto.countryCode === 'IL' ? 'he' : 'en';
+      this.emailService
+        .sendVerificationEmail(dto.email, emailVerifyToken, locale)
+        .catch((err) => {
+          this.logger.error(`Failed to send verification email: ${err.message}`);
+        });
+    }
 
     // Return JWT token immediately so the user can start setting up
     const payload = {
@@ -96,7 +107,7 @@ export class AuthService {
         countryCode: user.countryCode,
         isAdmin: user.isAdmin,
       },
-      emailVerified: false,
+      emailVerified: !this.emailService.isConfigured,
     };
   }
 
@@ -135,8 +146,8 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    // Check if email is verified
-    if (!user.emailVerified) {
+    // Check if email is verified (only enforce when an email provider is configured)
+    if (!user.emailVerified && this.emailService.isConfigured) {
       throw new UnauthorizedException(
         'Please verify your email address before logging in. Check your inbox for the verification link.',
       );
