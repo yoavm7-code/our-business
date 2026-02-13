@@ -763,6 +763,7 @@ export default function ClientsPage() {
       notes: c.notes || '',
       website: c.website || '',
       company: c.company || '',
+      customFields: (c as any).customFields || {},
     });
     setShowForm(true);
     setMsg(null);
