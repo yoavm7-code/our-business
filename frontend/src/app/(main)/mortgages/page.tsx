@@ -254,7 +254,7 @@ export default function MortgagesPage() {
   if (error && list.length === 0) {
     return (
       <div className="space-y-6 animate-fadeIn">
-        <h1 className="text-2xl font-bold">{t('mortgage.title')}</h1>
+        <h1 className="text-xl sm:text-2xl font-bold">{t('mortgage.title')}</h1>
         <div className="card text-center py-12">
           <p className="text-red-500">{error}</p>
           <button type="button" className="btn-primary mt-4" onClick={fetchList}>{t('common.retry')}</button>
@@ -268,7 +268,7 @@ export default function MortgagesPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">{t('mortgage.title')}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">{t('mortgage.title')}</h1>
           <p className="text-sm text-slate-500 mt-1">{t('mortgage.description')}</p>
         </div>
         <button type="button" className="btn-primary" onClick={openAddMortgage}>

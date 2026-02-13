@@ -310,7 +310,7 @@ export default function TaxPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">{t('tax.title')}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">{t('tax.title')}</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             {locale === 'he' ? 'ניהול מיסים, מע"מ ומקדמות מס הכנסה' : 'Manage taxes, VAT, and income tax advances'}
           </p>

@@ -216,9 +216,9 @@ export default function IncomePage() {
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* ── Header ── */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">
+          <h1 className="text-xl sm:text-2xl font-bold">
             {t('income.title')} <HelpTooltip text={t('help.income')} className="ms-1" />
           </h1>
           <p className="text-sm text-slate-500 mt-1">{t('income.subtitle')}</p>
@@ -276,7 +276,7 @@ export default function IncomePage() {
           ) : (
             <>
               <p className="text-sm text-slate-500">{t('income.incomeThisPeriod')}</p>
-              <p className="text-2xl font-bold mt-1 text-green-600 dark:text-green-400">
+              <p className="text-lg sm:text-2xl font-bold mt-1 text-green-600 dark:text-green-400">
                 {formatCurrency(monthlyIncome, locale)}
               </p>
             </>
@@ -288,7 +288,7 @@ export default function IncomePage() {
           ) : (
             <>
               <p className="text-sm text-slate-500">{t('income.expensesThisPeriod')}</p>
-              <p className="text-2xl font-bold mt-1 text-red-600 dark:text-red-400">
+              <p className="text-lg sm:text-2xl font-bold mt-1 text-red-600 dark:text-red-400">
                 {formatCurrency(summary?.expenses ?? 0, locale)}
               </p>
             </>
@@ -300,7 +300,7 @@ export default function IncomePage() {
           ) : (
             <>
               <p className="text-sm text-slate-500">{t('income.netIncome')}</p>
-              <p className={`text-2xl font-bold mt-1 ${netIncome >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+              <p className={`text-lg sm:text-2xl font-bold mt-1 ${netIncome >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                 {formatCurrency(netIncome, locale)}
               </p>
             </>
@@ -312,7 +312,7 @@ export default function IncomePage() {
           ) : (
             <>
               <p className="text-sm text-slate-500">{t('income.annualEstimate')}</p>
-              <p className="text-2xl font-bold mt-1 text-indigo-600 dark:text-indigo-400">
+              <p className="text-lg sm:text-2xl font-bold mt-1 text-indigo-600 dark:text-indigo-400">
                 {formatCurrency(annualEstimate, locale)}
               </p>
             </>

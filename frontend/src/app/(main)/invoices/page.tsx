@@ -1494,7 +1494,7 @@ export default function InvoicesPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">{t('invoices.title')}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">{t('invoices.title')}</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             {t('invoices.summaryTitle')}
             <span className="ms-2 text-xs text-slate-400 hidden sm:inline">

@@ -15,6 +15,10 @@ function extractTip(content: string): string | null {
     if (line.endsWith(':')) continue;
     // Skip very short lines
     if (line.replace(/[*•\-\d.)#]/g, '').trim().length < 15) continue;
+    // Skip lines that look like raw translation keys (camelCase, no spaces)
+    if (/^[a-zA-Z][a-zA-Z0-9]*([A-Z][a-zA-Z0-9]*)+$/.test(line.trim())) continue;
+    // Skip lines that are just identifiers with dots/underscores
+    if (/^[a-zA-Z_][a-zA-Z0-9_.]+$/.test(line.trim()) && !line.includes(' ')) continue;
 
     // Clean up: remove bullet/number prefixes and bold markers
     let cleaned = line
@@ -24,6 +28,8 @@ function extractTip(content: string): string | null {
       .trim();
 
     if (cleaned.length < 15) continue;
+    // After cleaning, check again for raw keys
+    if (/^[a-zA-Z][a-zA-Z0-9]*([A-Z][a-zA-Z0-9]*)+$/.test(cleaned)) continue;
 
     // Truncate if too long
     if (cleaned.length > 150) {

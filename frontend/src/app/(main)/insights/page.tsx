@@ -559,7 +559,7 @@ export default function InsightsPage() {
     <div className="space-y-6 max-w-3xl mx-auto animate-fadeIn">
       {/* Header */}
       <div className="text-center mb-2">
-        <h1 className="text-2xl font-bold flex items-center justify-center gap-2">
+        <h1 className="text-xl sm:text-2xl font-bold flex items-center justify-center gap-2">
           <span className="bg-gradient-to-r from-primary-600 to-accent-500 bg-clip-text text-transparent">
             {t('insightsPage.title')}
           </span>
