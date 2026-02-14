@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { reports, zReports } from '@/lib/api';
 import type { ZReportData } from '@/lib/api';
 import { useTranslation } from '@/i18n/context';
+import PageGuide from '@/components/PageGuide';
 import DateRangePicker, { getQuickRangeDates } from '@/components/DateRangePicker';
 import HelpTooltip from '@/components/HelpTooltip';
 import { useToast } from '@/components/Toast';
@@ -624,6 +625,17 @@ export default function ReportsPage() {
           </button>
         </div>
       </div>
+
+      {/* Page action guide */}
+      <PageGuide
+        pageKey="reports"
+        steps={[
+          { labelHe: 'בחר טווח תאריכים', labelEn: 'Select date range' },
+          { labelHe: 'בחר סוג דוח', labelEn: 'Choose report type' },
+          { labelHe: 'צפה בנתונים', labelEn: 'View data' },
+          { labelHe: 'ייצא או הדפס', labelEn: 'Export or print' },
+        ]}
+      />
 
       {/* Date Range + Tabs */}
       <div className="card no-print space-y-4">

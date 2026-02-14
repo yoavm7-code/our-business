@@ -14,6 +14,7 @@ import {
   type GreenInvoiceStatus,
 } from '@/lib/api';
 import { useTranslation } from '@/i18n/context';
+import PageGuide from '@/components/PageGuide';
 import { useToast } from '@/components/Toast';
 
 // ─── Constants ───────────────────────────────────────
@@ -1691,6 +1692,17 @@ export default function InvoicesPage() {
           {t('invoices.addInvoice')}
         </button>
       </div>
+
+      {/* Page action guide */}
+      <PageGuide
+        pageKey="invoices"
+        steps={[
+          { labelHe: 'צור חשבונית', labelEn: 'Create invoice' },
+          { labelHe: 'שלח ללקוח', labelEn: 'Send to client' },
+          { labelHe: 'סמן כשולם', labelEn: 'Mark as paid' },
+          { labelHe: 'ייצא לדוח', labelEn: 'Export to report' },
+        ]}
+      />
 
       {/* Morning connection success message */}
       {morningSuccessMsg && (

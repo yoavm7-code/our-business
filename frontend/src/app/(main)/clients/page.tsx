@@ -10,6 +10,7 @@ import {
   type InvoiceItem,
 } from '@/lib/api';
 import { useTranslation } from '@/i18n/context';
+import PageGuide from '@/components/PageGuide';
 import CustomFields from '@/components/CustomFields';
 
 // ─── Constants ───────────────────────────────────────
@@ -864,6 +865,17 @@ export default function ClientsPage() {
           {t('clients.addClient')}
         </button>
       </div>
+
+      {/* Page action guide */}
+      <PageGuide
+        pageKey="clients"
+        steps={[
+          { labelHe: 'הוסף לקוח', labelEn: 'Add a client' },
+          { labelHe: 'עדכן פרטי קשר', labelEn: 'Set contact details' },
+          { labelHe: 'צור חשבונית', labelEn: 'Create an invoice' },
+          { labelHe: 'עקוב אחר תשלומים', labelEn: 'Track payments' },
+        ]}
+      />
 
       {/* Message */}
       {msg && (
