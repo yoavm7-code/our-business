@@ -37,6 +37,15 @@ export class AccountsController {
     return this.accountsService.findAll(user.businessId, type);
   }
 
+  /** GET /api/accounts/:id - get single account */
+  @Get(':id')
+  findOne(
+    @CurrentUser() user: RequestUser,
+    @Param('id') id: string,
+  ) {
+    return this.accountsService.findOne(user.businessId, id);
+  }
+
   /** POST /api/accounts - create account */
   @Post()
   create(

@@ -1,8 +1,9 @@
 import { IsBoolean, IsDateString, IsInt, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreateTransactionDto {
+  @IsOptional()
   @IsString()
-  accountId: string;
+  accountId?: string;
 
   @IsOptional()
   @IsString()

@@ -1042,6 +1042,42 @@ ${projLines || 'אין פרויקטים פעילים'}
 }
 
 // ─── Utility Function ────────────────────────────────────────────────────
+/** Detect if an object looks like a financial period/forecast entry */
+function isFinancialEntry(obj: Record<string, unknown>): boolean {
+  const keys = Object.keys(obj);
+  const financialKeys = ['month', 'balance', 'income', 'revenues', 'expenses', 'net', 'revenue', 'profit', 'cashflow', 'forecast'];
+  return financialKeys.filter((k) => keys.includes(k)).length >= 2;
+}
+
+/** Format a financial entry into human-readable text */
+function formatFinancialEntry(obj: Record<string, unknown>): string {
+  const label = obj.month != null
+    ? (typeof obj.month === 'number' ? `${obj.month}` : String(obj.month))
+    : obj.period != null ? String(obj.period) : '';
+  const parts: string[] = [];
+  const numKeys: Record<string, string> = {
+    income: '💰', revenues: '💰', revenue: '💰',
+    expenses: '📉', balance: '🏦', net: '📊',
+    profit: '📊', cashflow: '💹', forecast: '🔮',
+  };
+  for (const [key, emoji] of Object.entries(numKeys)) {
+    if (obj[key] != null && key !== 'month' && key !== 'period') {
+      const val = Number(obj[key]);
+      if (!isNaN(val)) {
+        const formatted = val.toLocaleString('he-IL', { style: 'currency', currency: 'ILS', maximumFractionDigits: 0 });
+        parts.push(`${emoji} ${formatted}`);
+      }
+    }
+  }
+  // Add any string values
+  for (const [key, val] of Object.entries(obj)) {
+    if (typeof val === 'string' && key !== 'month' && key !== 'period') {
+      parts.push(String(val));
+    }
+  }
+  return label ? `- **${label}**: ${parts.join(' | ')}` : `- ${parts.join(' | ')}`;
+}
+
 function toReadableString(v: unknown): string {
   if (typeof v === 'string' && v.trim()) return v;
   if (v != null && typeof v === 'object') {
@@ -1051,13 +1087,22 @@ function toReadableString(v: unknown): string {
           if (typeof item === 'string') return '- ' + item;
           if (item != null && typeof item === 'object') {
             const obj = item as Record<string, unknown>;
-            const t = obj.type ?? obj.name ?? obj.title;
-            const d = obj.description ?? obj.desc ?? obj.details;
-            const p = obj.percentage ?? obj.allocation;
+            // Handle financial forecast/period entries
+            if (isFinancialEntry(obj)) {
+              return formatFinancialEntry(obj);
+            }
+            const t = obj.type ?? obj.name ?? obj.title ?? obj.label ?? obj.category;
+            const d = obj.description ?? obj.desc ?? obj.details ?? obj.summary ?? obj.recommendation ?? obj.tip ?? obj.insight;
+            const p = obj.percentage ?? obj.allocation ?? obj.percent;
+            const a = obj.amount ?? obj.value ?? obj.total;
             let line = '- ';
-            if (t) line += String(t);
+            if (t) line += `**${String(t)}**`;
             if (p) line += ` (${p}%)`;
-            if (d) line += ': ' + String(d);
+            if (a != null) {
+              const num = Number(a);
+              if (!isNaN(num)) line += ` ${num.toLocaleString('he-IL', { style: 'currency', currency: 'ILS', maximumFractionDigits: 0 })}`;
+            }
+            if (d) line += (line.trim() === '-' ? '' : ': ') + String(d);
             return line.trim() === '-' ? '- ' + JSON.stringify(item) : line;
           }
           return '- ' + JSON.stringify(item);
@@ -1066,11 +1111,21 @@ function toReadableString(v: unknown): string {
     }
     // Object with keys - try to format nicely
     const obj = v as Record<string, unknown>;
+    // Check if it has a main text field
+    const textField = obj.text ?? obj.content ?? obj.summary ?? obj.description ?? obj.analysis;
+    if (typeof textField === 'string' && textField.trim()) {
+      return textField;
+    }
+    // Check if it's a financial entry
+    if (isFinancialEntry(obj)) {
+      return formatFinancialEntry(obj);
+    }
     const parts: string[] = [];
     for (const [key, val] of Object.entries(obj)) {
-      if (typeof val === 'string') parts.push(`${key}: ${val}`);
-      else if (typeof val === 'number') parts.push(`${key}: ${val}`);
-      else parts.push(`${key}: ${JSON.stringify(val)}`);
+      if (typeof val === 'string') parts.push(`**${key}**: ${val}`);
+      else if (typeof val === 'number') parts.push(`**${key}**: ${val}`);
+      else if (Array.isArray(val)) parts.push(`**${key}**:\n${toReadableString(val)}`);
+      else if (val != null && typeof val === 'object') parts.push(`**${key}**: ${toReadableString(val)}`);
     }
     if (parts.length > 0) return parts.join('\n');
   }

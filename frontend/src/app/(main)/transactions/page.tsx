@@ -199,6 +199,9 @@ export default function TransactionsPage() {
   const [addingTx, setAddingTx] = useState(false);
   const [suggestingCategory, setSuggestingCategory] = useState(false);
   const [suggestedCatHint, setSuggestedCatHint] = useState<string | null>(null);
+  const [showInlineAccountForm, setShowInlineAccountForm] = useState(false);
+  const [inlineAccountName, setInlineAccountName] = useState('');
+  const [inlineAccountSaving, setInlineAccountSaving] = useState(false);
 
   /* ── edit transaction modal ── */
   const [editingTxId, setEditingTxId] = useState<string | null>(null);
@@ -655,7 +658,7 @@ export default function TransactionsPage() {
 
   async function handleAddTransaction(e: React.FormEvent) {
     e.preventDefault();
-    if (!addTxForm.accountId || !addTxForm.amount || parseFloat(addTxForm.amount) <= 0) return;
+    if (!addTxForm.amount || parseFloat(addTxForm.amount) <= 0) return;
     setAddingTx(true);
     setError('');
     try {
@@ -665,7 +668,7 @@ export default function TransactionsPage() {
       const instTotal = addTxForm.installmentTotal ? parseInt(addTxForm.installmentTotal, 10) : undefined;
       const totalAmt = addTxForm.totalAmount ? parseFloat(addTxForm.totalAmount) : undefined;
       await txApi.create({
-        accountId: addTxForm.accountId,
+        accountId: addTxForm.accountId || undefined,
         categoryId: addTxForm.categoryId || undefined,
         date: addTxForm.date,
         description: addTxForm.description.trim() || '-',
@@ -742,7 +745,7 @@ export default function TransactionsPage() {
 
   async function handleSaveEditTx(e: React.FormEvent) {
     e.preventDefault();
-    if (!editingTxId || !editTxForm.accountId || !editTxForm.amount || parseFloat(editTxForm.amount) <= 0) return;
+    if (!editingTxId || !editTxForm.amount || parseFloat(editTxForm.amount) <= 0) return;
     setUpdatingTx(true);
     setError('');
     const amountNum = parseFloat(editTxForm.amount);
@@ -1650,18 +1653,64 @@ export default function TransactionsPage() {
 
               {/* Account */}
               <div>
-                <label className="block text-sm font-medium mb-1">{t('common.account')}</label>
-                <select
-                  className="input w-full"
-                  value={addTxForm.accountId}
-                  onChange={(e) => setAddTxForm((f) => ({ ...f, accountId: e.target.value }))}
-                  required
-                >
-                  <option value="">{t('common.chooseAccount')}</option>
-                  {accountsList.map((a) => (
-                    <option key={a.id} value={a.id}>{a.name}</option>
-                  ))}
-                </select>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-medium">{t('common.account')}</label>
+                  {!showInlineAccountForm && (
+                    <button
+                      type="button"
+                      onClick={() => setShowInlineAccountForm(true)}
+                      className="text-xs text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-0.5"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                      {locale === 'he' ? 'חשבון חדש' : 'New account'}
+                    </button>
+                  )}
+                </div>
+                {showInlineAccountForm ? (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      className="input flex-1"
+                      placeholder={locale === 'he' ? 'שם החשבון (למשל: לאומי)' : 'Account name (e.g. Leumi)'}
+                      value={inlineAccountName}
+                      onChange={(e) => setInlineAccountName(e.target.value)}
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      disabled={!inlineAccountName.trim() || inlineAccountSaving}
+                      onClick={async () => {
+                        if (!inlineAccountName.trim()) return;
+                        setInlineAccountSaving(true);
+                        try {
+                          const created = await accounts.create({ name: inlineAccountName.trim(), type: 'BANK', currency: 'ILS' });
+                          setAccountsList((prev) => [...prev, created]);
+                          setAddTxForm((f) => ({ ...f, accountId: created.id }));
+                          setInlineAccountName('');
+                          setShowInlineAccountForm(false);
+                        } catch { /* ignore */ }
+                        setInlineAccountSaving(false);
+                      }}
+                      className="btn-primary text-xs px-3"
+                    >
+                      {inlineAccountSaving ? '...' : (locale === 'he' ? 'צור' : 'Create')}
+                    </button>
+                    <button type="button" onClick={() => { setShowInlineAccountForm(false); setInlineAccountName(''); }} className="btn-ghost text-xs px-2">
+                      {t('common.cancel')}
+                    </button>
+                  </div>
+                ) : (
+                  <select
+                    className="input w-full"
+                    value={addTxForm.accountId}
+                    onChange={(e) => setAddTxForm((f) => ({ ...f, accountId: e.target.value }))}
+                  >
+                    <option value="">{locale === 'he' ? 'ללא חשבון (אופציונלי)' : 'No account (optional)'}</option>
+                    {accountsList.map((a) => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               {/* Category + AI suggest */}
@@ -1932,8 +1981,8 @@ export default function TransactionsPage() {
 
               <div>
                 <label className="block text-sm font-medium mb-1">{t('common.account')}</label>
-                <select className="input w-full" value={editTxForm.accountId} onChange={(e) => setEditTxForm((f) => ({ ...f, accountId: e.target.value }))} required>
-                  <option value="">{t('common.chooseAccount')}</option>
+                <select className="input w-full" value={editTxForm.accountId} onChange={(e) => setEditTxForm((f) => ({ ...f, accountId: e.target.value }))}>
+                  <option value="">{locale === 'he' ? 'ללא חשבון' : 'No account'}</option>
                   {accountsList.map((a) => (
                     <option key={a.id} value={a.id}>{a.name}</option>
                   ))}

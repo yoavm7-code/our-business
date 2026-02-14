@@ -189,7 +189,7 @@ export default function SettingsPage() {
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
   const [accountForm, setAccountForm] = useState({
-    name: '', type: 'BANK' as string, provider: '', balance: '', currency: 'ILS',
+    name: '', type: 'BANK' as string, provider: '', balance: '', balanceDate: new Date().toISOString().slice(0, 10), currency: 'ILS',
     linkedBankAccountId: '',
   });
   const [savingAccount, setSavingAccount] = useState(false);
@@ -425,7 +425,7 @@ export default function SettingsPage() {
 
   function openAddAccount() {
     setEditingAccountId(null);
-    setAccountForm({ name: '', type: 'BANK', provider: '', balance: '', currency: 'ILS', linkedBankAccountId: '' });
+    setAccountForm({ name: '', type: 'BANK', provider: '', balance: '', balanceDate: new Date().toISOString().slice(0, 10), currency: 'ILS', linkedBankAccountId: '' });
     setShowAccountModal(true);
   }
 
@@ -438,6 +438,7 @@ export default function SettingsPage() {
         type: a.type,
         provider: '',
         balance: String(Number(a.balance ?? 0)),
+        balanceDate: a.balanceDate ? new Date(a.balanceDate).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
         currency: a.currency || 'ILS',
         linkedBankAccountId: '',
       });
@@ -460,6 +461,7 @@ export default function SettingsPage() {
         };
         if (BALANCE_TYPES.includes(accountForm.type)) {
           body.balance = parseFloat(accountForm.balance) || 0;
+          body.balanceDate = accountForm.balanceDate || null;
         }
         if (accountForm.type === 'CREDIT_CARD' && accountForm.linkedBankAccountId) {
           body.linkedBankAccountId = accountForm.linkedBankAccountId;
@@ -474,6 +476,7 @@ export default function SettingsPage() {
         if (accountForm.provider) body.provider = accountForm.provider;
         if (BALANCE_TYPES.includes(accountForm.type) && accountForm.balance) {
           body.balance = parseFloat(accountForm.balance) || 0;
+          body.balanceDate = accountForm.balanceDate || undefined;
         }
         if (accountForm.type === 'CREDIT_CARD' && accountForm.linkedBankAccountId) {
           body.linkedBankAccountId = accountForm.linkedBankAccountId;
@@ -1423,17 +1426,28 @@ export default function SettingsPage() {
                     </div>
                   </div>
                   {BALANCE_TYPES.includes(accountForm.type) && (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-1.5">{t('settings.initialBalance')}</label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          className="input"
-                          value={accountForm.balance}
-                          onChange={(e) => setAccountForm((f) => ({ ...f, balance: e.target.value }))}
-                          placeholder="0"
-                        />
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-1.5">{t('settings.initialBalance')}</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            className="input"
+                            value={accountForm.balance}
+                            onChange={(e) => setAccountForm((f) => ({ ...f, balance: e.target.value }))}
+                            placeholder="0"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1.5">{locale === 'he' ? 'תאריך יתרה' : 'Balance Date'}</label>
+                          <input
+                            type="date"
+                            className="input"
+                            value={accountForm.balanceDate}
+                            onChange={(e) => setAccountForm((f) => ({ ...f, balanceDate: e.target.value }))}
+                          />
+                        </div>
                       </div>
                       <div>
                         <label className="block text-sm font-medium mb-1.5">{t('common.currency')}</label>
@@ -1448,7 +1462,7 @@ export default function SettingsPage() {
                           <option value="GBP">GBP</option>
                         </select>
                       </div>
-                    </div>
+                    </>
                   )}
                   {accountForm.type === 'CREDIT_CARD' && bankAccounts.length > 0 && (
                     <div>

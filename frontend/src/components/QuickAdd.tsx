@@ -14,7 +14,7 @@ interface QuickAddProps {
 
 export default function QuickAdd({ open, onClose }: QuickAddProps) {
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const [activeType, setActiveType] = useState<QuickAddType | null>(null);
   const [accounts, setAccounts] = useState<AccountItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -26,6 +26,9 @@ export default function QuickAdd({ open, onClose }: QuickAddProps) {
   const [txDate, setTxDate] = useState(new Date().toISOString().slice(0, 10));
   const [txAccountId, setTxAccountId] = useState('');
   const [txIsExpense, setTxIsExpense] = useState(true);
+  const [showNewAccount, setShowNewAccount] = useState(false);
+  const [newAccountName, setNewAccountName] = useState('');
+  const [newAccountSaving, setNewAccountSaving] = useState(false);
 
   // Client form state
   const [clientName, setClientName] = useState('');
@@ -84,12 +87,12 @@ export default function QuickAdd({ open, onClose }: QuickAddProps) {
 
   async function handleSubmitTransaction(e: React.FormEvent) {
     e.preventDefault();
-    if (!txDesc || !txAmount || !txAccountId) return;
+    if (!txDesc || !txAmount) return;
     setLoading(true);
     try {
       const amount = txIsExpense ? -Math.abs(parseFloat(txAmount)) : Math.abs(parseFloat(txAmount));
       await transactions.create({
-        accountId: txAccountId,
+        accountId: txAccountId || undefined,
         date: txDate,
         description: txDesc,
         amount,
@@ -265,11 +268,38 @@ export default function QuickAdd({ open, onClose }: QuickAddProps) {
                   <input type="date" value={txDate} onChange={(e) => setTxDate(e.target.value)} className="input w-full" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">{t('transactionsPage.account')}</label>
-                  <select value={txAccountId} onChange={(e) => setTxAccountId(e.target.value)} required className="input w-full">
-                    <option value="">{t('common.select')}</option>
-                    {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                  </select>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-sm font-medium">{t('transactionsPage.account')}</label>
+                    {!showNewAccount && (
+                      <button type="button" onClick={() => setShowNewAccount(true)} className="text-xs text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-0.5">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                        {locale === 'he' ? 'חדש' : 'New'}
+                      </button>
+                    )}
+                  </div>
+                  {showNewAccount ? (
+                    <div className="flex gap-2">
+                      <input type="text" className="input flex-1" placeholder={locale === 'he' ? 'שם החשבון' : 'Account name'} value={newAccountName} onChange={(e) => setNewAccountName(e.target.value)} autoFocus />
+                      <button type="button" disabled={!newAccountName.trim() || newAccountSaving} onClick={async () => {
+                        if (!newAccountName.trim()) return;
+                        setNewAccountSaving(true);
+                        try {
+                          const created = await accountsApi.create({ name: newAccountName.trim(), type: 'BANK', currency: 'ILS' });
+                          setAccounts((prev) => [...prev, created]);
+                          setTxAccountId(created.id);
+                          setNewAccountName('');
+                          setShowNewAccount(false);
+                        } catch { /* ignore */ }
+                        setNewAccountSaving(false);
+                      }} className="btn-primary text-xs px-3">{newAccountSaving ? '...' : (locale === 'he' ? 'צור' : 'Add')}</button>
+                      <button type="button" onClick={() => { setShowNewAccount(false); setNewAccountName(''); }} className="btn-ghost text-xs px-2">&times;</button>
+                    </div>
+                  ) : (
+                    <select value={txAccountId} onChange={(e) => setTxAccountId(e.target.value)} className="input w-full">
+                      <option value="">{locale === 'he' ? 'ללא (אופציונלי)' : 'None (optional)'}</option>
+                      {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                    </select>
+                  )}
                 </div>
               </div>
               <button type="submit" disabled={loading} className="btn-primary w-full">

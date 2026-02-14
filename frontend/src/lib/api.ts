@@ -311,7 +311,7 @@ export const transactions = {
     const qs = query.toString();
     return api<{ items: TransactionItem[]; total: number; page: number; limit: number }>(`/api/transactions?${qs}`);
   },
-  create: (body: { accountId: string; categoryId?: string; date: string; description: string; amount: number; currency?: string; isRecurring?: boolean; totalAmount?: number; installmentCurrent?: number; installmentTotal?: number }) =>
+  create: (body: { accountId?: string; categoryId?: string; date: string; description: string; amount: number; currency?: string; isRecurring?: boolean; totalAmount?: number; installmentCurrent?: number; installmentTotal?: number }) =>
     api<TransactionItem>('/api/transactions', { method: 'POST', body: JSON.stringify(body) }),
   update: (id: string, body: { accountId?: string; categoryId?: string | null; date?: string; description?: string; amount?: number; isRecurring?: boolean; totalAmount?: number | null; installmentCurrent?: number | null; installmentTotal?: number | null }) =>
     api<TransactionItem>(`/api/transactions/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
