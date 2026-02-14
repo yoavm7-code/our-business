@@ -8,7 +8,7 @@ interface GroupedTransaction {
   amount: number;
   description: string;
   categoryId: string | null;
-  accountId: string;
+  accountId: string | null;
 }
 
 @Injectable()
@@ -77,7 +77,7 @@ export class RecurringService {
       amount: number;
       type: string;
       categoryId: string | null;
-      accountId: string;
+      accountId: string | null;
       lastSeenDate: Date;
       occurrences: number;
     }> = [];
