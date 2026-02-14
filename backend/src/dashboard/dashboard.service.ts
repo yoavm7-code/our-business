@@ -231,7 +231,7 @@ export class DashboardService {
       accountsRaw.filter((a) => a.type === 'CREDIT_CARD').map((a) => a.id),
     );
     const creditCardCharges = transactions
-      .filter((t) => creditCardAccountIds.has(t.accountId) && Number(t.amount) < 0)
+      .filter((t) => t.accountId && creditCardAccountIds.has(t.accountId) && Number(t.amount) < 0)
       .reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0);
 
     return {
