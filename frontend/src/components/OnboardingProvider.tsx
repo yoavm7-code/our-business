@@ -55,22 +55,14 @@ export default function OnboardingProvider({ children }: { children: React.React
 
     users
       .me()
-      .then((user) => {
+      .then(() => {
         if (cancelled) return;
 
-        // Existing user who already completed onboarding
-        if (user.onboardingCompleted !== false) {
-          setPhase('ready');
-          return;
-        }
-
-        // New user — figure out which phase they're in
+        // Determine phase from localStorage (works for all users)
         const onboardingDismissed = localStorage.getItem(KEY_ONBOARDING_DISMISSED) === 'true';
         const tourDone = localStorage.getItem(KEY_TOUR_DONE) === 'true';
 
-        if (tourDone) {
-          // Both done but API wasn't marked yet
-          users.completeOnboarding().catch(() => {});
+        if (tourDone && onboardingDismissed) {
           setPhase('ready');
         } else if (onboardingDismissed) {
           // User dismissed the progress card — show tour

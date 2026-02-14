@@ -18,20 +18,28 @@ interface Task {
  * Embedded dashboard card showing onboarding progress.
  * Replaces the full-screen wizard with a compact, non-intrusive progress bar.
  */
+const ONBOARDING_DISMISSED_KEY = 'onboardingProgress_dismissed';
+
 export default function OnboardingProgress() {
   const { locale } = useTranslation();
-  const { phase, dismissOnboarding } = useOnboarding();
+  const { dismissOnboarding } = useOnboarding();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissed, setDismissed] = useState(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem(ONBOARDING_DISMISSED_KEY) === 'true';
+    return false;
+  });
   const isHe = locale === 'he';
 
   useEffect(() => {
-    if (phase !== 'onboarding') return;
+    if (dismissed) return;
     let cancelled = false;
 
     async function checkProgress() {
       try {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+        if (!token) { if (!cancelled) setLoading(false); return; }
+
         const [user, accts, cls] = await Promise.all([
           users.me(),
           accounts.list().catch(() => []),
@@ -90,9 +98,9 @@ export default function OnboardingProgress() {
 
     checkProgress();
     return () => { cancelled = true; };
-  }, [phase]);
+  }, [dismissed]);
 
-  if (phase !== 'onboarding' || dismissed || loading) return null;
+  if (dismissed || loading) return null;
 
   const completed = tasks.filter((t) => t.done).length;
   const total = tasks.length;
@@ -130,7 +138,7 @@ export default function OnboardingProgress() {
           {/* Dismiss button */}
           <button
             type="button"
-            onClick={() => { setDismissed(true); dismissOnboarding(); }}
+            onClick={() => { setDismissed(true); localStorage.setItem(ONBOARDING_DISMISSED_KEY, 'true'); dismissOnboarding(); }}
             className="p-1 rounded-lg text-slate-300 hover:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             title={isHe ? 'סגור' : 'Dismiss'}
           >

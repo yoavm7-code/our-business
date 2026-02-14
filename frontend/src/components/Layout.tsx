@@ -504,8 +504,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
           {/* Right side actions */}
           <div className="flex items-center gap-2">
-            {/* Smart AI Tips — only shown after onboarding is fully done */}
-            {onboardingPhase === 'ready' && <SmartTip />}
+            {/* Smart AI Tips */}
+            <SmartTip />
             {/* Voice button with minimize option */}
             {voiceMinimized ? (
               <button
@@ -538,7 +538,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <button
                   type="button"
                   onClick={() => { setVoiceMinimized(true); localStorage.setItem('voiceIcon_minimized', 'true'); }}
-                  className="absolute -top-1 -end-1 w-3.5 h-3.5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 items-center justify-center hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors hidden group-hover:flex"
+                  className="absolute -top-1 -end-1 w-3.5 h-3.5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 flex items-center justify-center hover:bg-red-200 dark:hover:bg-red-800 hover:text-red-600 dark:hover:text-red-300 transition-colors opacity-60 hover:opacity-100"
                   title={locale === 'he' ? '\u05DE\u05D6\u05E2\u05E8' : 'Minimize'}
                 >
                   <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="5" y1="12" x2="19" y2="12" /></svg>
