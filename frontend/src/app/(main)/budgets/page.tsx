@@ -20,6 +20,19 @@ import {
 
 type CategoryOption = { id: string; name: string; slug: string; isIncome: boolean };
 
+const ICON_NAME_TO_EMOJI: Record<string, string> = {
+  briefcase: '💼', users: '👥', repeat: '🔄', star: '⭐', 'plus-circle': '➕',
+  paperclip: '📎', monitor: '🖥️', cpu: '🔧', 'map-pin': '📍', coffee: '☕',
+  shield: '🛡️', megaphone: '📢', wifi: '📡', home: '🏠', truck: '🚚',
+  'credit-card': '💳', 'file-text': '📄', 'book-open': '📚', package: '📦',
+};
+
+function resolveIcon(icon: string | null | undefined, fallback: string): string {
+  if (!icon) return fallback;
+  if (/[^\x20-\x7E]/.test(icon)) return icon;
+  return ICON_NAME_TO_EMOJI[icon] || fallback;
+}
+
 type BudgetSummary = {
   totalBudgeted: number;
   totalSpent: number;
@@ -338,7 +351,7 @@ export default function BudgetsPage() {
                           color: b.category.color || undefined,
                         }}
                       >
-                        {b.category.icon || b.category.name.charAt(0)}
+                        {resolveIcon(b.category.icon, b.category.name.charAt(0))}
                       </span>
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-base truncate">

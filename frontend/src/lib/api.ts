@@ -1669,3 +1669,39 @@ export const customFields = {
   setDefault: (id: string) =>
     api<unknown>(`/api/custom-fields/templates/${id}/set-default`, { method: 'POST' }),
 };
+
+// ═══════════════════════════════════════════════
+// NOTIFICATIONS (Alert Rules & Report Schedules)
+// ═══════════════════════════════════════════════
+
+export type AlertRuleItem = {
+  id: string; name: string; metric: string; operator: string; threshold: number;
+  enabled: boolean; emailNotify: boolean; cooldownHours: number;
+  lastTriggeredAt: string | null; lastValue: number | null;
+  createdAt: string; updatedAt: string;
+};
+
+export type ReportScheduleItem = {
+  id: string; reportType: string; frequency: string;
+  dayOfWeek: number | null; dayOfMonth: number | null; hour: number;
+  enabled: boolean; lastSentAt: string | null;
+  createdAt: string; updatedAt: string;
+};
+
+export const notifications = {
+  // Alert Rules
+  getAlertRules: () => api<AlertRuleItem[]>('/api/notifications/alert-rules'),
+  createAlertRule: (body: { name: string; metric: string; operator: string; threshold: number; enabled?: boolean; emailNotify?: boolean; cooldownHours?: number }) =>
+    api<AlertRuleItem>('/api/notifications/alert-rules', { method: 'POST', body: JSON.stringify(body) }),
+  updateAlertRule: (id: string, body: Partial<{ name: string; metric: string; operator: string; threshold: number; enabled: boolean; emailNotify: boolean; cooldownHours: number }>) =>
+    api<AlertRuleItem>(`/api/notifications/alert-rules/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  deleteAlertRule: (id: string) => api<unknown>(`/api/notifications/alert-rules/${id}`, { method: 'DELETE' }),
+
+  // Report Schedules
+  getReportSchedules: () => api<ReportScheduleItem[]>('/api/notifications/report-schedules'),
+  createReportSchedule: (body: { reportType: string; frequency: string; dayOfWeek?: number; dayOfMonth?: number; hour?: number; enabled?: boolean }) =>
+    api<ReportScheduleItem>('/api/notifications/report-schedules', { method: 'POST', body: JSON.stringify(body) }),
+  updateReportSchedule: (id: string, body: Partial<{ reportType: string; frequency: string; dayOfWeek: number; dayOfMonth: number; hour: number; enabled: boolean }>) =>
+    api<ReportScheduleItem>(`/api/notifications/report-schedules/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  deleteReportSchedule: (id: string) => api<unknown>(`/api/notifications/report-schedules/${id}`, { method: 'DELETE' }),
+};

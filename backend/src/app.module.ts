@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { ScheduleModule } from '@nestjs/schedule';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
@@ -31,6 +32,7 @@ import { GreenInvoiceModule } from './green-invoice/green-invoice.module';
 import { CustomFieldsModule } from './custom-fields/custom-fields.module';
 import { ExpensesModule } from './expenses/expenses.module';
 import { ZReportModule } from './z-report/z-report.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -39,6 +41,9 @@ import { ZReportModule } from './z-report/z-report.module';
 
     // Rate limiting: 60 requests per minute by default
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
+
+    // Task scheduling (cron jobs for alerts & reports)
+    ScheduleModule.forRoot(),
 
     // Core infrastructure
     PrismaModule,
@@ -86,6 +91,7 @@ import { ZReportModule } from './z-report/z-report.module';
 
     // Notifications & admin
     AlertsModule,
+    NotificationsModule,
     AdminModule,
   ],
   providers: [],

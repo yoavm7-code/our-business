@@ -28,7 +28,8 @@
     "ecommerce": "מסחר אלקטרוני",
     "realestate": "נדל\"ן",
     "translation": "תרגום",
-    "other": "אחר"
+    "other": "אחר",
+    "otherPlaceholder": "פרט את תחום העסק שלך"
   },
   "common": {
     "appName": "FreelancerOS",
@@ -427,7 +428,19 @@
     "metric_fixedIncomeSum": "סה\"כ הכנסות קבועות",
     "size_sm": "קטן",
     "size_md": "בינוני",
-    "size_lg": "גדול"
+    "size_lg": "גדול",
+    "widgetStat": "מדד סטטיסטי",
+    "widgetBarChart": "גרף עמודות",
+    "widgetPieChart": "גרף עוגה",
+    "widgetClients": "לקוחות",
+    "widgetInvoices": "חשבוניות",
+    "widgetProjects": "פרויקטים",
+    "widgetFixedList": "רשימת קבועים",
+    "widgetRecentTx": "תנועות אחרונות",
+    "widgetForexAccounts": "חשבונות מט\"ח",
+    "widgetGoals": "יעדים",
+    "widgetBudgets": "תקציבים",
+    "widgetRecurring": "תשלומים חוזרים"
   },
   "clients": {
     "title": "לקוחות",
@@ -1815,6 +1828,7 @@
     "recentUploads": "העלאות אחרונות",
     "retry": "נסה שוב",
     "selectAll": "בחר הכל",
+    "maxFiles": "עד {{count}} קבצים",
     "selectFileAndAccount": "בחר קובץ וחשבון",
     "selected": "נבחרו",
     "someFilesFailed": "חלק מהקבצים נכשלו",

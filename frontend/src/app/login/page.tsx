@@ -470,14 +470,22 @@ export default function LoginPage() {
                 <label className="block text-sm font-medium mb-1">{t('businessField.title')}</label>
                 <select
                   className="input w-full"
-                  value={businessField}
-                  onChange={(e) => setBusinessField(e.target.value)}
+                  value={businessField.startsWith('other:') ? 'other' : businessField}
+                  onChange={(e) => setBusinessField(e.target.value === 'other' ? 'other:' : e.target.value)}
                 >
                   <option value="">{t('businessField.placeholder')}</option>
                   {['softwareDev','design','marketing','consulting','writing','photography','video','music','teaching','legal','accounting','architecture','engineering','health','fitness','food','fashion','ecommerce','realestate','translation','other'].map((key) => (
                     <option key={key} value={key}>{t(`businessField.${key}`)}</option>
                   ))}
                 </select>
+                {(businessField === 'other' || businessField.startsWith('other:')) && (
+                  <input
+                    className="input w-full mt-2"
+                    value={businessField.startsWith('other:') ? businessField.slice(6) : ''}
+                    onChange={(e) => setBusinessField(`other:${e.target.value}`)}
+                    placeholder={t('businessField.otherPlaceholder')}
+                  />
+                )}
                 <p className="text-xs text-slate-500 mt-1">{t('businessField.description')}</p>
               </div>
 

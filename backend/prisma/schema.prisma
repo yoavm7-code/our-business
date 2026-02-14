@@ -59,6 +59,8 @@ model Business {
   customFieldTemplates CustomFieldTemplate[]
   expenses           Expense[]
   zReports           ZReport[]
+  alertRules         AlertRule[]
+  reportSchedules    ReportSchedule[]
 
   @@map("Household")
 }
@@ -813,4 +815,54 @@ model ZReport {
 
   @@unique([businessId, reportDate])
   @@index([businessId])
+}
+
+// --------------------------------------------
+// Custom Alert Rules (user-defined notifications)
+// --------------------------------------------
+model AlertRule {
+  id          String   @id @default(uuid())
+  businessId  String   @map("household_id")
+  userId      String   @map("user_id")
+  name        String
+  metric      String   // budget_usage, cash_flow, monthly_income, monthly_expenses, account_balance, unpaid_invoices, overdue_invoices
+  operator    String   // gt, lt, gte, lte
+  threshold   Decimal  @db.Decimal(14, 2)
+  enabled     Boolean  @default(true)
+  emailNotify Boolean  @default(true) @map("email_notify")
+  cooldownHours Int    @default(24) @map("cooldown_hours") // don't re-alert within this window
+  lastTriggeredAt DateTime? @map("last_triggered_at")
+  lastValue   Decimal? @map("last_value") @db.Decimal(14, 2)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([userId])
+  @@map("alert_rules")
+}
+
+// --------------------------------------------
+// Report Schedules (automated email reports)
+// --------------------------------------------
+model ReportSchedule {
+  id          String   @id @default(uuid())
+  businessId  String   @map("household_id")
+  userId      String   @map("user_id")
+  reportType  String   @map("report_type") // pnl, cashflow, clients, categories, tax
+  frequency   String   // weekly, monthly
+  dayOfWeek   Int?     @map("day_of_week")  // 0=Sun ... 6=Sat (for weekly)
+  dayOfMonth  Int?     @map("day_of_month") // 1-28 (for monthly)
+  hour        Int      @default(8) // 0-23 send hour
+  enabled     Boolean  @default(true)
+  lastSentAt  DateTime? @map("last_sent_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([userId])
+  @@map("report_schedules")
 }

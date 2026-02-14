@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { users, accounts, categories, twoFactor, greenInvoice, type NotificationSettings, type UploadPreferences, type AccountItem, type CategoryItem, type GreenInvoiceStatus } from '@/lib/api';
+import { users, accounts, categories, twoFactor, greenInvoice, notifications, type NotificationSettings, type UploadPreferences, type AccountItem, type CategoryItem, type GreenInvoiceStatus, type AlertRuleItem, type ReportScheduleItem } from '@/lib/api';
 import { COUNTRY_CODES } from '@/lib/countries';
 import { useTranslation } from '@/i18n/context';
 import AvatarCropper from '@/components/AvatarCropper';
@@ -30,6 +30,22 @@ const CATEGORY_ICON_OPTIONS = [
   '✈️', '👔', '🎁', '⚽', '📚', '💻', '🖨️', '📊', '🔧', '🧹',
   '💳', '📦', '🏦', '🧾', '📝', '🎯', '🔒', '🌐', '📈', '💼',
 ];
+
+// Map backend icon name strings to emoji for display
+const ICON_NAME_TO_EMOJI: Record<string, string> = {
+  briefcase: '💼', users: '👥', repeat: '🔄', star: '⭐', 'plus-circle': '➕',
+  paperclip: '📎', monitor: '🖥️', cpu: '🔧', 'map-pin': '📍', coffee: '☕',
+  shield: '🛡️', megaphone: '📢', wifi: '📡', home: '🏠', truck: '🚚',
+  'credit-card': '💳', 'file-text': '📄', 'book-open': '📚', package: '📦',
+};
+
+function resolveIcon(icon: string | null | undefined, fallback: string): string {
+  if (!icon) return fallback;
+  // If it's already an emoji (not pure ASCII), return as-is
+  if (/[^\x20-\x7E]/.test(icon)) return icon;
+  // Otherwise map from icon name to emoji
+  return ICON_NAME_TO_EMOJI[icon] || fallback;
+}
 
 const CATEGORY_COLOR_OPTIONS = [
   '#6366f1', '#3b82f6', '#06b6d4', '#10b981', '#22c55e',
@@ -218,6 +234,14 @@ export default function SettingsPage() {
   const [notifLoading, setNotifLoading] = useState(true);
   const notifSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  /* ── Custom alert rules & report schedules state ── */
+  const [alertRules, setAlertRules] = useState<AlertRuleItem[]>([]);
+  const [reportSchedules, setReportSchedules] = useState<ReportScheduleItem[]>([]);
+  const [showAlertForm, setShowAlertForm] = useState(false);
+  const [showScheduleForm, setShowScheduleForm] = useState(false);
+  const [alertForm, setAlertForm] = useState({ name: '', metric: 'monthly_expenses', operator: 'gt', threshold: '' });
+  const [scheduleForm, setScheduleForm] = useState({ reportType: 'pnl', frequency: 'weekly', dayOfWeek: 0, dayOfMonth: 1, hour: 8 });
+
   /* ── Upload preferences state ── */
   const [uploadPrefs, setUploadPrefs] = useState<UploadPreferences>({
     confirmUploads: true,
@@ -278,6 +302,9 @@ export default function SettingsPage() {
       .then((ns) => setNotifSettings((prev) => ({ ...prev, ...ns })))
       .catch(() => {})
       .finally(() => setNotifLoading(false));
+
+    notifications.getAlertRules().then(setAlertRules).catch(() => {});
+    notifications.getReportSchedules().then(setReportSchedules).catch(() => {});
 
     users.getUploadPreferences()
       .then((up) => setUploadPrefs(up))
@@ -1044,14 +1071,22 @@ export default function SettingsPage() {
                   <label className="block text-sm font-medium mb-1.5">{t('businessField.title')}</label>
                   <select
                     className="input w-full"
-                    value={profileForm.businessField}
-                    onChange={(e) => setProfileForm((f) => ({ ...f, businessField: e.target.value }))}
+                    value={profileForm.businessField.startsWith('other:') ? 'other' : profileForm.businessField}
+                    onChange={(e) => setProfileForm((f) => ({ ...f, businessField: e.target.value === 'other' ? 'other:' : e.target.value }))}
                   >
                     <option value="">{t('businessField.placeholder')}</option>
                     {['softwareDev','design','marketing','consulting','writing','photography','video','music','teaching','legal','accounting','architecture','engineering','health','fitness','food','fashion','ecommerce','realestate','translation','other'].map((key) => (
                       <option key={key} value={key}>{t(`businessField.${key}`)}</option>
                     ))}
                   </select>
+                  {(profileForm.businessField === 'other' || profileForm.businessField.startsWith('other:')) && (
+                    <input
+                      className="input w-full mt-2"
+                      value={profileForm.businessField.startsWith('other:') ? profileForm.businessField.slice(6) : ''}
+                      onChange={(e) => setProfileForm((f) => ({ ...f, businessField: `other:${e.target.value}` }))}
+                      placeholder={t('businessField.otherPlaceholder')}
+                    />
+                  )}
                   <p className="text-xs text-slate-500 mt-1">{t('businessField.description')}</p>
                 </div>
               </div>
@@ -1489,7 +1524,7 @@ export default function SettingsPage() {
                       className="w-8 h-8 rounded-lg flex items-center justify-center text-sm"
                       style={{ backgroundColor: (c.color || '#6366f1') + '20', color: c.color || '#6366f1' }}
                     >
-                      {c.icon || '💰'}
+                      {resolveIcon(c.icon, '💰')}
                     </span>
                     <span className="text-sm font-medium">{getCatDisplayName(c, t)}</span>
                   </div>
@@ -1554,7 +1589,7 @@ export default function SettingsPage() {
                       className="w-8 h-8 rounded-lg flex items-center justify-center text-sm"
                       style={{ backgroundColor: (c.color || '#ef4444') + '20', color: c.color || '#ef4444' }}
                     >
-                      {c.icon || '📊'}
+                      {resolveIcon(c.icon, '📊')}
                     </span>
                     <div>
                       <span className="text-sm font-medium">{getCatDisplayName(c, t)}</span>
@@ -2131,6 +2166,233 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+          </div>
+          {/* ── Custom Alert Rules ── */}
+          <div className="card mt-6">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="font-semibold">{locale === 'he' ? 'התראות מותאמות אישית' : 'Custom Alert Rules'}</h2>
+              <button type="button" onClick={() => setShowAlertForm(!showAlertForm)} className="btn-ghost text-sm">
+                <span className="flex items-center gap-1.5">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                  {t('common.add')}
+                </span>
+              </button>
+            </div>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+              {locale === 'he' ? 'צור כללים מותאמים אישית לקבלת התראות למייל' : 'Create custom rules to receive email alerts'}
+            </p>
+
+            {showAlertForm && (
+              <div className="border border-[var(--border)] rounded-xl p-4 mb-4 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium mb-1">{locale === 'he' ? 'שם ההתראה' : 'Rule Name'}</label>
+                    <input className="input w-full text-sm" value={alertForm.name} onChange={(e) => setAlertForm((f) => ({ ...f, name: e.target.value }))} placeholder={locale === 'he' ? 'למשל: חריגה מהוצאות' : 'e.g. Expense Alert'} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1">{locale === 'he' ? 'מדד' : 'Metric'}</label>
+                    <select className="input w-full text-sm" value={alertForm.metric} onChange={(e) => setAlertForm((f) => ({ ...f, metric: e.target.value }))}>
+                      <option value="monthly_expenses">{locale === 'he' ? 'הוצאות חודשיות' : 'Monthly Expenses'}</option>
+                      <option value="monthly_income">{locale === 'he' ? 'הכנסות חודשיות' : 'Monthly Income'}</option>
+                      <option value="cash_flow">{locale === 'he' ? 'תזרים מזומנים' : 'Cash Flow'}</option>
+                      <option value="account_balance">{locale === 'he' ? 'יתרת חשבון' : 'Account Balance'}</option>
+                      <option value="unpaid_invoices">{locale === 'he' ? 'חשבוניות לא שולמו' : 'Unpaid Invoices'}</option>
+                      <option value="overdue_invoices">{locale === 'he' ? 'חשבוניות באיחור' : 'Overdue Invoices'}</option>
+                      <option value="budget_usage">{locale === 'he' ? 'ניצול תקציב (%)' : 'Budget Usage (%)'}</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1">{locale === 'he' ? 'תנאי' : 'Condition'}</label>
+                    <select className="input w-full text-sm" value={alertForm.operator} onChange={(e) => setAlertForm((f) => ({ ...f, operator: e.target.value }))}>
+                      <option value="gt">{locale === 'he' ? 'גדול מ-' : 'Greater than'}</option>
+                      <option value="lt">{locale === 'he' ? 'קטן מ-' : 'Less than'}</option>
+                      <option value="gte">{locale === 'he' ? 'גדול או שווה ל-' : 'Greater or equal'}</option>
+                      <option value="lte">{locale === 'he' ? 'קטן או שווה ל-' : 'Less or equal'}</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1">{locale === 'he' ? 'סף' : 'Threshold'}</label>
+                    <input type="number" className="input w-full text-sm" value={alertForm.threshold} onChange={(e) => setAlertForm((f) => ({ ...f, threshold: e.target.value }))} placeholder="1000" />
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    disabled={!alertForm.name.trim() || !alertForm.threshold}
+                    onClick={async () => {
+                      const rule = await notifications.createAlertRule({ name: alertForm.name.trim(), metric: alertForm.metric, operator: alertForm.operator, threshold: Number(alertForm.threshold) });
+                      setAlertRules((prev) => [rule, ...prev]);
+                      setAlertForm({ name: '', metric: 'monthly_expenses', operator: 'gt', threshold: '' });
+                      setShowAlertForm(false);
+                    }}
+                    className="btn-primary text-sm"
+                  >{t('common.add')}</button>
+                  <button type="button" onClick={() => setShowAlertForm(false)} className="btn-ghost text-sm">{t('common.cancel')}</button>
+                </div>
+              </div>
+            )}
+
+            {alertRules.length === 0 && !showAlertForm ? (
+              <p className="text-sm text-slate-400 py-4 text-center">{locale === 'he' ? 'אין התראות מותאמות. לחץ על + כדי ליצור התראה חדשה.' : 'No custom alerts. Click + to create one.'}</p>
+            ) : (
+              <div className="space-y-2">
+                {alertRules.map((rule) => (
+                  <div key={rule.id} className="flex items-center justify-between p-3 rounded-xl border border-[var(--border)] bg-slate-50/50 dark:bg-slate-800/30">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">{rule.name}</p>
+                      <p className="text-xs text-slate-500">{rule.metric.replace(/_/g, ' ')} {{ gt: '>', lt: '<', gte: '>=', lte: '<=' }[rule.operator]} {Number(rule.threshold).toLocaleString()}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await notifications.updateAlertRule(rule.id, { enabled: !rule.enabled });
+                          setAlertRules((prev) => prev.map((r) => r.id === rule.id ? { ...r, enabled: !r.enabled } : r));
+                        }}
+                        className={`px-2 py-1 text-xs rounded-lg font-medium transition-colors ${rule.enabled ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-slate-100 text-slate-400 dark:bg-slate-800'}`}
+                      >{rule.enabled ? (locale === 'he' ? 'פעיל' : 'Active') : (locale === 'he' ? 'מושבת' : 'Off')}</button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await notifications.deleteAlertRule(rule.id);
+                          setAlertRules((prev) => prev.filter((r) => r.id !== rule.id));
+                        }}
+                        className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-400"
+                      >
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ── Scheduled Reports ── */}
+          <div className="card mt-6">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="font-semibold">{locale === 'he' ? 'דו"חות מתוזמנים' : 'Scheduled Reports'}</h2>
+              <button type="button" onClick={() => setShowScheduleForm(!showScheduleForm)} className="btn-ghost text-sm">
+                <span className="flex items-center gap-1.5">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                  {t('common.add')}
+                </span>
+              </button>
+            </div>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+              {locale === 'he' ? 'תזמן שליחת דו"חות למייל שלך באופן קבוע' : 'Schedule automatic report emails to your inbox'}
+            </p>
+
+            {showScheduleForm && (
+              <div className="border border-[var(--border)] rounded-xl p-4 mb-4 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium mb-1">{locale === 'he' ? 'סוג דו"ח' : 'Report Type'}</label>
+                    <select className="input w-full text-sm" value={scheduleForm.reportType} onChange={(e) => setScheduleForm((f) => ({ ...f, reportType: e.target.value }))}>
+                      <option value="pnl">{locale === 'he' ? 'רווח והפסד' : 'Profit & Loss'}</option>
+                      <option value="cashflow">{locale === 'he' ? 'תזרים מזומנים' : 'Cash Flow'}</option>
+                      <option value="clients">{locale === 'he' ? 'סיכום לקוחות' : 'Clients Summary'}</option>
+                      <option value="categories">{locale === 'he' ? 'פירוט קטגוריות' : 'Category Breakdown'}</option>
+                      <option value="tax">{locale === 'he' ? 'סיכום מס' : 'Tax Summary'}</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1">{locale === 'he' ? 'תדירות' : 'Frequency'}</label>
+                    <select className="input w-full text-sm" value={scheduleForm.frequency} onChange={(e) => setScheduleForm((f) => ({ ...f, frequency: e.target.value }))}>
+                      <option value="weekly">{locale === 'he' ? 'שבועי' : 'Weekly'}</option>
+                      <option value="monthly">{locale === 'he' ? 'חודשי' : 'Monthly'}</option>
+                    </select>
+                  </div>
+                  {scheduleForm.frequency === 'weekly' && (
+                    <div>
+                      <label className="block text-xs font-medium mb-1">{locale === 'he' ? 'יום בשבוע' : 'Day of Week'}</label>
+                      <select className="input w-full text-sm" value={scheduleForm.dayOfWeek} onChange={(e) => setScheduleForm((f) => ({ ...f, dayOfWeek: Number(e.target.value) }))}>
+                        {[locale === 'he' ? 'ראשון' : 'Sunday', locale === 'he' ? 'שני' : 'Monday', locale === 'he' ? 'שלישי' : 'Tuesday', locale === 'he' ? 'רביעי' : 'Wednesday', locale === 'he' ? 'חמישי' : 'Thursday', locale === 'he' ? 'שישי' : 'Friday', locale === 'he' ? 'שבת' : 'Saturday'].map((d, i) => (
+                          <option key={i} value={i}>{d}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  {scheduleForm.frequency === 'monthly' && (
+                    <div>
+                      <label className="block text-xs font-medium mb-1">{locale === 'he' ? 'יום בחודש' : 'Day of Month'}</label>
+                      <select className="input w-full text-sm" value={scheduleForm.dayOfMonth} onChange={(e) => setScheduleForm((f) => ({ ...f, dayOfMonth: Number(e.target.value) }))}>
+                        {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+                          <option key={d} value={d}>{d}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-xs font-medium mb-1">{locale === 'he' ? 'שעה' : 'Hour'}</label>
+                    <select className="input w-full text-sm" value={scheduleForm.hour} onChange={(e) => setScheduleForm((f) => ({ ...f, hour: Number(e.target.value) }))}>
+                      {Array.from({ length: 24 }, (_, i) => i).map((h) => (
+                        <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const schedule = await notifications.createReportSchedule({
+                        reportType: scheduleForm.reportType,
+                        frequency: scheduleForm.frequency,
+                        dayOfWeek: scheduleForm.frequency === 'weekly' ? scheduleForm.dayOfWeek : undefined,
+                        dayOfMonth: scheduleForm.frequency === 'monthly' ? scheduleForm.dayOfMonth : undefined,
+                        hour: scheduleForm.hour,
+                      });
+                      setReportSchedules((prev) => [schedule, ...prev]);
+                      setShowScheduleForm(false);
+                    }}
+                    className="btn-primary text-sm"
+                  >{t('common.add')}</button>
+                  <button type="button" onClick={() => setShowScheduleForm(false)} className="btn-ghost text-sm">{t('common.cancel')}</button>
+                </div>
+              </div>
+            )}
+
+            {reportSchedules.length === 0 && !showScheduleForm ? (
+              <p className="text-sm text-slate-400 py-4 text-center">{locale === 'he' ? 'אין דו"חות מתוזמנים. לחץ על + כדי לתזמן דו"ח.' : 'No scheduled reports. Click + to add one.'}</p>
+            ) : (
+              <div className="space-y-2">
+                {reportSchedules.map((schedule) => {
+                  const reportNames: Record<string, string> = locale === 'he'
+                    ? { pnl: 'רווח והפסד', cashflow: 'תזרים מזומנים', clients: 'סיכום לקוחות', categories: 'פירוט קטגוריות', tax: 'סיכום מס' }
+                    : { pnl: 'Profit & Loss', cashflow: 'Cash Flow', clients: 'Clients', categories: 'Categories', tax: 'Tax' };
+                  const freqLabel = schedule.frequency === 'weekly' ? (locale === 'he' ? 'שבועי' : 'Weekly') : (locale === 'he' ? 'חודשי' : 'Monthly');
+                  return (
+                    <div key={schedule.id} className="flex items-center justify-between p-3 rounded-xl border border-[var(--border)] bg-slate-50/50 dark:bg-slate-800/30">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium">{reportNames[schedule.reportType] || schedule.reportType}</p>
+                        <p className="text-xs text-slate-500">{freqLabel} | {String(schedule.hour).padStart(2, '0')}:00</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            await notifications.updateReportSchedule(schedule.id, { enabled: !schedule.enabled });
+                            setReportSchedules((prev) => prev.map((s) => s.id === schedule.id ? { ...s, enabled: !s.enabled } : s));
+                          }}
+                          className={`px-2 py-1 text-xs rounded-lg font-medium transition-colors ${schedule.enabled ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-slate-100 text-slate-400 dark:bg-slate-800'}`}
+                        >{schedule.enabled ? (locale === 'he' ? 'פעיל' : 'Active') : (locale === 'he' ? 'מושבת' : 'Off')}</button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            await notifications.deleteReportSchedule(schedule.id);
+                            setReportSchedules((prev) => prev.filter((s) => s.id !== schedule.id));
+                          }}
+                          className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-400"
+                        >
+                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
