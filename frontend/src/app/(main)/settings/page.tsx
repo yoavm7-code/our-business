@@ -162,7 +162,10 @@ export default function SettingsPage() {
     businessPhone: '', businessEmail: '', defaultCurrency: 'ILS',
     vatRate: '17', invoicePrefix: 'INV-',
   });
-  const [businessLogo, setBusinessLogo] = useState<string | null>(null);
+  const [businessLogo, setBusinessLogo] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem('business_logo');
+    return null;
+  });
   const [savingBusiness, setSavingBusiness] = useState(false);
   const businessLogoRef = useRef<HTMLInputElement>(null);
 
@@ -366,7 +369,9 @@ export default function SettingsPage() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
-      setBusinessLogo(ev.target?.result as string);
+      const dataUrl = ev.target?.result as string;
+      setBusinessLogo(dataUrl);
+      if (dataUrl) localStorage.setItem('business_logo', dataUrl);
     };
     reader.readAsDataURL(file);
     if (businessLogoRef.current) businessLogoRef.current.value = '';
@@ -768,19 +773,20 @@ export default function SettingsPage() {
         setGiPassword('');
         setGiTestResult({
           success: true,
-          message: locale === 'he' ? '\u05D4\u05D7\u05D9\u05D1\u05D5\u05E8 \u05D4\u05E6\u05DC\u05D9\u05D7! \u05D4\u05D7\u05E9\u05D1\u05D5\u05DF \u05DE\u05D7\u05D5\u05D1\u05E8 \u05DC\u05DE\u05D5\u05E8\u05E0\u05D9\u05E0\u05D2.' : 'Connected successfully! Your account is now linked to Morning.',
+          message: locale === 'he' ? 'החיבור הצליח! החשבון מחובר למורנינג.' : 'Connected successfully! Your account is now linked to Morning.',
         });
       } else {
-        setGiTestResult({
-          success: false,
-          message: locale === 'he' ? '\u05D4\u05D7\u05D9\u05D1\u05D5\u05E8 \u05E0\u05DB\u05E9\u05DC. \u05D1\u05D3\u05D5\u05E7 \u05D0\u05EA \u05E4\u05E8\u05D8\u05D9 \u05D4\u05D4\u05EA\u05D7\u05D1\u05E8\u05D5\u05EA.' : 'Connection failed. Please check your credentials.',
-        });
+        // Show the actual error message from the backend
+        const msg = (result as any).message || (locale === 'he' ? 'החיבור נכשל. בדוק את פרטי ההתחברות.' : 'Connection failed. Please check your credentials.');
+        setGiTestResult({ success: false, message: msg });
       }
     } catch (err: any) {
-      const errorMsg = err?.message || err?.body?.message || '';
+      // err.message contains the backend's detailed error (from BadRequestException)
+      const errorMsg = err?.message || '';
+      console.error('[Morning connect error]', errorMsg, err);
       setGiTestResult({
         success: false,
-        message: errorMsg || (locale === 'he' ? '\u05D4\u05D7\u05D9\u05D1\u05D5\u05E8 \u05E0\u05DB\u05E9\u05DC. \u05D1\u05D3\u05D5\u05E7 \u05D0\u05EA \u05E4\u05E8\u05D8\u05D9 \u05D4\u05D4\u05EA\u05D7\u05D1\u05E8\u05D5\u05EA.' : 'Connection failed. Check your credentials.'),
+        message: errorMsg || (locale === 'he' ? 'החיבור נכשל. בדוק את פרטי ההתחברות.' : 'Connection failed. Check your credentials.'),
       });
     } finally {
       setGiConnecting(false);
@@ -1180,7 +1186,7 @@ export default function SettingsPage() {
                       <img src={businessLogo} alt="Logo" className="w-16 h-16 rounded-lg object-contain border border-[var(--border)] bg-white p-1" />
                       <button
                         type="button"
-                        onClick={() => setBusinessLogo(null)}
+                        onClick={() => { setBusinessLogo(null); localStorage.removeItem('business_logo'); }}
                         className="absolute -top-1.5 -end-1.5 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12" /></svg>
@@ -2214,83 +2220,71 @@ export default function SettingsPage() {
             ) : (
               /* ─── Setup / Connect state ─── */
               <div className="space-y-4">
-                {/* Explanation */}
-                <div className="p-4 rounded-xl bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800/50">
-                  <p className="text-sm text-green-700 dark:text-green-300 leading-relaxed">
-                    {locale === 'he'
-                      ? 'הזן את האימייל והסיסמה שבהם אתה נכנס לאתר מורנינג (Green Invoice). החיבור מאובטח ומאפשר סנכרון חשבוניות אוטומטי.'
-                      : 'Enter the email and password you use to log in to the Morning (Green Invoice) website. The connection is secure and enables automatic invoice syncing.'}
+                {/* Step-by-step guide */}
+                <div className="p-4 rounded-xl bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800/50 space-y-3">
+                  <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                    {locale === 'he' ? 'איך מתחברים?' : 'How to connect'}
                   </p>
-                </div>
-
-                {/* Google sign-in tip */}
-                <details className="group">
-                  <summary className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400 cursor-pointer hover:underline">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" />
-                    </svg>
-                    {locale === 'he' ? 'נרשמת עם Google ואין לך סיסמה?' : 'Signed up with Google and have no password?'}
-                  </summary>
-                  <div className="mt-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/50 text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
+                  <div className="text-sm text-green-700 dark:text-green-300 leading-relaxed space-y-2">
                     {locale === 'he' ? (
-                      <ol className="list-decimal list-inside space-y-1">
-                        <li>היכנס לאתר מורנינג (<a href="https://app.greeninvoice.co.il" target="_blank" rel="noopener noreferrer" className="underline font-medium">app.greeninvoice.co.il</a>)</li>
-                        <li>לחץ על &quot;שכחתי סיסמה&quot; והזן את האימייל של חשבון Google שלך</li>
-                        <li>תקבל מייל לאיפוס סיסמה — הגדר סיסמה חדשה</li>
-                        <li>חזור לכאן והזן את האימייל + הסיסמה החדשה</li>
+                      <ol className="list-decimal list-inside space-y-1.5">
+                        <li>היכנס לחשבון שלך באתר <a href="https://app.greeninvoice.co.il" target="_blank" rel="noopener noreferrer" className="underline font-semibold">מורנינג</a></li>
+                        <li>עבור אל <strong>החשבון שלי</strong> &rarr; <strong>כלי מפתחים</strong> &rarr; <strong>מפתחות API</strong></li>
+                        <li>לחץ <strong>&quot;הוסף מפתח&quot;</strong>, תן שם (למשל &quot;FreelancerOS&quot;), בחר הרשאות ושמור</li>
+                        <li>העתק את <strong>מזהה המפתח (API Key ID)</strong> ואת <strong>הסוד (Secret)</strong> והדבק למטה</li>
                       </ol>
                     ) : (
-                      <ol className="list-decimal list-inside space-y-1">
-                        <li>Go to <a href="https://app.greeninvoice.co.il" target="_blank" rel="noopener noreferrer" className="underline font-medium">app.greeninvoice.co.il</a></li>
-                        <li>Click &quot;Forgot password&quot; and enter your Google account email</li>
-                        <li>You will receive a password reset email — set a new password</li>
-                        <li>Come back here and enter the email + new password</li>
+                      <ol className="list-decimal list-inside space-y-1.5">
+                        <li>Log in to your <a href="https://app.greeninvoice.co.il" target="_blank" rel="noopener noreferrer" className="underline font-semibold">Morning</a> account</li>
+                        <li>Go to <strong>My Account</strong> &rarr; <strong>Developer Tools</strong> &rarr; <strong>API Keys</strong></li>
+                        <li>Click <strong>&quot;Add Key&quot;</strong>, give it a name (e.g. &quot;FreelancerOS&quot;), set permissions and save</li>
+                        <li>Copy the <strong>API Key ID</strong> and <strong>Secret</strong> and paste below</li>
                       </ol>
                     )}
                   </div>
-                </details>
+                </div>
 
-                {/* Credential form */}
+                {/* API Key form */}
                 <div className="space-y-3">
                   <div>
                     <label className="block text-sm font-medium mb-1">
-                      {locale === 'he' ? 'אימייל' : 'Email'}
+                      {locale === 'he' ? 'מזהה מפתח API (API Key ID)' : 'API Key ID'}
                     </label>
                     <input
-                      type="email"
+                      type="text"
                       className="input w-full"
-                      value={giEmail}
-                      onChange={(e) => setGiEmail(e.target.value)}
-                      placeholder="your@email.com"
+                      value={giKeyId}
+                      onChange={(e) => setGiKeyId(e.target.value)}
+                      placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
                       dir="ltr"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1">
-                      {locale === 'he' ? 'סיסמה' : 'Password'}
+                      {locale === 'he' ? 'סוד (Secret)' : 'Secret'}
                     </label>
                     <input
                       type="password"
                       className="input w-full"
-                      value={giPassword}
-                      onChange={(e) => setGiPassword(e.target.value)}
-                      placeholder="********"
+                      value={giSecret}
+                      onChange={(e) => setGiSecret(e.target.value)}
+                      placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
                       dir="ltr"
                     />
                   </div>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={giCredSandbox}
-                      onChange={(e) => setGiCredSandbox(e.target.checked)}
+                      checked={giSandbox}
+                      onChange={(e) => setGiSandbox(e.target.checked)}
                       className="rounded border-slate-300 text-primary-600 focus:ring-primary-500"
                     />
                     <span className="text-sm text-slate-600 dark:text-slate-400">{t('integrations.sandboxMode')}</span>
                   </label>
                   <button
                     type="button"
-                    onClick={handleGiConnectWithCredentials}
-                    disabled={giConnecting || !giEmail.trim() || !giPassword.trim()}
+                    onClick={handleGiConnect}
+                    disabled={giConnecting || !giKeyId.trim() || !giSecret.trim()}
                     className="btn-primary w-full"
                   >
                     {giConnecting ? (
@@ -2311,50 +2305,32 @@ export default function SettingsPage() {
 
                 {/* Connection result */}
                 {giTestResult && (
-                  <div className={`p-3 rounded-xl border text-sm flex items-center gap-2 ${
+                  <div className={`p-3 rounded-xl border text-sm ${
                     giTestResult.success
                       ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300'
                       : 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300'
                   }`}>
-                    {giTestResult.success ? (
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M22 11.08V12a10 10 0 11-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
-                      </svg>
-                    ) : (
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" />
-                      </svg>
-                    )}
-                    <span className="font-medium">{giTestResult.message}</span>
+                    <div className="flex items-start gap-2">
+                      {giTestResult.success ? (
+                        <svg className="w-4 h-4 mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M22 11.08V12a10 10 0 11-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4 mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" />
+                        </svg>
+                      )}
+                      <span className="text-xs leading-relaxed">{giTestResult.message}</span>
+                    </div>
                   </div>
                 )}
 
-                {/* Signup + API Key links */}
-                <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
-                  <span>
-                    {locale === 'he' ? 'אין לך חשבון? ' : "No account? "}
-                    <a href="https://app.greeninvoice.co.il/signup" target="_blank" rel="noopener noreferrer" className="text-green-600 dark:text-green-400 hover:underline font-medium">
-                      {locale === 'he' ? 'הירשם' : 'Sign up'}
-                    </a>
-                  </span>
-                  <details className="group relative">
-                    <summary className="cursor-pointer hover:text-slate-600 dark:hover:text-slate-300">
-                      {locale === 'he' ? 'מפתח API (מתקדם)' : 'API Key (advanced)'}
-                    </summary>
-                    <div className="absolute end-0 mt-2 w-72 p-4 rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-xl z-30 space-y-3">
-                      <div>
-                        <label className="block text-sm font-medium mb-1">{t('integrations.apiKeyId')}</label>
-                        <input className="input w-full text-xs" value={giKeyId} onChange={(e) => setGiKeyId(e.target.value)} placeholder={t('integrations.apiKeyIdPlaceholder')} dir="ltr" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">{t('integrations.apiSecret')}</label>
-                        <input type="password" className="input w-full text-xs" value={giSecret} onChange={(e) => setGiSecret(e.target.value)} placeholder={t('integrations.apiSecretPlaceholder')} dir="ltr" />
-                      </div>
-                      <button type="button" onClick={handleGiConnect} disabled={giConnecting || !giKeyId.trim() || !giSecret.trim()} className="btn-primary w-full text-xs">
-                        {giConnecting ? t('integrations.connecting') : t('integrations.connect')}
-                      </button>
-                    </div>
-                  </details>
+                {/* Bottom links */}
+                <div className="text-xs text-center text-slate-400 pt-1">
+                  {locale === 'he' ? 'אין לך חשבון מורנינג? ' : "Don't have a Morning account? "}
+                  <a href="https://app.greeninvoice.co.il/signup" target="_blank" rel="noopener noreferrer" className="text-green-600 dark:text-green-400 hover:underline font-medium">
+                    {locale === 'he' ? 'הירשם כאן' : 'Sign up here'}
+                  </a>
                 </div>
               </div>
             )}

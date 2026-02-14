@@ -31,6 +31,7 @@ import {
 type ReportTab = 'pnl' | 'cashflow' | 'clients' | 'categories' | 'tax' | 'forecast' | 'zreport';
 type ExportFormat = 'pdf' | 'excel' | 'csv';
 type LogoPosition = 'left' | 'center' | 'right';
+type LogoMode = 'none' | 'existing' | 'upload';
 type TitleStyle = 'normal' | 'bold' | 'larger';
 
 type PnlData = Awaited<ReturnType<typeof reports.getProfitLoss>>;
@@ -1694,6 +1695,29 @@ function ReportExportModal({
   const [titleStyle, setTitleStyle] = useState<TitleStyle>('bold');
   const [includeCharts, setIncludeCharts] = useState(true);
 
+  // Logo mode: none / existing (from settings) / upload new
+  const [existingLogo] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem('business_logo');
+    return null;
+  });
+  const [logoMode, setLogoMode] = useState<LogoMode>(existingLogo ? 'existing' : 'none');
+  const [uploadedLogo, setUploadedLogo] = useState<string | null>(null);
+  const logoUploadRef = useRef<HTMLInputElement>(null);
+
+  function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setUploadedLogo(ev.target?.result as string);
+      setLogoMode('upload');
+    };
+    reader.readAsDataURL(file);
+    if (logoUploadRef.current) logoUploadRef.current.value = '';
+  }
+
+  const activeLogo = logoMode === 'existing' ? existingLogo : logoMode === 'upload' ? uploadedLogo : null;
+
   const tabLabels: Record<ReportTab, string> = {
     pnl: t('reports.tabs.pnl'),
     cashflow: t('reports.tabs.cashflow'),
@@ -1763,29 +1787,81 @@ function ReportExportModal({
             </div>
           </div>
 
-          {/* Logo Position */}
+          {/* Logo Source */}
           <div>
-            <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">{t('reports.logoPosition')}</label>
-            <div className="flex gap-3">
-              {logoPositions.map((pos) => (
-                <button
-                  key={pos.id}
-                  type="button"
-                  onClick={() => setLogoPosition(pos.id)}
-                  className={`flex-1 rounded-xl border-2 p-3 transition-all ${
-                    logoPosition === pos.id
-                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/30'
-                      : 'border-[var(--border)] hover:border-slate-300 dark:hover:border-slate-600'
-                  }`}
-                >
-                  <div className="h-8 flex items-center mb-1.5" style={{ justifyContent: pos.id === 'left' ? 'flex-start' : pos.id === 'center' ? 'center' : 'flex-end' }}>
-                    <div className={`w-8 h-6 rounded bg-slate-300 dark:bg-slate-600 ${logoPosition === pos.id ? 'bg-primary-400 dark:bg-primary-500' : ''}`} />
-                  </div>
-                  <p className="text-xs text-center font-medium text-slate-500 dark:text-slate-400">{pos.label}</p>
-                </button>
-              ))}
+            <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">{t('reports.logoSource')}</label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setLogoMode('none')}
+                className={`px-3 py-2 rounded-xl text-sm transition-all ${
+                  logoMode === 'none'
+                    ? 'bg-primary-600 text-white shadow-md shadow-primary-600/20'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                }`}
+              >
+                {t('reports.logoNone')}
+              </button>
+              <button
+                type="button"
+                onClick={() => existingLogo ? setLogoMode('existing') : undefined}
+                className={`px-3 py-2 rounded-xl text-sm transition-all ${
+                  logoMode === 'existing'
+                    ? 'bg-primary-600 text-white shadow-md shadow-primary-600/20'
+                    : existingLogo
+                      ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-300 dark:text-slate-600 cursor-not-allowed'
+                }`}
+                title={!existingLogo ? t('reports.noLogoConfigured') : ''}
+              >
+                <span className="flex items-center gap-1.5">
+                  {existingLogo && <img src={existingLogo} alt="" className="w-4 h-4 rounded object-contain" />}
+                  {t('reports.logoExisting')}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => logoUploadRef.current?.click()}
+                className={`px-3 py-2 rounded-xl text-sm transition-all ${
+                  logoMode === 'upload'
+                    ? 'bg-primary-600 text-white shadow-md shadow-primary-600/20'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                }`}
+              >
+                <span className="flex items-center gap-1.5">
+                  {uploadedLogo && <img src={uploadedLogo} alt="" className="w-4 h-4 rounded object-contain" />}
+                  {t('reports.logoUpload')}
+                </span>
+              </button>
+              <input ref={logoUploadRef} type="file" accept="image/png,image/jpeg" className="hidden" onChange={handleLogoUpload} />
             </div>
           </div>
+
+          {/* Logo Position (only if logo is selected) */}
+          {logoMode !== 'none' && (
+            <div>
+              <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">{t('reports.logoPosition')}</label>
+              <div className="flex gap-3">
+                {logoPositions.map((pos) => (
+                  <button
+                    key={pos.id}
+                    type="button"
+                    onClick={() => setLogoPosition(pos.id)}
+                    className={`flex-1 rounded-xl border-2 p-3 transition-all ${
+                      logoPosition === pos.id
+                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/30'
+                        : 'border-[var(--border)] hover:border-slate-300 dark:hover:border-slate-600'
+                    }`}
+                  >
+                    <div className="h-8 flex items-center mb-1.5" style={{ justifyContent: pos.id === 'left' ? 'flex-start' : pos.id === 'center' ? 'center' : 'flex-end' }}>
+                      <div className={`w-8 h-6 rounded bg-slate-300 dark:bg-slate-600 ${logoPosition === pos.id ? 'bg-primary-400 dark:bg-primary-500' : ''}`} />
+                    </div>
+                    <p className="text-xs text-center font-medium text-slate-500 dark:text-slate-400">{pos.label}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Title Style */}
           <div>
@@ -1828,12 +1904,18 @@ function ReportExportModal({
           <div>
             <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">{t('reports.reportPreview')}</label>
             <div className="border border-[var(--border)] rounded-xl bg-white dark:bg-slate-900 p-5 min-h-[200px]">
-              {/* Preview header with logo position */}
-              <div className="flex items-start mb-4" style={{ justifyContent: logoPosition === 'left' ? 'flex-start' : logoPosition === 'center' ? 'center' : 'flex-end' }}>
-                <div className="w-16 h-12 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs text-slate-400 dark:text-slate-500">
-                  {t('reports.noLogo')}
+              {/* Preview header with logo */}
+              {activeLogo ? (
+                <div className="flex items-start mb-4" style={{ justifyContent: logoPosition === 'left' ? 'flex-start' : logoPosition === 'center' ? 'center' : 'flex-end' }}>
+                  <img src={activeLogo} alt="Logo" className="h-12 max-w-[120px] object-contain rounded" />
                 </div>
-              </div>
+              ) : logoMode !== 'none' ? (
+                <div className="flex items-start mb-4" style={{ justifyContent: logoPosition === 'left' ? 'flex-start' : logoPosition === 'center' ? 'center' : 'flex-end' }}>
+                  <div className="w-16 h-12 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs text-slate-400 dark:text-slate-500">
+                    {t('reports.noLogo')}
+                  </div>
+                </div>
+              ) : null}
               {/* Preview title */}
               <h3
                 className="mb-2 text-slate-800 dark:text-slate-200"
