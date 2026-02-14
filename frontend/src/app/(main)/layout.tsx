@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Layout from '@/components/Layout';
+import OnboardingProvider from '@/components/OnboardingProvider';
 
 export default function MainLayout({
   children,
@@ -34,5 +35,9 @@ export default function MainLayout({
     );
   }
 
-  return <Layout>{children}</Layout>;
+  return (
+    <OnboardingProvider>
+      <Layout>{children}</Layout>
+    </OnboardingProvider>
+  );
 }

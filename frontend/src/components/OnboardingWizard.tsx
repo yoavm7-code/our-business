@@ -36,7 +36,7 @@ interface OnboardingWizardProps {
 
 export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const [step, setStep] = useState<Step>(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -117,20 +117,14 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
     }
   }
 
-  async function handleFinish(action: 'invoice' | 'upload' | 'dashboard') {
-    setLoading(true);
-    try {
-      await users.completeOnboarding();
-      onComplete();
-      if (action === 'invoice') {
-        router.push('/invoices?new=1');
-      } else if (action === 'upload') {
-        router.push('/upload');
-      } else {
-        router.push('/dashboard');
-      }
-    } catch {
-      onComplete();
+  function handleFinish(action: 'invoice' | 'upload' | 'dashboard') {
+    onComplete();
+    if (action === 'invoice') {
+      router.push('/invoices?new=1');
+    } else if (action === 'upload') {
+      router.push('/upload');
+    } else {
+      router.push('/dashboard');
     }
   }
 
@@ -374,44 +368,55 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
             </div>
           )}
 
-          {/* Step 4: Create invoice or upload document */}
+          {/* Step 4: Tasks checklist + actions */}
           {step === 4 && (
             <div className="space-y-4 animate-fadeIn">
-              <div className="text-center mb-6">
+              <div className="text-center mb-4">
                 <h2 className="text-xl font-bold">{t('onboarding.step4Title')}</h2>
                 <p className="text-sm text-slate-500 mt-1">{t('onboarding.step4Desc')}</p>
               </div>
 
-              <div className="space-y-3">
-                {/* Create invoice */}
-                <button
-                  type="button"
-                  onClick={() => handleFinish('invoice')}
-                  disabled={loading}
-                  className="flex items-center gap-4 w-full p-4 rounded-xl border border-[var(--border)] hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-md transition-all group text-start"
-                >
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform shrink-0">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-                      <polyline points="14 2 14 8 20 8"/>
-                      <line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm">{t('onboarding.createInvoice')}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">{t('onboarding.createInvoiceDesc')}</p>
-                  </div>
-                </button>
+              {/* Tasks checklist for the new user */}
+              <div className="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800/40">
+                <h4 className="text-sm font-bold text-indigo-700 dark:text-indigo-300 mb-3 flex items-center gap-2">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  {locale === 'he' ? '\u05DE\u05E9\u05D9\u05DE\u05D5\u05EA \u05DC\u05D4\u05EA\u05D7\u05DC\u05D4' : 'Getting Started Tasks'}
+                </h4>
+                <div className="space-y-2">
+                  {[
+                    { done: !!businessName.trim(), label: locale === 'he' ? '\u05D4\u05D2\u05D3\u05E8 \u05E4\u05E8\u05D8\u05D9 \u05E2\u05E1\u05E7' : 'Set up business details' },
+                    { done: !!accountName.trim(), label: locale === 'he' ? '\u05D4\u05D5\u05E1\u05E3 \u05D7\u05E9\u05D1\u05D5\u05DF \u05D1\u05E0\u05E7' : 'Add bank account' },
+                    { done: !!clientName.trim(), label: locale === 'he' ? '\u05D4\u05D5\u05E1\u05E3 \u05DC\u05E7\u05D5\u05D7 \u05E8\u05D0\u05E9\u05D5\u05DF' : 'Add first client' },
+                    { done: false, label: locale === 'he' ? '\u05D4\u05E2\u05DC\u05D4 \u05DE\u05E1\u05DE\u05DA \u05D0\u05D5 \u05D7\u05E9\u05D1\u05D5\u05E0\u05D9\u05EA' : 'Upload a document or invoice' },
+                    { done: false, label: locale === 'he' ? '\u05E1\u05D3\u05E8 \u05D0\u05EA \u05DC\u05D5\u05D7 \u05D4\u05D1\u05E7\u05E8\u05D4' : 'Customize your dashboard' },
+                    { done: false, label: locale === 'he' ? '\u05D7\u05D1\u05E8 \u05D0\u05D9\u05E0\u05D8\u05D2\u05E8\u05E6\u05D9\u05D4 (\u05DE\u05D5\u05E8\u05E0\u05D9\u05E0\u05D2/\u05D1\u05E0\u05E7)' : 'Connect an integration (Morning/bank)' },
+                  ].map((task, i) => (
+                    <div key={i} className="flex items-center gap-2.5 text-sm">
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${
+                        task.done
+                          ? 'bg-green-500 text-white'
+                          : 'border-2 border-slate-300 dark:border-slate-600'
+                      }`}>
+                        {task.done && (
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        )}
+                      </div>
+                      <span className={task.done ? 'text-slate-500 line-through' : 'text-slate-700 dark:text-slate-300'}>{task.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
-                {/* Upload document */}
+              {/* Quick actions */}
+              <div className="space-y-2.5">
                 <button
                   type="button"
                   onClick={() => handleFinish('upload')}
                   disabled={loading}
-                  className="flex items-center gap-4 w-full p-4 rounded-xl border border-[var(--border)] hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-md transition-all group text-start"
+                  className="flex items-center gap-3 w-full p-3 rounded-xl border border-[var(--border)] hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-md transition-all group text-start"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform shrink-0">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform shrink-0">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
                       <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
                       <polyline points="17 8 12 3 7 8"/>
                       <line x1="12" y1="3" x2="12" y2="15"/>
@@ -423,15 +428,33 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
                   </div>
                 </button>
 
-                {/* Go to dashboard */}
+                <button
+                  type="button"
+                  onClick={() => handleFinish('invoice')}
+                  disabled={loading}
+                  className="flex items-center gap-3 w-full p-3 rounded-xl border border-[var(--border)] hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-md transition-all group text-start"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform shrink-0">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                      <polyline points="14 2 14 8 20 8"/>
+                      <line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm">{t('onboarding.createInvoice')}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{t('onboarding.createInvoiceDesc')}</p>
+                  </div>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => handleFinish('dashboard')}
                   disabled={loading}
-                  className="flex items-center gap-4 w-full p-4 rounded-xl border border-[var(--border)] hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-md transition-all group text-start"
+                  className="flex items-center gap-3 w-full p-3 rounded-xl border border-[var(--border)] hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-md transition-all group text-start"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform shrink-0">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform shrink-0">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
                       <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
                       <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
                     </svg>
@@ -443,7 +466,7 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
                 </button>
               </div>
 
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-3 pt-1">
                 <button type="button" onClick={() => setStep(3)} className="flex-1 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                   {t('common.back')}
                 </button>

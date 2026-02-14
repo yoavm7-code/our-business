@@ -44,6 +44,15 @@ export class ZReportController {
     return this.zReportService.list(businessId, from, to);
   }
 
+  /** Generate monthly Z-Report */
+  @Post('generate-monthly')
+  generateMonthly(
+    @HouseholdId() businessId: string,
+    @Body() dto: { year: number; month: number },
+  ) {
+    return this.zReportService.generateMonthly(businessId, dto.year, dto.month);
+  }
+
   /** Close/finalize a Z-Report */
   @Post(':id/close')
   close(

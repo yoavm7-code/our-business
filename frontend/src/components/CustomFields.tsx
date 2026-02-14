@@ -71,15 +71,95 @@ function IconClose() {
 
 // ─── Field type labels ──────────────────────────────
 const FIELD_TYPE_LABELS: Record<CustomFieldType, { he: string; en: string }> = {
-  text: { he: 'טקסט', en: 'Text' },
-  number: { he: 'מספר', en: 'Number' },
-  date: { he: 'תאריך', en: 'Date' },
-  select: { he: 'בחירה', en: 'Select' },
-  checkbox: { he: 'תיבת סימון', en: 'Checkbox' },
-  textarea: { he: 'טקסט ארוך', en: 'Textarea' },
+  text: { he: '\u05D8\u05E7\u05E1\u05D8', en: 'Text' },
+  number: { he: '\u05DE\u05E1\u05E4\u05E8', en: 'Number' },
+  date: { he: '\u05EA\u05D0\u05E8\u05D9\u05DA', en: 'Date' },
+  select: { he: '\u05D1\u05D7\u05D9\u05E8\u05D4', en: 'Select' },
+  checkbox: { he: '\u05EA\u05D9\u05D1\u05EA \u05E1\u05D9\u05DE\u05D5\u05DF', en: 'Checkbox' },
+  textarea: { he: '\u05D8\u05E7\u05E1\u05D8 \u05D0\u05E8\u05D5\u05DA', en: 'Textarea' },
 };
 
 const FIELD_TYPES: CustomFieldType[] = ['text', 'number', 'date', 'select', 'checkbox', 'textarea'];
+
+// ─── Value input for a single field ─────────────────
+function FieldValueInput({
+  field,
+  fieldValue,
+  onValueChange,
+  placeholder,
+}: {
+  field: CustomFieldDefinition;
+  fieldValue: any;
+  onValueChange: (val: any) => void;
+  placeholder: string;
+}) {
+  switch (field.type) {
+    case 'text':
+      return (
+        <input
+          className="input-sm flex-1 min-w-0"
+          value={fieldValue || ''}
+          onChange={(e) => onValueChange(e.target.value)}
+          placeholder={placeholder}
+        />
+      );
+    case 'number':
+      return (
+        <input
+          type="number"
+          className="input-sm flex-1 min-w-0"
+          value={fieldValue || ''}
+          onChange={(e) => onValueChange(e.target.value)}
+          placeholder={placeholder}
+        />
+      );
+    case 'date':
+      return (
+        <input
+          type="date"
+          className="input-sm flex-1 min-w-0"
+          value={fieldValue || ''}
+          onChange={(e) => onValueChange(e.target.value)}
+        />
+      );
+    case 'select':
+      return (
+        <select
+          className="input-sm flex-1 min-w-0"
+          value={fieldValue || ''}
+          onChange={(e) => onValueChange(e.target.value)}
+        >
+          <option value="">{'\u05D1\u05D7\u05E8'}...</option>
+          {(field.options || []).map((opt) => (
+            <option key={opt} value={opt}>{opt}</option>
+          ))}
+        </select>
+      );
+    case 'checkbox':
+      return (
+        <label className="flex items-center gap-2 text-sm cursor-pointer flex-1 min-w-0">
+          <input
+            type="checkbox"
+            checked={!!fieldValue}
+            onChange={(e) => onValueChange(e.target.checked)}
+            className="rounded"
+          />
+          <span className="text-xs text-slate-500">{field.name || placeholder}</span>
+        </label>
+      );
+    case 'textarea':
+      return (
+        <textarea
+          className="input-sm flex-1 min-w-0 h-16 resize-none"
+          value={fieldValue || ''}
+          onChange={(e) => onValueChange(e.target.value)}
+          placeholder={placeholder}
+        />
+      );
+    default:
+      return null;
+  }
+}
 
 // ─── Component ──────────────────────────────────────
 export default function CustomFields({ entityType, value, onChange, templates: propTemplates }: CustomFieldsProps) {
@@ -273,22 +353,23 @@ export default function CustomFields({ entityType, value, onChange, templates: p
         </div>
       </div>
 
-      {/* Existing field inputs */}
+      {/* Existing field inputs - inline name + value in same row */}
       {fields.length > 0 && (
-        <div className="space-y-3 border border-[var(--border)] rounded-xl p-3">
+        <div className="space-y-2 border border-[var(--border)] rounded-xl p-3">
           {fields.map((field, index) => (
             <div key={index} className="space-y-2">
-              <div className="flex items-center gap-2">
+              {/* Row 1: field name, type, value input, and actions - all inline */}
+              <div className="flex items-start gap-2">
                 {/* Field name input */}
                 <input
-                  className="input-sm flex-1"
+                  className="input-sm w-32 shrink-0"
                   value={field.name}
                   onChange={(e) => updateFieldName(index, e.target.value)}
                   placeholder={'\u05E9\u05DD \u05D4\u05E9\u05D3\u05D4'} /* שם השדה */
                 />
                 {/* Field type selector */}
                 <select
-                  className="input-sm w-auto text-xs"
+                  className="input-sm w-auto text-xs shrink-0"
                   value={field.type}
                   onChange={(e) => updateFieldType(index, e.target.value as CustomFieldType)}
                 >
@@ -296,6 +377,15 @@ export default function CustomFields({ entityType, value, onChange, templates: p
                     <option key={ft} value={ft}>{FIELD_TYPE_LABELS[ft].he}</option>
                   ))}
                 </select>
+                {/* Inline value input */}
+                <FieldValueInput
+                  field={field}
+                  fieldValue={field.name ? value[field.name] : ''}
+                  onValueChange={(val) => {
+                    if (field.name) handleFieldValueChange(field.name, val);
+                  }}
+                  placeholder={field.name || '\u05E2\u05E8\u05DA'} /* ערך */
+                />
                 {/* Options editor button for select fields */}
                 {field.type === 'select' && (
                   <button
@@ -304,82 +394,20 @@ export default function CustomFields({ entityType, value, onChange, templates: p
                       setEditingOptions(index);
                       setOptionsInput((field.options || []).join('\n'));
                     }}
-                    className="px-2 py-1 text-xs rounded-lg border border-[var(--border)] hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                    className="px-2 py-1.5 text-xs rounded-lg border border-[var(--border)] hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shrink-0"
                   >
-                    {'\u05D0\u05E4\u05E9\u05E8\u05D5\u05D9\u05D5\u05EA'} ({(field.options || []).length}) {/* אפשרויות */}
+                    {'\u05D0\u05E4\u05E9\u05E8\u05D5\u05D9\u05D5\u05EA'} ({(field.options || []).length})
                   </button>
                 )}
                 {/* Remove button */}
                 <button
                   type="button"
                   onClick={() => removeField(index)}
-                  className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-400 hover:text-red-600 transition-colors"
+                  className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-400 hover:text-red-600 transition-colors shrink-0"
                 >
                   <IconTrash />
                 </button>
               </div>
-
-              {/* Field value input */}
-              {field.name && (
-                <div className="ps-2">
-                  {field.type === 'text' && (
-                    <input
-                      className="input-sm w-full"
-                      value={value[field.name] || ''}
-                      onChange={(e) => handleFieldValueChange(field.name, e.target.value)}
-                      placeholder={field.name}
-                    />
-                  )}
-                  {field.type === 'number' && (
-                    <input
-                      type="number"
-                      className="input-sm w-full"
-                      value={value[field.name] || ''}
-                      onChange={(e) => handleFieldValueChange(field.name, e.target.value)}
-                      placeholder={field.name}
-                    />
-                  )}
-                  {field.type === 'date' && (
-                    <input
-                      type="date"
-                      className="input-sm w-full"
-                      value={value[field.name] || ''}
-                      onChange={(e) => handleFieldValueChange(field.name, e.target.value)}
-                    />
-                  )}
-                  {field.type === 'select' && (
-                    <select
-                      className="input-sm w-full"
-                      value={value[field.name] || ''}
-                      onChange={(e) => handleFieldValueChange(field.name, e.target.value)}
-                    >
-                      <option value="">{'\u05D1\u05D7\u05E8'}...</option> {/* בחר... */}
-                      {(field.options || []).map((opt) => (
-                        <option key={opt} value={opt}>{opt}</option>
-                      ))}
-                    </select>
-                  )}
-                  {field.type === 'checkbox' && (
-                    <label className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={!!value[field.name]}
-                        onChange={(e) => handleFieldValueChange(field.name, e.target.checked)}
-                        className="rounded"
-                      />
-                      <span>{field.name}</span>
-                    </label>
-                  )}
-                  {field.type === 'textarea' && (
-                    <textarea
-                      className="input-sm w-full h-16 resize-none"
-                      value={value[field.name] || ''}
-                      onChange={(e) => handleFieldValueChange(field.name, e.target.value)}
-                      placeholder={field.name}
-                    />
-                  )}
-                </div>
-              )}
 
               {/* Options editor modal for select fields */}
               {editingOptions === index && (

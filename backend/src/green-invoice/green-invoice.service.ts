@@ -194,12 +194,44 @@ export class GreenInvoiceService {
   // ── Public API ─────────────────────────────────────
 
   /** Test the connection with stored credentials */
-  async testConnection(businessId: string): Promise<{ success: boolean; businessName?: string }> {
+  async testConnection(businessId: string): Promise<{ success: boolean; message?: string }> {
     try {
-      const token = await this.getToken(businessId);
-      return { success: true };
-    } catch {
-      return { success: false };
+      const creds = await this.getCredentials(businessId);
+      const base = this.getBaseUrl(creds.sandbox);
+
+      const res = await fetch(`${base}/account/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: creds.keyId, secret: creds.secret }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        this.logger.warn(`Green Invoice test connection failed: ${res.status} ${text}`);
+        let detail = '';
+        if (res.status === 401 || res.status === 403) {
+          detail = 'Incorrect email or password';
+        } else if (res.status === 404) {
+          detail = 'API endpoint not found - check sandbox setting';
+        } else if (res.status >= 500) {
+          detail = 'Green Invoice server error - try again later';
+        } else {
+          detail = `HTTP ${res.status}`;
+        }
+        return { success: false, message: detail };
+      }
+
+      return { success: true, message: 'Connection successful' };
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : 'Unknown error';
+      this.logger.error(`Green Invoice test failed: ${errMsg}`);
+      if (errMsg.includes('credentials not configured')) {
+        return { success: false, message: 'No credentials configured. Please enter your details and connect first.' };
+      }
+      if (errMsg.includes('fetch') || errMsg.includes('ECONNREFUSED') || errMsg.includes('network')) {
+        return { success: false, message: 'Network error - cannot reach Green Invoice servers' };
+      }
+      return { success: false, message: errMsg };
     }
   }
 
@@ -224,7 +256,17 @@ export class GreenInvoiceService {
     if (!res.ok) {
       const text = await res.text();
       this.logger.error(`Green Invoice login failed: ${res.status} ${text}`);
-      throw new BadRequestException('Morning login failed. Check your email and password.');
+      let detail = '';
+      if (res.status === 401 || res.status === 403) {
+        detail = 'Incorrect email or password. Make sure you are using the same credentials as your Morning (Green Invoice) website login.';
+      } else if (res.status === 404) {
+        detail = 'API endpoint not found. Try toggling the sandbox mode setting.';
+      } else if (res.status >= 500) {
+        detail = 'Green Invoice server is temporarily unavailable. Please try again in a few minutes.';
+      } else {
+        detail = `Connection failed (HTTP ${res.status}). Please verify your credentials.`;
+      }
+      throw new BadRequestException(detail);
     }
 
     const data = await res.json();

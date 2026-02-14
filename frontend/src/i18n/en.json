@@ -199,7 +199,18 @@
     "reportsSection": "Reports & Analysis",
     "planning": "Planning",
     "assets": "Assets",
-    "analysis": "Analysis"
+    "analysis": "Analysis",
+    "dashboardDesc": "Overview of your business at a glance",
+    "clientsDesc": "Manage clients, contacts and history",
+    "projectsDesc": "Track projects and budgets",
+    "invoicesDesc": "Create and manage invoices and receipts",
+    "transactionsDesc": "View and manage all transactions",
+    "uploadDesc": "Upload documents and receipts",
+    "incomeDesc": "Track income sources",
+    "budgetsDesc": "Budget planning and tracking",
+    "reportsDesc": "Financial reports and exports",
+    "insightsDesc": "AI-powered smart insights and recommendations",
+    "taxDesc": "Tax management and periodic reporting"
   },
   "auth": {
     "login": "Login",
