@@ -232,6 +232,31 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const isMobileDrawer = drawerOpen;
   const isCollapsed = sidebarCollapsed && !isMobileDrawer;
 
+  /** Renders a flyout tooltip next to a collapsed sidebar icon */
+  function CollapsedTooltip({ itemKey, label, description }: { itemKey: string; label: string; description?: string }) {
+    if (hoveredItem !== itemKey || !isCollapsed) return null;
+    return (
+      <div
+        className="fixed z-[9999] animate-fadeIn pointer-events-none"
+        style={{ [locale === 'he' ? 'right' : 'left']: '64px' }}
+        ref={(el) => {
+          if (el) {
+            const btn = el.parentElement?.querySelector('a, button');
+            if (btn) {
+              const rect = btn.getBoundingClientRect();
+              el.style.top = `${rect.top + rect.height / 2 - (description ? 22 : 16)}px`;
+            }
+          }
+        }}
+      >
+        <div className="bg-[#252540] border border-white/10 rounded-lg shadow-2xl px-3.5 py-2.5 whitespace-nowrap">
+          <span className="text-sm text-white font-semibold">{label}</span>
+          {description && <p className="text-xs text-slate-400 mt-0.5">{description}</p>}
+        </div>
+      </div>
+    );
+  }
+
   const sidebarContent = (
     <>
       {/* Logo / brand */}
@@ -384,27 +409,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                         >
                           <NavIcon name={item.icon} />
                         </Link>
-                        {/* Per-item flyout label */}
-                        {isItemHovered && (
-                          <div
-                            className="fixed z-[9999] animate-fadeIn pointer-events-none"
-                            style={{ [locale === 'he' ? 'right' : 'left']: '64px' }}
-                            ref={(el) => {
-                              if (el) {
-                                const link = el.parentElement?.querySelector('a');
-                                if (link) {
-                                  const rect = link.getBoundingClientRect();
-                                  el.style.top = `${rect.top + rect.height / 2 - 16}px`;
-                                }
-                              }
-                            }}
-                          >
-                            <div className="bg-[#252540] border border-white/10 rounded-lg shadow-2xl px-3 py-2 whitespace-nowrap">
-                              <span className="text-sm text-white font-medium">{t(item.key)}</span>
-                              {item.descKey && <p className="text-[10px] text-slate-400 mt-0.5">{t(item.descKey)}</p>}
-                            </div>
-                          </div>
-                        )}
+                        <CollapsedTooltip itemKey={item.href} label={t(item.key)} description={item.descKey ? t(item.descKey) : undefined} />
                       </div>
                     );
                   })}
@@ -440,46 +445,56 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         })}
 
         {/* Quick Add in sidebar */}
-        <button
-          type="button"
-          onClick={() => setShowQuickAdd(true)}
-          onMouseEnter={() => { if (isCollapsed) setHoveredItem(null); }}
-          className={`flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium text-indigo-400 hover:bg-indigo-500/15 transition-all duration-150 mt-4 ${isCollapsed ? 'justify-center' : ''}`}
-          title={isCollapsed ? t('quickAdd.title') : undefined}
-        >
-          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-          {!isCollapsed && <span>{t('quickAdd.title')}</span>}
-        </button>
+        <div className="relative mt-4">
+          <button
+            type="button"
+            onClick={() => setShowQuickAdd(true)}
+            onMouseEnter={() => { if (isCollapsed) { if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current); setHoveredItem('quick-add'); } }}
+            onMouseLeave={() => { if (isCollapsed) { hoverTimeoutRef.current = setTimeout(() => setHoveredItem(null), 150); } }}
+            className={`flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium text-indigo-400 hover:bg-indigo-500/15 transition-all duration-150 ${isCollapsed ? 'justify-center' : ''}`}
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            {!isCollapsed && <span>{t('quickAdd.title')}</span>}
+          </button>
+          <CollapsedTooltip itemKey="quick-add" label={t('quickAdd.title')} />
+        </div>
 
         {/* Site tour button */}
-        <button
-          type="button"
-          onClick={startTour}
-          onMouseEnter={() => { if (isCollapsed) setHoveredItem(null); }}
-          className={`flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium text-[#a0a3bd] hover:bg-white/5 hover:text-white transition-all duration-150 ${isCollapsed ? 'justify-center' : ''}`}
-          title={isCollapsed ? (locale === 'he' ? 'סיור באתר' : 'Site Tour') : undefined}
-        >
-          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polygon points="10 8 16 12 10 16 10 8" /></svg>
-          {!isCollapsed && <span>{locale === 'he' ? 'סיור באתר' : 'Site Tour'}</span>}
-        </button>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={startTour}
+            onMouseEnter={() => { if (isCollapsed) { if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current); setHoveredItem('site-tour'); } }}
+            onMouseLeave={() => { if (isCollapsed) { hoverTimeoutRef.current = setTimeout(() => setHoveredItem(null), 150); } }}
+            className={`flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium text-[#a0a3bd] hover:bg-white/5 hover:text-white transition-all duration-150 ${isCollapsed ? 'justify-center' : ''}`}
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polygon points="10 8 16 12 10 16 10 8" /></svg>
+            {!isCollapsed && <span>{locale === 'he' ? 'סיור באתר' : 'Site Tour'}</span>}
+          </button>
+          <CollapsedTooltip itemKey="site-tour" label={locale === 'he' ? 'סיור באתר' : 'Site Tour'} />
+        </div>
 
         {/* Settings - at bottom of nav */}
-        <div className="pt-3 mt-3 border-t border-white/10" onMouseEnter={() => { if (isCollapsed) setHoveredItem(null); }}>
+        <div className="pt-3 mt-3 border-t border-white/10 relative">
           {(() => {
             const isActive = pathname === '/settings';
             return (
-              <Link
-                href="/settings"
-                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
-                  isActive
-                    ? 'bg-indigo-500/15 text-indigo-400'
-                    : 'text-[#a0a3bd] hover:bg-white/5 hover:text-white'
-                } ${isCollapsed ? 'justify-center' : ''}`}
-                title={isCollapsed ? t('nav.settings') : undefined}
-              >
-                <NavIcon name="settings" />
-                {!isCollapsed && <span>{t('nav.settings')}</span>}
-              </Link>
+              <>
+                <Link
+                  href="/settings"
+                  onMouseEnter={() => { if (isCollapsed) { if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current); setHoveredItem('settings'); } }}
+                  onMouseLeave={() => { if (isCollapsed) { hoverTimeoutRef.current = setTimeout(() => setHoveredItem(null), 150); } }}
+                  className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
+                    isActive
+                      ? 'bg-indigo-500/15 text-indigo-400'
+                      : 'text-[#a0a3bd] hover:bg-white/5 hover:text-white'
+                  } ${isCollapsed ? 'justify-center' : ''}`}
+                >
+                  <NavIcon name="settings" />
+                  {!isCollapsed && <span>{t('nav.settings')}</span>}
+                </Link>
+                <CollapsedTooltip itemKey="settings" label={t('nav.settings')} />
+              </>
             );
           })()}
         </div>
