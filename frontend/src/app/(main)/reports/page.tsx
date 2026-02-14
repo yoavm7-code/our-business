@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { reports, zReports } from '@/lib/api';
-import type { ZReportData } from '@/lib/api';
+import { reports, zReports, notifications } from '@/lib/api';
+import type { ZReportData, ReportScheduleItem } from '@/lib/api';
 import { useTranslation } from '@/i18n/context';
 import PageGuide from '@/components/PageGuide';
 import DateRangePicker, { getQuickRangeDates } from '@/components/DateRangePicker';
@@ -332,6 +332,13 @@ export default function ReportsPage() {
   const [exportFormat, setExportFormat] = useState<ExportFormat>('pdf');
   const exportDropdownRef = useRef<HTMLDivElement>(null);
 
+  // Schedule states
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [reportSchedules, setReportSchedules] = useState<ReportScheduleItem[]>([]);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [scheduleForm, setScheduleForm] = useState({ reportType: activeTab as string, frequency: 'weekly', dayOfWeek: 0, dayOfMonth: 1, hour: 8 });
+  const [scheduleSaving, setScheduleSaving] = useState(false);
+
   // Tax year derived from the date range
   const taxYear = useMemo(() => {
     return new Date(from).getFullYear();
@@ -395,6 +402,26 @@ export default function ReportsPage() {
   useEffect(() => {
     fetchData(activeTab);
   }, [activeTab, fetchData]);
+
+  // ─── Fetch schedules when modal opens ─────────────────
+  useEffect(() => {
+    if (!scheduleModalOpen) return;
+    let cancelled = false;
+    setScheduleLoading(true);
+    notifications.getReportSchedules().then((data) => {
+      if (!cancelled) setReportSchedules(data);
+    }).catch(() => {}).finally(() => {
+      if (!cancelled) setScheduleLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [scheduleModalOpen]);
+
+  // Sync schedule form report type with active tab
+  useEffect(() => {
+    if (activeTab !== 'zreport') {
+      setScheduleForm((f) => ({ ...f, reportType: activeTab }));
+    }
+  }, [activeTab]);
 
   // ─── Handlers ───────────────────────────────────────────
   function handleDateChange(f: string, t2: string) {
@@ -624,6 +651,16 @@ export default function ReportsPage() {
           <button type="button" className="btn-secondary flex items-center gap-1.5 text-sm" onClick={handlePrint}>
             <PrintIcon /> {t('reports.print')}
           </button>
+          <button
+            type="button"
+            className="btn-secondary flex items-center gap-1.5 text-sm"
+            onClick={() => setScheduleModalOpen(true)}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+            {locale === 'he' ? 'תזמון' : 'Schedule'}
+          </button>
         </div>
       </div>
 
@@ -727,6 +764,295 @@ export default function ReportsPage() {
           taxData={taxData}
           forecastData={forecastData}
         />
+      )}
+
+      {/* Schedule Report Modal */}
+      {scheduleModalOpen && (
+        <div className="modal-overlay" onClick={() => setScheduleModalOpen(false)}>
+          <div
+            className="bg-[var(--card)] rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col animate-scaleIn mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal header */}
+            <div className="flex items-center justify-between p-5 border-b border-[var(--border)]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-600 dark:text-indigo-400">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg">{locale === 'he' ? 'תזמון דו"חות למייל' : 'Schedule Report Emails'}</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{locale === 'he' ? 'קבל דו"חות אוטומטיים לתיבת המייל' : 'Get automatic reports delivered to your inbox'}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setScheduleModalOpen(false)}
+                className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                <CloseIcon />
+              </button>
+            </div>
+
+            {/* Modal body */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-5">
+              {/* New schedule form */}
+              <div className="rounded-xl border border-[var(--border)] bg-slate-50/50 dark:bg-slate-800/20 p-4 space-y-4">
+                <h4 className="text-sm font-semibold flex items-center gap-2">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary-500">
+                    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                  {locale === 'he' ? 'תזמון חדש' : 'New Schedule'}
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Report type */}
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
+                      {locale === 'he' ? 'סוג דו"ח' : 'Report Type'}
+                    </label>
+                    <select
+                      className="input w-full text-sm"
+                      value={scheduleForm.reportType}
+                      onChange={(e) => setScheduleForm((f) => ({ ...f, reportType: e.target.value }))}
+                    >
+                      <option value="pnl">{locale === 'he' ? 'רווח והפסד' : 'Profit & Loss'}</option>
+                      <option value="cashflow">{locale === 'he' ? 'תזרים מזומנים' : 'Cash Flow'}</option>
+                      <option value="clients">{locale === 'he' ? 'סיכום לקוחות' : 'Clients Summary'}</option>
+                      <option value="categories">{locale === 'he' ? 'פירוט קטגוריות' : 'Category Breakdown'}</option>
+                      <option value="tax">{locale === 'he' ? 'סיכום מס' : 'Tax Summary'}</option>
+                    </select>
+                  </div>
+
+                  {/* Frequency */}
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
+                      {locale === 'he' ? 'תדירות' : 'Frequency'}
+                    </label>
+                    <select
+                      className="input w-full text-sm"
+                      value={scheduleForm.frequency}
+                      onChange={(e) => setScheduleForm((f) => ({ ...f, frequency: e.target.value }))}
+                    >
+                      <option value="weekly">{locale === 'he' ? 'שבועי' : 'Weekly'}</option>
+                      <option value="monthly">{locale === 'he' ? 'חודשי' : 'Monthly'}</option>
+                    </select>
+                  </div>
+
+                  {/* Day of week (weekly) */}
+                  {scheduleForm.frequency === 'weekly' && (
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
+                        {locale === 'he' ? 'יום בשבוע' : 'Day of Week'}
+                      </label>
+                      <select
+                        className="input w-full text-sm"
+                        value={scheduleForm.dayOfWeek}
+                        onChange={(e) => setScheduleForm((f) => ({ ...f, dayOfWeek: Number(e.target.value) }))}
+                      >
+                        {(locale === 'he'
+                          ? ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת']
+                          : ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+                        ).map((d, i) => (
+                          <option key={i} value={i}>{d}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Day of month (monthly) */}
+                  {scheduleForm.frequency === 'monthly' && (
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
+                        {locale === 'he' ? 'יום בחודש' : 'Day of Month'}
+                      </label>
+                      <select
+                        className="input w-full text-sm"
+                        value={scheduleForm.dayOfMonth}
+                        onChange={(e) => setScheduleForm((f) => ({ ...f, dayOfMonth: Number(e.target.value) }))}
+                      >
+                        {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+                          <option key={d} value={d}>{d}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Hour */}
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
+                      {locale === 'he' ? 'שעת שליחה' : 'Send Time'}
+                    </label>
+                    <select
+                      className="input w-full text-sm"
+                      value={scheduleForm.hour}
+                      onChange={(e) => setScheduleForm((f) => ({ ...f, hour: Number(e.target.value) }))}
+                    >
+                      {Array.from({ length: 24 }, (_, i) => i).map((h) => (
+                        <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={scheduleSaving}
+                  onClick={async () => {
+                    setScheduleSaving(true);
+                    try {
+                      const schedule = await notifications.createReportSchedule({
+                        reportType: scheduleForm.reportType,
+                        frequency: scheduleForm.frequency,
+                        dayOfWeek: scheduleForm.frequency === 'weekly' ? scheduleForm.dayOfWeek : undefined,
+                        dayOfMonth: scheduleForm.frequency === 'monthly' ? scheduleForm.dayOfMonth : undefined,
+                        hour: scheduleForm.hour,
+                      });
+                      setReportSchedules((prev) => [schedule, ...prev]);
+                      toast(locale === 'he' ? 'התזמון נוצר בהצלחה' : 'Schedule created', 'success');
+                    } catch {
+                      toast(locale === 'he' ? 'שגיאה ביצירת תזמון' : 'Failed to create schedule', 'error');
+                    } finally {
+                      setScheduleSaving(false);
+                    }
+                  }}
+                  className="btn-primary text-sm w-full flex items-center justify-center gap-2"
+                >
+                  {scheduleSaving ? (
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+                    </svg>
+                  )}
+                  {locale === 'he' ? 'צור תזמון' : 'Create Schedule'}
+                </button>
+              </div>
+
+              {/* Existing schedules */}
+              <div>
+                <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400">
+                    <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+                  </svg>
+                  {locale === 'he' ? 'תזמונים פעילים' : 'Active Schedules'}
+                </h4>
+
+                {scheduleLoading ? (
+                  <div className="flex items-center justify-center py-8 gap-2 text-slate-500">
+                    <span className="h-5 w-5 animate-spin rounded-full border-2 border-primary-500 border-t-transparent" />
+                    <span className="text-sm">{t('common.loading')}</span>
+                  </div>
+                ) : reportSchedules.length === 0 ? (
+                  <div className="text-center py-8 rounded-xl border border-dashed border-[var(--border)]">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto text-slate-300 dark:text-slate-600 mb-2">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+                    </svg>
+                    <p className="text-sm text-slate-400 dark:text-slate-500">
+                      {locale === 'he' ? 'אין תזמונים עדיין. צור את הראשון למעלה.' : 'No schedules yet. Create your first one above.'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {reportSchedules.map((schedule) => {
+                      const reportNames: Record<string, string> = locale === 'he'
+                        ? { pnl: 'רווח והפסד', cashflow: 'תזרים מזומנים', clients: 'סיכום לקוחות', categories: 'פירוט קטגוריות', tax: 'סיכום מס' }
+                        : { pnl: 'Profit & Loss', cashflow: 'Cash Flow', clients: 'Clients', categories: 'Categories', tax: 'Tax' };
+                      const freqLabel = schedule.frequency === 'weekly'
+                        ? (locale === 'he' ? 'שבועי' : 'Weekly')
+                        : (locale === 'he' ? 'חודשי' : 'Monthly');
+                      const dayLabel = schedule.frequency === 'weekly' && schedule.dayOfWeek != null
+                        ? (locale === 'he'
+                          ? ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'][schedule.dayOfWeek]
+                          : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][schedule.dayOfWeek])
+                        : schedule.frequency === 'monthly' && schedule.dayOfMonth != null
+                          ? (locale === 'he' ? `${schedule.dayOfMonth} בחודש` : `${schedule.dayOfMonth}${['st','nd','rd'][((schedule.dayOfMonth+90)%100-10)%10-1]||'th'}`)
+                          : '';
+
+                      return (
+                        <div
+                          key={schedule.id}
+                          className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${
+                            schedule.enabled
+                              ? 'border-[var(--border)] bg-white dark:bg-slate-800/40'
+                              : 'border-dashed border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/20 opacity-60'
+                          }`}
+                        >
+                          {/* Report type icon */}
+                          <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                            schedule.enabled
+                              ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+                          }`}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" />
+                            </svg>
+                          </div>
+
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{reportNames[schedule.reportType] || schedule.reportType}</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                              {freqLabel}{dayLabel ? ` \u00b7 ${dayLabel}` : ''} \u00b7 {String(schedule.hour).padStart(2, '0')}:00
+                            </p>
+                          </div>
+
+                          {/* Toggle + Delete */}
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                await notifications.updateReportSchedule(schedule.id, { enabled: !schedule.enabled });
+                                setReportSchedules((prev) =>
+                                  prev.map((s) => s.id === schedule.id ? { ...s, enabled: !s.enabled } : s)
+                                );
+                              }}
+                              className={`relative w-9 h-5 rounded-full transition-colors ${
+                                schedule.enabled ? 'bg-primary-500' : 'bg-slate-300 dark:bg-slate-600'
+                              }`}
+                              title={schedule.enabled ? (locale === 'he' ? 'פעיל' : 'Enabled') : (locale === 'he' ? 'מושבת' : 'Disabled')}
+                            >
+                              <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${
+                                schedule.enabled ? 'end-0.5' : 'start-0.5'
+                              }`} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                await notifications.deleteReportSchedule(schedule.id);
+                                setReportSchedules((prev) => prev.filter((s) => s.id !== schedule.id));
+                                toast(locale === 'he' ? 'התזמון נמחק' : 'Schedule deleted', 'success');
+                              }}
+                              className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-slate-400 hover:text-red-500 transition-colors"
+                              title={locale === 'he' ? 'מחק' : 'Delete'}
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal footer hint */}
+            <div className="px-5 py-3 border-t border-[var(--border)] bg-slate-50/50 dark:bg-slate-800/20 rounded-b-2xl">
+              <p className="text-xs text-slate-400 dark:text-slate-500 text-center flex items-center justify-center gap-1.5">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" />
+                </svg>
+                {locale === 'he'
+                  ? 'הדו"חות יישלחו לכתובת המייל של החשבון שלך'
+                  : 'Reports will be sent to your account email address'}
+              </p>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
