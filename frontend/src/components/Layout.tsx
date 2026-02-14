@@ -114,7 +114,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     }
     return true;
   });
-  const [hoveredGroup, setHoveredGroup] = useState<string | null>(null);
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set(['main', 'business', 'finance', 'reports', 'more']));
   const [userInfo, setUserInfo] = useState<{ name: string | null; email: string; avatarUrl?: string | null } | null>(null);
@@ -236,15 +236,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <>
       {/* Logo / brand */}
       {isCollapsed ? (
-        <div className="flex flex-col items-center py-4 border-b border-white/10 px-2 group/brand">
+        <div className="flex flex-col items-center py-4 border-b border-white/10 px-2">
           <Link href="/dashboard" className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-indigo-500/25">
             F
           </Link>
-          {/* Expand arrow - appears on hover */}
+          {/* Expand arrow - always visible */}
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); setSidebarCollapsed((c) => { const next = !c; localStorage.setItem('sidebar_collapsed', String(next)); return next; }); }}
-            className="mt-2 p-1 rounded-lg text-[#a0a3bd] hover:text-white hover:bg-white/10 transition-all opacity-0 group-hover/brand:opacity-100 hidden md:inline-flex"
+            className="mt-2 p-1 rounded-lg text-[#a0a3bd] hover:text-white hover:bg-white/10 transition-all hidden md:inline-flex"
             aria-label="Expand sidebar"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ transform: locale === 'he' ? 'scaleX(1)' : 'scaleX(-1)' }}>
@@ -341,23 +341,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Navigation */}
       <nav className="flex-1 px-2 py-2 space-y-0.5 overflow-y-auto">
         {navGroups.map((group) => {
-          const isHovered = hoveredGroup === group.id;
           return (
-            <div
-              key={group.id}
-              className="relative"
-              onMouseEnter={() => {
-                if (isCollapsed) {
-                  if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-                  setHoveredGroup(group.id);
-                }
-              }}
-              onMouseLeave={() => {
-                if (isCollapsed) {
-                  hoverTimeoutRef.current = setTimeout(() => setHoveredGroup(null), 200);
-                }
-              }}
-            >
+            <div key={group.id} className="relative">
               {/* Group header - expanded mode */}
               {!isCollapsed && (
                 <div
@@ -374,76 +359,55 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 </div>
               )}
 
-              {/* Collapsed mode: show first item icon as group representative */}
+              {/* Collapsed mode: individual icons with per-item label tooltip */}
               {isCollapsed && (
                 <div className="flex flex-col items-center gap-0.5 py-1">
                   {group.items.map((item) => {
                     const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
+                    const isItemHovered = hoveredItem === item.href;
                     return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        className={`flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-150 ${
-                          isActive
-                            ? 'bg-indigo-500/15 text-indigo-400'
-                            : 'text-[#a0a3bd] hover:bg-white/8 hover:text-white'
-                        }`}
-                        title={t(item.key)}
-                      >
-                        <NavIcon name={item.icon} />
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Collapsed hover flyout (only for groups with multiple items) */}
-              {isCollapsed && isHovered && group.items.length > 1 && (
-                <div
-                  className="fixed z-[9999] animate-fadeIn"
-                  style={{
-                    [locale === 'he' ? 'right' : 'left']: '64px',
-                    top: 'var(--flyout-top)',
-                  }}
-                  ref={(el) => {
-                    if (el) {
-                      const parent = el.parentElement;
-                      if (parent) {
-                        const rect = parent.getBoundingClientRect();
-                        el.style.setProperty('top', `${rect.top}px`);
-                        el.style.removeProperty('--flyout-top');
-                      }
-                    }
-                  }}
-                  onMouseEnter={() => {
-                    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-                    setHoveredGroup(group.id);
-                  }}
-                  onMouseLeave={() => {
-                    hoverTimeoutRef.current = setTimeout(() => setHoveredGroup(null), 200);
-                  }}
-                >
-                  <div className="bg-[#252540] border border-white/10 rounded-xl shadow-2xl py-2 px-1 min-w-[200px]">
-                    <p className="px-3 py-2 text-xs font-bold uppercase tracking-wider text-slate-300 border-b border-white/10 mb-1">{t(group.labelKey)}</p>
-                    {group.items.map((item) => {
-                      const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
-                      return (
+                      <div key={item.href} className="relative">
                         <Link
-                          key={item.href}
                           href={item.href}
-                          onClick={() => setHoveredGroup(null)}
-                          className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all ${
+                          onMouseEnter={() => {
+                            if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+                            setHoveredItem(item.href);
+                          }}
+                          onMouseLeave={() => {
+                            hoverTimeoutRef.current = setTimeout(() => setHoveredItem(null), 150);
+                          }}
+                          className={`flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-150 ${
                             isActive
                               ? 'bg-indigo-500/15 text-indigo-400'
                               : 'text-[#a0a3bd] hover:bg-white/8 hover:text-white'
                           }`}
                         >
-                          <NavIcon name={item.icon} className="w-4 h-4" />
-                          <span>{t(item.key)}</span>
+                          <NavIcon name={item.icon} />
                         </Link>
-                      );
-                    })}
-                  </div>
+                        {/* Per-item flyout label */}
+                        {isItemHovered && (
+                          <div
+                            className="fixed z-[9999] animate-fadeIn pointer-events-none"
+                            style={{ [locale === 'he' ? 'right' : 'left']: '64px' }}
+                            ref={(el) => {
+                              if (el) {
+                                const link = el.parentElement?.querySelector('a');
+                                if (link) {
+                                  const rect = link.getBoundingClientRect();
+                                  el.style.top = `${rect.top + rect.height / 2 - 16}px`;
+                                }
+                              }
+                            }}
+                          >
+                            <div className="bg-[#252540] border border-white/10 rounded-lg shadow-2xl px-3 py-2 whitespace-nowrap">
+                              <span className="text-sm text-white font-medium">{t(item.key)}</span>
+                              {item.descKey && <p className="text-[10px] text-slate-400 mt-0.5">{t(item.descKey)}</p>}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
@@ -479,7 +443,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <button
           type="button"
           onClick={() => setShowQuickAdd(true)}
-          onMouseEnter={() => { if (isCollapsed) setHoveredGroup(null); }}
+          onMouseEnter={() => { if (isCollapsed) setHoveredItem(null); }}
           className={`flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium text-indigo-400 hover:bg-indigo-500/15 transition-all duration-150 mt-4 ${isCollapsed ? 'justify-center' : ''}`}
           title={isCollapsed ? t('quickAdd.title') : undefined}
         >
@@ -491,7 +455,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <button
           type="button"
           onClick={startTour}
-          onMouseEnter={() => { if (isCollapsed) setHoveredGroup(null); }}
+          onMouseEnter={() => { if (isCollapsed) setHoveredItem(null); }}
           className={`flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium text-[#a0a3bd] hover:bg-white/5 hover:text-white transition-all duration-150 ${isCollapsed ? 'justify-center' : ''}`}
           title={isCollapsed ? (locale === 'he' ? 'סיור באתר' : 'Site Tour') : undefined}
         >
@@ -500,7 +464,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </button>
 
         {/* Settings - at bottom of nav */}
-        <div className="pt-3 mt-3 border-t border-white/10" onMouseEnter={() => { if (isCollapsed) setHoveredGroup(null); }}>
+        <div className="pt-3 mt-3 border-t border-white/10" onMouseEnter={() => { if (isCollapsed) setHoveredItem(null); }}>
           {(() => {
             const isActive = pathname === '/settings';
             return (
@@ -522,7 +486,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </nav>
 
       {/* Footer actions */}
-      <div className={`border-t border-white/10 space-y-0.5 ${isCollapsed ? 'p-1.5' : 'p-3'}`} onMouseEnter={() => { if (isCollapsed) setHoveredGroup(null); }}>
+      <div className={`border-t border-white/10 space-y-0.5 ${isCollapsed ? 'p-1.5' : 'p-3'}`} onMouseEnter={() => { if (isCollapsed) setHoveredItem(null); }}>
         {/* Search shortcut */}
         <button
           type="button"
