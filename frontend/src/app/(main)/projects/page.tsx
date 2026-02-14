@@ -10,6 +10,7 @@ import {
   type InvoiceItem,
 } from '@/lib/api';
 import { useTranslation } from '@/i18n/context';
+import PageGuide from '@/components/PageGuide';
 import CustomFields from '@/components/CustomFields';
 
 // ─── Constants ───────────────────────────────────────
@@ -1117,6 +1118,17 @@ export default function ProjectsPage() {
           </button>
         </div>
       </div>
+
+      {/* Page action guide */}
+      <PageGuide
+        pageKey="projects"
+        steps={[
+          { labelHe: 'צור פרויקט', labelEn: 'Create project' },
+          { labelHe: 'הגדר תקציב ולקוח', labelEn: 'Set budget & client' },
+          { labelHe: 'עקוב אחר התקדמות', labelEn: 'Track progress' },
+          { labelHe: 'סגור והפק דוח', labelEn: 'Close & report' },
+        ]}
+      />
 
       {/* Message */}
       {msg && (

@@ -12,6 +12,7 @@ import {
   type CategoryItem,
 } from '@/lib/api';
 import { useTranslation } from '@/i18n/context';
+import PageGuide from '@/components/PageGuide';
 import HelpTooltip from '@/components/HelpTooltip';
 
 /* ──────────────────────────────────────────────────────── */
@@ -627,6 +628,17 @@ export default function UploadPage() {
         </h1>
         <p className="text-slate-500 dark:text-slate-400 mt-1">{t('upload.description')}</p>
       </div>
+
+      {/* Page action guide */}
+      <PageGuide
+        pageKey="upload"
+        steps={[
+          { labelHe: 'בחר קובץ', labelEn: 'Choose file' },
+          { labelHe: 'סריקה אוטומטית', labelEn: 'Auto-scan' },
+          { labelHe: 'אישור פרטים', labelEn: 'Confirm details' },
+          { labelHe: 'שמור וסווג', labelEn: 'Save & classify' },
+        ]}
+      />
 
       {/* ── Supported formats indicator ── */}
       <div className="flex flex-wrap items-center gap-3">

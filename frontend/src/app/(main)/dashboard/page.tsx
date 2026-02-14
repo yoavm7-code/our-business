@@ -29,6 +29,7 @@ import {
 import { useTranslation } from '@/i18n/context';
 import DateRangePicker from '@/components/DateRangePicker';
 import SmartTip from '@/components/SmartTip';
+import OnboardingProgress from '@/components/OnboardingProgress';
 import HelpTooltip from '@/components/HelpTooltip';
 import WidgetSettings from '@/components/dashboard/WidgetSettings';
 import { DEFAULT_WIDGETS } from '@/components/dashboard/defaults';
@@ -1457,6 +1458,9 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Onboarding progress (new users only) ── */}
+      <OnboardingProgress />
 
       {/* ── Edit mode toolbar ── */}
       <div className="flex flex-wrap items-center gap-2 sm:gap-3">

@@ -2213,208 +2213,160 @@ export default function SettingsPage() {
               </div>
             ) : (
               /* ─── Setup / Connect state ─── */
-              <div className="space-y-4">
-                {/* Connection method toggle */}
-                <div className="flex rounded-xl border border-[var(--border)] overflow-hidden">
+              <div className="space-y-5">
+                {/* Step 1: Log in to Morning */}
+                <div className="p-5 rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/10 dark:to-emerald-900/10 border border-green-200 dark:border-green-800/50">
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center shrink-0 text-sm font-bold">1</div>
+                    <div>
+                      <h4 className="text-sm font-bold text-green-800 dark:text-green-200">
+                        {locale === 'he' ? 'התחבר לחשבון מורנינג שלך' : 'Log in to your Morning account'}
+                      </h4>
+                      <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                        {locale === 'he'
+                          ? 'לחץ על הכפתור למטה כדי לפתוח את מורנינג. התחבר או צור חשבון חדש אם אין לך.'
+                          : 'Click the button below to open Morning. Log in or create a new account if you don\'t have one.'}
+                      </p>
+                    </div>
+                  </div>
                   <button
                     type="button"
-                    onClick={() => setGiConnectionMethod('api_key')}
-                    className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
-                      giConnectionMethod === 'api_key'
-                        ? 'bg-primary-600 text-white'
-                        : 'bg-[var(--card)] hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400'
-                    }`}
+                    onClick={() => window.open('https://app.greeninvoice.co.il', '_blank', 'noopener')}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-semibold shadow-lg hover:shadow-xl transition-all"
                   >
-                    <span className="flex items-center justify-center gap-2">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
-                      </svg>
-                      {locale === 'he' ? 'מפתח API' : 'API Key'}
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setGiConnectionMethod('credentials')}
-                    className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors border-s border-[var(--border)] ${
-                      giConnectionMethod === 'credentials'
-                        ? 'bg-primary-600 text-white'
-                        : 'bg-[var(--card)] hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400'
-                    }`}
-                  >
-                    <span className="flex items-center justify-center gap-2">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" />
-                      </svg>
-                      {locale === 'he' ? 'שם משתמש וסיסמה' : 'Username & Password'}
-                    </span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" />
+                    </svg>
+                    {locale === 'he' ? 'פתח את מורנינג' : 'Open Morning'}
                   </button>
                 </div>
 
-                {giConnectionMethod === 'api_key' ? (
-                  /* ─── API Key method ─── */
-                  <>
-                    {/* Setup guide */}
-                    <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800">
-                      <h4 className="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-2">{t('integrations.howToConnect')}</h4>
-                      <ol className="text-sm text-blue-600 dark:text-blue-400 space-y-1.5 list-decimal ps-4">
-                        <li>{t('integrations.step1')}</li>
-                        <li>{t('integrations.step2')}</li>
-                        <li>{t('integrations.step3')}</li>
-                        <li>{t('integrations.step4')}</li>
-                      </ol>
-                    </div>
-
-                    {/* API Key form */}
-                    <div className="space-y-3">
-                      <div>
-                        <label className="block text-sm font-medium mb-1">{t('integrations.apiKeyId')}</label>
-                        <input
-                          className="input w-full"
-                          value={giKeyId}
-                          onChange={(e) => setGiKeyId(e.target.value)}
-                          placeholder={t('integrations.apiKeyIdPlaceholder')}
-                          dir="ltr"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">{t('integrations.apiSecret')}</label>
-                        <input
-                          type="password"
-                          className="input w-full"
-                          value={giSecret}
-                          onChange={(e) => setGiSecret(e.target.value)}
-                          placeholder={t('integrations.apiSecretPlaceholder')}
-                          dir="ltr"
-                        />
-                      </div>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={giSandbox}
-                          onChange={(e) => setGiSandbox(e.target.checked)}
-                          className="rounded border-slate-300 text-primary-600 focus:ring-primary-500"
-                        />
-                        <span className="text-sm text-slate-600 dark:text-slate-400">{t('integrations.sandboxMode')}</span>
-                      </label>
-                      <button
-                        type="button"
-                        onClick={handleGiConnect}
-                        disabled={giConnecting || !giKeyId.trim() || !giSecret.trim()}
-                        className="btn-primary w-full sm:w-auto"
-                      >
-                        {giConnecting ? (
-                          <span className="flex items-center gap-2">
-                            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                            {t('integrations.connecting')}
-                          </span>
-                        ) : (
-                          t('integrations.connect')
-                        )}
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  /* ─── Username & Password method ─── */
-                  <>
-                    <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800">
-                      <p className="text-sm text-blue-600 dark:text-blue-400">
+                {/* Step 2: Enter credentials */}
+                <div className="p-5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-[var(--border)]">
+                  <div className="flex items-start gap-3 mb-4">
+                    <div className="w-8 h-8 rounded-full bg-indigo-500 text-white flex items-center justify-center shrink-0 text-sm font-bold">2</div>
+                    <div>
+                      <h4 className="text-sm font-bold">
+                        {locale === 'he' ? 'הזן את פרטי ההתחברות שלך' : 'Enter your login details'}
+                      </h4>
+                      <p className="text-xs text-slate-500 mt-1">
                         {locale === 'he'
-                          ? 'הזן את פרטי ההתחברות שלך למורנינג (Green Invoice). אלו אותם פרטים שבהם אתה מתחבר לאתר.'
-                          : 'Enter your Morning (Green Invoice) login credentials. These are the same credentials you use to log in to the website.'}
+                          ? 'הכנס את אותם פרטים שבהם נכנסת למורנינג - אימייל וסיסמה.'
+                          : 'Enter the same email and password you used to log in to Morning.'}
                       </p>
                     </div>
+                  </div>
 
-                    <div className="space-y-3">
-                      <div>
-                        <label className="block text-sm font-medium mb-1">
-                          {locale === 'he' ? 'אימייל' : 'Email'}
-                        </label>
-                        <input
-                          type="email"
-                          className="input w-full"
-                          value={giEmail}
-                          onChange={(e) => setGiEmail(e.target.value)}
-                          placeholder={locale === 'he' ? 'your@email.com' : 'your@email.com'}
-                          dir="ltr"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">
-                          {locale === 'he' ? 'סיסמה' : 'Password'}
-                        </label>
-                        <input
-                          type="password"
-                          className="input w-full"
-                          value={giPassword}
-                          onChange={(e) => setGiPassword(e.target.value)}
-                          placeholder="********"
-                          dir="ltr"
-                        />
-                      </div>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={giCredSandbox}
-                          onChange={(e) => setGiCredSandbox(e.target.checked)}
-                          className="rounded border-slate-300 text-primary-600 focus:ring-primary-500"
-                        />
-                        <span className="text-sm text-slate-600 dark:text-slate-400">{t('integrations.sandboxMode')}</span>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        {locale === 'he' ? 'אימייל' : 'Email'}
                       </label>
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={handleGiConnectWithCredentials}
-                          disabled={giConnecting || !giEmail.trim() || !giPassword.trim()}
-                          className="btn-primary"
-                        >
-                          {giConnecting ? (
-                            <span className="flex items-center gap-2">
-                              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                              {t('integrations.connecting')}
-                            </span>
-                          ) : (
-                            locale === 'he' ? 'התחבר' : 'Connect'
-                          )}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleGiTestConnection}
-                          disabled={giTestingConnection}
-                          className="btn-secondary"
-                        >
-                          {giTestingConnection ? (
-                            <span className="flex items-center gap-2">
-                              <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-500 border-t-transparent" />
-                              {locale === 'he' ? 'בודק...' : 'Testing...'}
-                            </span>
-                          ) : (
-                            locale === 'he' ? 'בדוק חיבור' : 'Test Connection'
-                          )}
-                        </button>
-                      </div>
-
-                      {/* Test connection result */}
-                      {giTestResult && (
-                        <div className={`p-3 rounded-xl border text-sm flex items-center gap-2 ${
-                          giTestResult.success
-                            ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300'
-                            : 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300'
-                        }`}>
-                          {giTestResult.success ? (
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M22 11.08V12a10 10 0 11-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
-                            </svg>
-                          ) : (
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" />
-                            </svg>
-                          )}
-                          <span className="font-medium">{giTestResult.message}</span>
-                        </div>
-                      )}
+                      <input
+                        type="email"
+                        className="input w-full"
+                        value={giEmail}
+                        onChange={(e) => setGiEmail(e.target.value)}
+                        placeholder="your@email.com"
+                        dir="ltr"
+                      />
                     </div>
-                  </>
-                )}
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        {locale === 'he' ? 'סיסמה' : 'Password'}
+                      </label>
+                      <input
+                        type="password"
+                        className="input w-full"
+                        value={giPassword}
+                        onChange={(e) => setGiPassword(e.target.value)}
+                        placeholder="********"
+                        dir="ltr"
+                      />
+                    </div>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={giCredSandbox}
+                        onChange={(e) => setGiCredSandbox(e.target.checked)}
+                        className="rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                      />
+                      <span className="text-sm text-slate-600 dark:text-slate-400">{t('integrations.sandboxMode')}</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleGiConnectWithCredentials}
+                      disabled={giConnecting || !giEmail.trim() || !giPassword.trim()}
+                      className="btn-primary w-full"
+                    >
+                      {giConnecting ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                          {t('integrations.connecting')}
+                        </span>
+                      ) : (
+                        <span className="flex items-center justify-center gap-2">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M22 11.08V12a10 10 0 11-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+                          </svg>
+                          {locale === 'he' ? 'חבר את החשבון' : 'Connect Account'}
+                        </span>
+                      )}
+                    </button>
+
+                    {/* Connection result */}
+                    {giTestResult && (
+                      <div className={`p-3 rounded-xl border text-sm flex items-center gap-2 ${
+                        giTestResult.success
+                          ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300'
+                          : 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300'
+                      }`}>
+                        {giTestResult.success ? (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M22 11.08V12a10 10 0 11-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+                          </svg>
+                        ) : (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" />
+                          </svg>
+                        )}
+                        <span className="font-medium">{giTestResult.message}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* API Key toggle (for advanced users) */}
+                <details className="group">
+                  <summary className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="transition-transform group-open:rotate-90">
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                    {locale === 'he' ? 'התחברות עם מפתח API (מתקדם)' : 'Connect with API Key (advanced)'}
+                  </summary>
+                  <div className="mt-3 space-y-3 p-4 rounded-xl border border-[var(--border)]">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">{t('integrations.apiKeyId')}</label>
+                      <input className="input w-full" value={giKeyId} onChange={(e) => setGiKeyId(e.target.value)} placeholder={t('integrations.apiKeyIdPlaceholder')} dir="ltr" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">{t('integrations.apiSecret')}</label>
+                      <input type="password" className="input w-full" value={giSecret} onChange={(e) => setGiSecret(e.target.value)} placeholder={t('integrations.apiSecretPlaceholder')} dir="ltr" />
+                    </div>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={giSandbox} onChange={(e) => setGiSandbox(e.target.checked)} className="rounded border-slate-300 text-primary-600 focus:ring-primary-500" />
+                      <span className="text-sm text-slate-600 dark:text-slate-400">{t('integrations.sandboxMode')}</span>
+                    </label>
+                    <button type="button" onClick={handleGiConnect} disabled={giConnecting || !giKeyId.trim() || !giSecret.trim()} className="btn-primary w-full sm:w-auto">
+                      {giConnecting ? (
+                        <span className="flex items-center gap-2">
+                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                          {t('integrations.connecting')}
+                        </span>
+                      ) : t('integrations.connect')}
+                    </button>
+                  </div>
+                </details>
               </div>
             )}
           </div>

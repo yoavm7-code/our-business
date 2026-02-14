@@ -13,6 +13,7 @@ import {
   type TransactionItem,
 } from '@/lib/api';
 import { useTranslation } from '@/i18n/context';
+import PageGuide from '@/components/PageGuide';
 import HelpTooltip from '@/components/HelpTooltip';
 import VoiceInputButton from '@/components/VoiceInputButton';
 import { useToast } from '@/components/Toast';
@@ -391,6 +392,17 @@ export default function IncomeExpensesPage() {
           {activeTab === 'income' ? t('income.addIncomeEntry') : t('expenses.addExpenseEntry')}
         </button>
       </div>
+
+      {/* Page action guide */}
+      <PageGuide
+        pageKey="income"
+        steps={[
+          { labelHe: 'הוסף הכנסה או הוצאה', labelEn: 'Add income or expense' },
+          { labelHe: 'סווג לקטגוריה', labelEn: 'Categorize' },
+          { labelHe: 'צרף קבלה', labelEn: 'Attach receipt' },
+          { labelHe: 'עקוב אחר הסיכומים', labelEn: 'Track totals' },
+        ]}
+      />
 
       {/* ── Period filter ── */}
       <div className="flex flex-wrap items-center gap-2">
