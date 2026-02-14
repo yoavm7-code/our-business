@@ -144,7 +144,7 @@ Return ONLY the slug string, nothing else. If unsure, return "other".`,
     return this.prisma.transaction.create({
       data: {
         businessId,
-        accountId: dto.accountId,
+        accountId: dto.accountId ?? null,
         categoryId,
         clientId: dto.clientId ?? null,
         projectId: dto.projectId ?? null,

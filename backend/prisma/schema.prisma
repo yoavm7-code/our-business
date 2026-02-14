@@ -374,7 +374,7 @@ model Category {
 model Transaction {
   id                 String    @id @default(uuid())
   businessId         String    @map("household_id")
-  accountId          String    @map("account_id")
+  accountId          String?   @map("account_id")
   categoryId         String?   @map("category_id")
   clientId           String?   @map("client_id")
   projectId          String?   @map("project_id")
@@ -398,7 +398,7 @@ model Transaction {
   updatedAt          DateTime  @updatedAt
 
   business   Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  account    Account   @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  account    Account?  @relation(fields: [accountId], references: [id], onDelete: Restrict)
   category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   client     Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
   project    Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
