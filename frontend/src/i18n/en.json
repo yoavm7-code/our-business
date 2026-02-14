@@ -1161,6 +1161,11 @@
     "export": "Export",
     "cancel": "Cancel",
     "noLogo": "No Logo",
+    "logoSource": "Report Logo",
+    "logoNone": "No Logo",
+    "logoExisting": "Business Logo",
+    "logoUpload": "Upload Different",
+    "noLogoConfigured": "No logo configured in settings",
     "reportPreview": "Report Preview",
     "zReport": {
       "title": "Z-Report (End of Day)",

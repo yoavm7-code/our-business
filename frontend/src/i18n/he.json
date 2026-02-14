@@ -1095,6 +1095,11 @@
     "export": "ייצוא",
     "cancel": "ביטול",
     "noLogo": "ללא לוגו",
+    "logoSource": "לוגו בדו\"ח",
+    "logoNone": "ללא לוגו",
+    "logoExisting": "הלוגו הקיים",
+    "logoUpload": "העלה לוגו אחר",
+    "noLogoConfigured": "לא הוגדר לוגו בהגדרות",
     "reportPreview": "תצוגה מקדימה של הדו\"ח",
     "zReport": {
       "title": "דוח זד (Z-Report)",

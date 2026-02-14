@@ -162,7 +162,10 @@ export default function SettingsPage() {
     businessPhone: '', businessEmail: '', defaultCurrency: 'ILS',
     vatRate: '17', invoicePrefix: 'INV-',
   });
-  const [businessLogo, setBusinessLogo] = useState<string | null>(null);
+  const [businessLogo, setBusinessLogo] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem('business_logo');
+    return null;
+  });
   const [savingBusiness, setSavingBusiness] = useState(false);
   const businessLogoRef = useRef<HTMLInputElement>(null);
 
@@ -366,7 +369,9 @@ export default function SettingsPage() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
-      setBusinessLogo(ev.target?.result as string);
+      const dataUrl = ev.target?.result as string;
+      setBusinessLogo(dataUrl);
+      if (dataUrl) localStorage.setItem('business_logo', dataUrl);
     };
     reader.readAsDataURL(file);
     if (businessLogoRef.current) businessLogoRef.current.value = '';
@@ -1181,7 +1186,7 @@ export default function SettingsPage() {
                       <img src={businessLogo} alt="Logo" className="w-16 h-16 rounded-lg object-contain border border-[var(--border)] bg-white p-1" />
                       <button
                         type="button"
-                        onClick={() => setBusinessLogo(null)}
+                        onClick={() => { setBusinessLogo(null); localStorage.removeItem('business_logo'); }}
                         className="absolute -top-1.5 -end-1.5 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12" /></svg>
