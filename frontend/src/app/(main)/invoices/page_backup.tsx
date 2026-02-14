@@ -1801,28 +1801,28 @@ export default function InvoicesPage() {
       {/* Summary cards */}
       {summary && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="card">
+          <div className="card stat-card-indigo">
             <div className="flex items-center justify-between mb-1">
               <p className="text-sm text-slate-500">{t('invoices.totalDraft')}</p>
               <span className="text-xs font-medium text-slate-400">{summary.countDraft}</span>
             </div>
             <p className="text-xl font-bold">{formatCurrency(summary.totalDraft, 'ILS', locale)}</p>
           </div>
-          <div className="card">
+          <div className="card stat-card-blue">
             <div className="flex items-center justify-between mb-1">
               <p className="text-sm text-slate-500">{t('invoices.totalSent')}</p>
               <span className="text-xs font-medium text-slate-400">{summary.countSent}</span>
             </div>
             <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{formatCurrency(summary.totalSent, 'ILS', locale)}</p>
           </div>
-          <div className="card">
+          <div className="card stat-card-green">
             <div className="flex items-center justify-between mb-1">
               <p className="text-sm text-slate-500">{t('invoices.totalPaid')}</p>
               <span className="text-xs font-medium text-slate-400">{summary.countPaid}</span>
             </div>
             <p className="text-xl font-bold text-green-600 dark:text-green-400">{formatCurrency(summary.totalPaid, 'ILS', locale)}</p>
           </div>
-          <div className="card">
+          <div className="card stat-card-red">
             <div className="flex items-center justify-between mb-1">
               <p className="text-sm text-slate-500">{t('invoices.totalOverdue')}</p>
               <span className="text-xs font-medium text-slate-400">{summary.countOverdue}</span>
@@ -1833,24 +1833,24 @@ export default function InvoicesPage() {
       )}
 
       {/* Status tabs */}
-      <div className="flex gap-0 border-b border-gray-200 dark:border-slate-700">
+      <div className="flex flex-wrap gap-1.5">
         {statusTabs.map((tab) => (
           <button
             key={tab.key}
             type="button"
             onClick={() => setStatusFilter(tab.key)}
-            className={`px-4 py-2.5 text-sm font-medium transition-all border-b-2 -mb-px ${
+            className={`px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${
               statusFilter === tab.key
-                ? 'border-primary-600 text-primary-600 dark:text-primary-400 dark:border-primary-400'
-                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                ? 'bg-primary-600 text-white shadow-md'
+                : 'bg-[var(--card)] border border-[var(--border)] hover:bg-slate-50 dark:hover:bg-slate-800'
             }`}
           >
             {tab.label}
             {tab.count !== undefined && tab.count > 0 && (
               <span className={`ms-1.5 px-1.5 py-0.5 rounded-full text-xs ${
                 statusFilter === tab.key
-                  ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
-                  : 'bg-gray-100 dark:bg-slate-800 text-gray-500'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
               }`}>
                 {tab.count}
               </span>

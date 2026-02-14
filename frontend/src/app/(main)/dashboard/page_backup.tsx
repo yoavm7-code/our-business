@@ -214,7 +214,7 @@ function SortableWidget({
       style={style}
       className={`card relative overflow-hidden group ${colSpan} ${statBgClass} ${
         editMode ? 'ring-2 ring-primary-300 dark:ring-primary-700 cursor-grab' : ''
-      } hover:shadow-sm transition-all duration-200`}
+      } hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-200`}
     >
       {editMode && (
         <>
@@ -1358,36 +1358,36 @@ export default function DashboardPage() {
   /* ================================================================ */
 
   const QuickActionsWidget = () => (
-    <div className="card transition-all duration-200">
+    <div className="card hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-200">
       <h2 className="font-semibold mb-4">{t('dashboard.quickActions')}</h2>
-      <div className="flex flex-wrap gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
         {[
           { href: '/transactions', label: t('dashboard.newInvoice'), icon: (
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-primary-500"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-          ) },
+          ), bg: 'bg-primary-50 dark:bg-primary-950/30 hover:bg-primary-100 dark:hover:bg-primary-950/50' },
           { href: '/transactions', label: t('dashboard.newClient'), icon: (
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-emerald-500"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
-          ) },
+          ), bg: 'bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-100 dark:hover:bg-emerald-950/50' },
           { href: '/upload', label: t('dashboard.uploadDocument'), icon: (
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent-500"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          ) },
+          ), bg: 'bg-accent-50 dark:bg-accent-950/30 hover:bg-accent-100 dark:hover:bg-accent-950/50' },
           { href: '/transactions', label: t('dashboard.newProject'), icon: (
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-500"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
-          ) },
+          ), bg: 'bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-950/50' },
           { href: '/transactions', label: t('dashboard.newExpense'), icon: (
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-red-500"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-          ) },
+          ), bg: 'bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50' },
           { href: '/goals', label: t('dashboard.goalsWidget'), icon: (
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-violet-500"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-          ) },
+          ), bg: 'bg-violet-50 dark:bg-violet-950/30 hover:bg-violet-100 dark:hover:bg-violet-950/50' },
         ].map((action, i) => (
           <a
             key={i}
             href={action.href}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-start transition-all duration-150 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 hover:border-gray-200 dark:hover:border-slate-600 hover:shadow-sm"
+            className={`flex flex-col items-center gap-2 p-3 rounded-xl text-center transition-all duration-150 ${action.bg}`}
           >
             {action.icon}
-            <span className="text-xs font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">{action.label}</span>
+            <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{action.label}</span>
           </a>
         ))}
       </div>

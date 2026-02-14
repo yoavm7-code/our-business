@@ -1143,7 +1143,7 @@ export default function ProjectsPage() {
 
       {/* Status tabs */}
       {projectsList.length > 0 && viewMode === 'grid' && (
-        <div className="flex gap-0 border-b border-gray-200 dark:border-slate-700">
+        <div className="flex flex-wrap gap-2">
           {(['all', ...PROJECT_STATUSES] as const).map((tab) => {
             const isActive = activeTab === tab;
             return (
@@ -1151,18 +1151,18 @@ export default function ProjectsPage() {
                 key={tab}
                 type="button"
                 onClick={() => setActiveTab(tab)}
-                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-all border-b-2 -mb-px ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                   isActive
-                    ? 'border-primary-600 text-primary-600 dark:text-primary-400 dark:border-primary-400'
-                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                    ? 'bg-primary-600 text-white shadow-md'
+                    : 'bg-[var(--card)] border border-[var(--border)] hover:bg-slate-50 dark:hover:bg-slate-800'
                 }`}
               >
                 {tab !== 'all' && (
-                  <span className="w-2 h-2 rounded-full" style={{ background: STATUS_CONFIG[tab].dotColor }} />
+                  <span className="w-2 h-2 rounded-full" style={{ background: isActive ? 'white' : STATUS_CONFIG[tab].dotColor }} />
                 )}
                 {tab === 'all' ? t('common.all') : t(`projects.status_${tab}`)}
                 <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                  isActive ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400' : 'bg-gray-100 dark:bg-slate-800 text-gray-500'
+                  isActive ? 'bg-white/20' : 'bg-slate-100 dark:bg-slate-800'
                 }`}>
                   {tabCounts[tab] || 0}
                 </span>
