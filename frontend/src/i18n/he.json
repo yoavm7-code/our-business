@@ -188,7 +188,18 @@
     "reportsSection": "דו\"חות וניתוח",
     "planning": "תכנון",
     "assets": "נכסים",
-    "analysis": "ניתוח"
+    "analysis": "ניתוח",
+    "dashboardDesc": "סקירה כללית של העסק שלך",
+    "clientsDesc": "ניהול לקוחות, פרטי קשר והיסטוריה",
+    "projectsDesc": "מעקב אחר פרויקטים ותקציבים",
+    "invoicesDesc": "יצירה וניהול חשבוניות וקבלות",
+    "transactionsDesc": "צפייה וניהול כל התנועות",
+    "uploadDesc": "העלאת מסמכים וקבלות למערכת",
+    "incomeDesc": "מעקב אחר מקורות ההכנסה",
+    "budgetsDesc": "תכנון ומעקב תקציבי",
+    "reportsDesc": "דוחות כספיים וייצוא",
+    "insightsDesc": "תובנות והמלצות חכמות מבוססות AI",
+    "taxDesc": "ניהול מיסים ודיווח תקופתי"
   },
   "auth": {
     "login": "התחברות",

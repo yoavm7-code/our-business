@@ -10,34 +10,36 @@ import CommandPalette from '@/components/CommandPalette';
 import AlertsBell from '@/components/AlertsBell';
 import QuickAdd from '@/components/QuickAdd';
 import VoiceTransaction from '@/components/VoiceTransaction';
+import SmartTip from '@/components/SmartTip';
+import { useOnboarding } from '@/components/OnboardingProvider';
 
 /* ────────────────────────────────────────────── */
 /* Navigation data                                 */
 /* ────────────────────────────────────────────── */
 
-type NavItem = { href: string; key: string; icon: string };
+type NavItem = { href: string; key: string; icon: string; descKey?: string };
 
 const mainItems: NavItem[] = [
-  { href: '/dashboard', key: 'nav.dashboard', icon: 'grid' },
+  { href: '/dashboard', key: 'nav.dashboard', icon: 'grid', descKey: 'nav.dashboardDesc' },
 ];
 
 const businessItems: NavItem[] = [
-  { href: '/clients', key: 'nav.clients', icon: 'users' },
-  { href: '/projects', key: 'nav.projects', icon: 'folder' },
-  { href: '/invoices', key: 'nav.invoices', icon: 'file-invoice' },
+  { href: '/clients', key: 'nav.clients', icon: 'users', descKey: 'nav.clientsDesc' },
+  { href: '/projects', key: 'nav.projects', icon: 'folder', descKey: 'nav.projectsDesc' },
+  { href: '/invoices', key: 'nav.invoices', icon: 'file-invoice', descKey: 'nav.invoicesDesc' },
 ];
 
 const financeItems: NavItem[] = [
-  { href: '/transactions', key: 'nav.transactions', icon: 'list' },
-  { href: '/upload', key: 'nav.uploadDocuments', icon: 'upload' },
-  { href: '/income', key: 'nav.income', icon: 'trending-up' },
-  { href: '/budgets', key: 'nav.budgets', icon: 'wallet' },
+  { href: '/transactions', key: 'nav.transactions', icon: 'list', descKey: 'nav.transactionsDesc' },
+  { href: '/upload', key: 'nav.uploadDocuments', icon: 'upload', descKey: 'nav.uploadDesc' },
+  { href: '/income', key: 'nav.income', icon: 'trending-up', descKey: 'nav.incomeDesc' },
+  { href: '/budgets', key: 'nav.budgets', icon: 'wallet', descKey: 'nav.budgetsDesc' },
 ];
 
 const reportsItems: NavItem[] = [
-  { href: '/reports', key: 'nav.reports', icon: 'file-text' },
-  { href: '/insights', key: 'nav.insights', icon: 'sparkles' },
-  { href: '/tax', key: 'nav.tax', icon: 'percent' },
+  { href: '/reports', key: 'nav.reports', icon: 'file-text', descKey: 'nav.reportsDesc' },
+  { href: '/insights', key: 'nav.insights', icon: 'sparkles', descKey: 'nav.insightsDesc' },
+  { href: '/tax', key: 'nav.tax', icon: 'percent', descKey: 'nav.taxDesc' },
 ];
 
 const navGroups = [
@@ -101,6 +103,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { t, locale, setLocale } = useTranslation();
+  const { phase: onboardingPhase } = useOnboarding();
 
   /* --- State --- */
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -112,6 +115,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [avatarCropFile, setAvatarCropFile] = useState<File | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [voiceMinimized, setVoiceMinimized] = useState(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem('voiceIcon_minimized') === 'true';
+    return false;
+  });
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const toggleGroup = (g: string) => setOpenGroups((prev) => {
@@ -325,15 +332,22 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  title={sidebarCollapsed ? t(item.key) : undefined}
-                  className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
+                  title={sidebarCollapsed ? `${t(item.key)}${item.descKey ? ' - ' + t(item.descKey) : ''}` : (item.descKey ? t(item.descKey) : undefined)}
+                  className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 group/nav ${
                     isActive
                       ? 'bg-indigo-500/15 text-indigo-400'
                       : 'text-[#a0a3bd] hover:bg-white/5 hover:text-white'
                   } ${sidebarCollapsed ? 'justify-center' : ''}`}
                 >
                   <NavIcon name={item.icon} />
-                  {!sidebarCollapsed && <span>{t(item.key)}</span>}
+                  {!sidebarCollapsed && (
+                    <div className="flex-1 min-w-0">
+                      <span>{t(item.key)}</span>
+                      {item.descKey && (
+                        <p className="text-[10px] text-slate-500 font-normal truncate mt-0.5 opacity-0 group-hover/nav:opacity-100 transition-opacity">{t(item.descKey)}</p>
+                      )}
+                    </div>
+                  )}
                 </Link>
               );
             })}
@@ -490,19 +504,47 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
           {/* Right side actions */}
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleVoiceClick}
-              className="shrink-0 p-1.5 rounded-lg text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all duration-200"
-              title={t('voice.start')}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                <line x1="12" y1="19" x2="12" y2="23" />
-                <line x1="8" y1="23" x2="16" y2="23" />
-              </svg>
-            </button>
+            {/* Smart AI Tips — only shown after onboarding is fully done */}
+            {onboardingPhase === 'ready' && <SmartTip />}
+            {/* Voice button with minimize option */}
+            {voiceMinimized ? (
+              <button
+                type="button"
+                onClick={() => { setVoiceMinimized(false); localStorage.setItem('voiceIcon_minimized', 'false'); }}
+                className="relative shrink-0 p-1 rounded-full text-slate-300 dark:text-slate-600 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all duration-200"
+                title={t('voice.start')}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                </svg>
+              </button>
+            ) : (
+              <div className="relative group">
+                <button
+                  type="button"
+                  onClick={handleVoiceClick}
+                  className="shrink-0 p-1.5 rounded-lg text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all duration-200"
+                  title={t('voice.start')}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                    <line x1="12" y1="19" x2="12" y2="23" />
+                    <line x1="8" y1="23" x2="16" y2="23" />
+                  </svg>
+                </button>
+                {/* Minimize button - shown on hover */}
+                <button
+                  type="button"
+                  onClick={() => { setVoiceMinimized(true); localStorage.setItem('voiceIcon_minimized', 'true'); }}
+                  className="absolute -top-1 -end-1 w-3.5 h-3.5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 items-center justify-center hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors hidden group-hover:flex"
+                  title={locale === 'he' ? '\u05DE\u05D6\u05E2\u05E8' : 'Minimize'}
+                >
+                  <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                </button>
+              </div>
+            )}
             <button
               type="button"
               onClick={() => setShowQuickAdd(true)}
