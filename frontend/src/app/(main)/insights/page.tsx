@@ -378,7 +378,7 @@ export default function InsightsPage() {
   const [expandedIds, setExpandedIds] = useState<Set<InsightSection>>(new Set());
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [refreshingAll, setRefreshingAll] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(false);
 
   // ─── Load single section ────────────────────────────────
   const loadSection = useCallback(
@@ -460,10 +460,22 @@ export default function InsightsPage() {
     [locale, loadSection],
   );
 
-  // Load all on mount
+  // Restore cached data on mount (no API calls)
   useEffect(() => {
-    loadAllSections(false);
-  }, [loadAllSections]);
+    const restored: Record<string, SectionState> = {};
+    let hasAny = false;
+    SECTION_CONFIGS.forEach((s) => {
+      const cached = getCached(s.id, locale);
+      if (cached) {
+        restored[s.id] = { content: cached.content, loading: false, error: '' };
+        hasAny = true;
+      }
+    });
+    if (hasAny) {
+      setSectionData((prev) => ({ ...prev, ...restored }));
+      setLastUpdated(new Date());
+    }
+  }, [locale]);
 
   // Reset when locale changes
   useEffect(() => {
@@ -477,7 +489,6 @@ export default function InsightsPage() {
       ),
     );
     setExpandedIds(new Set());
-    setInitialLoading(true);
   }, [locale]);
 
   // ─── Expand / Collapse ─────────────────────────────────
