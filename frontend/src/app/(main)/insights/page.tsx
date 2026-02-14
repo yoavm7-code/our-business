@@ -340,8 +340,8 @@ function FormattedLine({ text }: { text: string }) {
 // ─── Shimmer card ────────────────────────────────────────────
 function ShimmerCard({ gradient }: { gradient: string }) {
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] overflow-hidden">
-      <div className={`h-1 bg-gradient-to-r ${gradient}`} />
+    <div className="rounded-xl border border-gray-100 dark:border-slate-700 bg-white dark:bg-[var(--card)] overflow-hidden">
+      <div className={`h-0.5 bg-gradient-to-r ${gradient}`} />
       <div className="p-5">
         <div className="flex items-center gap-3 mb-4">
           <div className="skeleton w-10 h-10 rounded-lg" />
@@ -571,7 +571,7 @@ export default function InsightsPage() {
       {/* Header */}
       <div className="text-center mb-2">
         <h1 className="text-xl sm:text-2xl font-bold flex items-center justify-center gap-2">
-          <span className="bg-gradient-to-r from-primary-600 to-accent-500 bg-clip-text text-transparent">
+          <span className="text-gray-900 dark:text-gray-100">
             {t('insightsPage.title')}
           </span>
           <HelpTooltip text={t('help.insights')} />
@@ -733,15 +733,15 @@ function InsightCard({
   return (
     <div
       className={`
-        rounded-xl border border-[var(--border)] bg-[var(--card)] overflow-hidden
+        rounded-xl border border-gray-100 dark:border-slate-700 bg-white dark:bg-[var(--card)] overflow-hidden
         transition-all duration-300 ease-out
-        ${isExpanded ? 'shadow-lg ring-1 ring-black/5 dark:ring-white/5' : 'shadow-sm hover:shadow-md'}
+        ${isExpanded ? 'shadow-md ring-1 ring-black/5 dark:ring-white/5' : 'shadow-sm hover:shadow-sm'}
         stagger-${Math.min(index + 1, 8)}
       `}
       style={{ animationName: 'fadeIn', animationDuration: '0.4s', animationFillMode: 'both' }}
     >
       {/* Gradient top line */}
-      <div className={`h-1 bg-gradient-to-r ${config.gradient} transition-all duration-300 ${isExpanded ? 'opacity-100' : 'opacity-60'}`} />
+      <div className={`h-0.5 bg-gradient-to-r ${config.gradient} transition-all duration-300 ${isExpanded ? 'opacity-100' : 'opacity-40'}`} />
 
       {/* Header button */}
       <button

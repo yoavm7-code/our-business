@@ -891,17 +891,17 @@ export default function ClientsPage() {
       {/* Summary cards */}
       {clientsList.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="card stat-card-indigo">
+          <div className="card">
             <p className="text-sm text-slate-500">{t('clients.totalClients')}</p>
-            <p className="text-2xl font-bold mt-1">{totalClients}</p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-1">{totalClients}</p>
           </div>
-          <div className="card stat-card-green">
+          <div className="card">
             <p className="text-sm text-slate-500">{t('clients.activeClientsCount')}</p>
-            <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">{activeClients}</p>
+            <p className="text-3xl font-bold text-green-600 dark:text-green-400 mt-1">{activeClients}</p>
           </div>
-          <div className="card stat-card-blue">
+          <div className="card">
             <p className="text-sm text-slate-500">{t('clients.totalRevenue')}</p>
-            <p className="text-2xl font-bold mt-1">{formatCurrency(totalRevenue, 'ILS', locale)}</p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-1">{formatCurrency(totalRevenue, 'ILS', locale)}</p>
           </div>
         </div>
       )}
@@ -950,126 +950,91 @@ export default function ClientsPage() {
           <p className="text-slate-500">{t('clients.noResults')}</p>
         </div>
       ) : (
-        /* Client cards grid */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((c, idx) => {
-            const projectCount = c._count?.projects || 0;
-            const revenue = c.totalRevenue || 0;
-            const initials = c.name
-              .split(' ')
-              .map((w) => w.charAt(0))
-              .slice(0, 2)
-              .join('')
-              .toUpperCase();
+        /* Client table */
+        <div className="card p-0 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-800/30">
+                  <th className="text-start py-3 px-4 font-medium text-gray-500 whitespace-nowrap">{t('clients.clientName')}</th>
+                  <th className="text-start py-3 px-4 font-medium text-gray-500 whitespace-nowrap">{t('clients.contact')}</th>
+                  <th className="text-start py-3 px-4 font-medium text-gray-500 whitespace-nowrap">{t('clients.email')}</th>
+                  <th className="text-start py-3 px-4 font-medium text-gray-500 whitespace-nowrap">{t('clients.projects')}</th>
+                  <th className="text-end py-3 px-4 font-medium text-gray-500 whitespace-nowrap">{t('clients.revenue')}</th>
+                  <th className="text-end py-3 px-4 font-medium text-gray-500 whitespace-nowrap">{locale === 'he' ? 'פעולות' : 'Actions'}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((c) => {
+                  const projectCount = c._count?.projects || 0;
+                  const revenue = c.totalRevenue || 0;
+                  const initials = c.name
+                    .split(' ')
+                    .map((w) => w.charAt(0))
+                    .slice(0, 2)
+                    .join('')
+                    .toUpperCase();
 
-            return (
-              <div
-                key={c.id}
-                className={`card-hover relative overflow-hidden cursor-pointer group stagger-${Math.min(idx + 1, 8)}`}
-                style={{ animationName: 'fadeIn' }}
-                onClick={() => openDetail(c)}
-              >
-                {/* Top color bar */}
-                <div className="absolute inset-x-0 top-0 h-1" style={{ background: '#6366f1' }} />
-
-                {/* Header */}
-                <div className="flex items-start gap-3 mb-4">
-                  <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg shrink-0 shadow-md"
-                    style={{ background: '#6366f1' }}
-                  >
-                    {initials}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-base truncate group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-                      {c.name}
-                    </h3>
-                    {c.contactName && (
-                      <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-                        <IconUser /> {c.contactName}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <IconChevronRight />
-                  </div>
-                </div>
-
-                {/* Contact info */}
-                <div className="space-y-1.5 mb-4">
-                  {c.email && (
-                    <div className="flex items-center gap-2 text-sm text-slate-500">
-                      <IconMail />
-                      <span className="truncate">{c.email}</span>
-                    </div>
-                  )}
-                  {c.phone && (
-                    <div className="flex items-center gap-2 text-sm text-slate-500">
-                      <IconPhone />
-                      <span>{c.phone}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Stats row */}
-                <div className="flex items-center gap-4 mb-4 pt-3 border-t border-[var(--border)]">
-                  <div className="flex-1">
-                    <p className="text-xs text-slate-400">{t('clients.projects')}</p>
-                    <p className="text-sm font-bold">{projectCount}</p>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-xs text-slate-400">{t('clients.revenue')}</p>
-                    <p className="text-sm font-bold text-green-600 dark:text-green-400">
-                      {formatCurrency(revenue, c.currency, locale)}
-                    </p>
-                  </div>
-                  {c.hourlyRate != null && c.hourlyRate > 0 && (
-                    <div className="flex-1">
-                      <p className="text-xs text-slate-400">{t('clients.rate')}</p>
-                      <p className="text-sm font-bold">{formatCurrency(c.hourlyRate, c.currency, locale)}/h</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Quick actions */}
-                <div className="flex gap-1.5">
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); openEdit(c); }}
-                    className="flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-lg border border-[var(--border)] hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-                    title={t('clients.edit')}
-                  >
-                    <IconEdit /> {t('clients.edit')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); openDetail(c); }}
-                    className="flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-lg border border-[var(--border)] hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-                    title={t('clients.viewProjects')}
-                  >
-                    <IconFolder /> {t('clients.projects')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); /* Navigate to create invoice for this client */ }}
-                    className="flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-lg border border-[var(--border)] hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-                    title={t('clients.createInvoice')}
-                  >
-                    <IconInvoice /> {t('clients.invoice')}
-                  </button>
-                  <div className="flex-1" />
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); confirmDelete(c); }}
-                    className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 transition-colors"
-                    title={t('common.delete')}
-                  >
-                    <IconTrash />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+                  return (
+                    <tr
+                      key={c.id}
+                      className="border-b border-gray-100 dark:border-slate-700 last:border-0 hover:bg-gray-50/80 dark:hover:bg-slate-800/50 cursor-pointer transition-colors"
+                      onClick={() => openDetail(c)}
+                    >
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-semibold text-sm shrink-0"
+                            style={{ background: '#6366f1' }}
+                          >
+                            {initials}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-medium truncate">{c.name}</p>
+                            {c.company && <p className="text-xs text-gray-400 truncate">{c.company}</p>}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-gray-600 dark:text-gray-400">
+                        {c.contactName || '—'}
+                      </td>
+                      <td className="py-3 px-4 text-gray-500">
+                        {c.email || '—'}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-gray-700 dark:text-gray-300 font-medium">{projectCount}</span>
+                      </td>
+                      <td className="py-3 px-4 text-end">
+                        <span className="font-medium text-green-600 dark:text-green-400">
+                          {formatCurrency(revenue, c.currency, locale)}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-end">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); openEdit(c); }}
+                            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                            title={t('clients.edit')}
+                          >
+                            <IconEdit />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); confirmDelete(c); }}
+                            className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                            title={t('common.delete')}
+                          >
+                            <IconTrash />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
