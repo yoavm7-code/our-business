@@ -22,6 +22,16 @@ const JUNK_PATTERNS = [
   /^```/,
 ];
 
+/** Strip common schema-like prefixes from the text */
+function cleanTipText(text: string): string {
+  return text
+    .replace(/^(description|title|summary|note|label|section|category)\s*:\s*/i, '')
+    .trim();
+}
+
+/** Storage key — bump version to bust old cached tips that contained junk */
+const TIPS_STORAGE_KEY = 'smartTips_v3';
+
 function extractMultipleTips(content: string, max: number = 5): string[] {
   const lines = content.split('\n').map((l: string) => l.trim()).filter(Boolean);
   const results: string[] = [];
@@ -48,7 +58,7 @@ function extractMultipleTips(content: string, max: number = 5): string[] {
     if (JUNK_PATTERNS.some((p) => p.test(cleaned))) continue;
     if (cleaned.length > 200) cleaned = cleaned.slice(0, 197) + '...';
 
-    results.push(cleaned);
+    results.push(cleanTipText(cleaned));
   }
 
   return results;
@@ -77,7 +87,7 @@ export default function SmartTip() {
 
   // Load tips
   useEffect(() => {
-    const stored = typeof window !== 'undefined' ? localStorage.getItem('smartTips_v2') : null;
+    const stored = typeof window !== 'undefined' ? localStorage.getItem(TIPS_STORAGE_KEY) : null;
     if (stored) {
       try {
         const parsed = JSON.parse(stored) as StoredTip[];
@@ -105,7 +115,7 @@ export default function SmartTip() {
       }
       if (allTips.length > 0) {
         setTips(allTips);
-        localStorage.setItem('smartTips_v2', JSON.stringify(allTips));
+        localStorage.setItem(TIPS_STORAGE_KEY, JSON.stringify(allTips));
       }
       setLoaded(true);
     }, 3000);
@@ -116,7 +126,7 @@ export default function SmartTip() {
   const markAsRead = useCallback((tipId: string) => {
     setTips((prev: StoredTip[]) => {
       const updated = prev.map((tip: StoredTip) => tip.id === tipId ? { ...tip, read: true } : tip);
-      localStorage.setItem('smartTips_v2', JSON.stringify(updated));
+      localStorage.setItem(TIPS_STORAGE_KEY, JSON.stringify(updated));
       return updated;
     });
   }, []);
@@ -124,7 +134,7 @@ export default function SmartTip() {
   const markAllRead = useCallback(() => {
     setTips((prev: StoredTip[]) => {
       const updated = prev.map((tip: StoredTip) => ({ ...tip, read: true }));
-      localStorage.setItem('smartTips_v2', JSON.stringify(updated));
+      localStorage.setItem(TIPS_STORAGE_KEY, JSON.stringify(updated));
       return updated;
     });
   }, []);

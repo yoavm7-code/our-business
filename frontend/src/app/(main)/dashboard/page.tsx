@@ -30,6 +30,7 @@ import { useTranslation } from '@/i18n/context';
 import DateRangePicker from '@/components/DateRangePicker';
 import SmartTip from '@/components/SmartTip';
 import OnboardingProgress from '@/components/OnboardingProgress';
+import { useOnboarding } from '@/components/OnboardingProvider';
 import HelpTooltip from '@/components/HelpTooltip';
 import WidgetSettings from '@/components/dashboard/WidgetSettings';
 import { DEFAULT_WIDGETS } from '@/components/dashboard/defaults';
@@ -353,6 +354,8 @@ function getWidgetDefaultTitle(w: WidgetConfig, t: (key: string) => string): str
 
 export default function DashboardPage() {
   const { t, locale } = useTranslation();
+  const { startTour } = useOnboarding();
+  const isHe = locale === 'he';
 
   /* --- Core data state --- */
   const [summary, setSummary] = useState<SummaryData | null>(null);
@@ -1459,8 +1462,20 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ── Onboarding progress (new users only) ── */}
+      {/* ── Onboarding progress ── */}
       <OnboardingProgress />
+
+      {/* ── Start Tour button (visible to all) ── */}
+      <button
+        type="button"
+        onClick={startTour}
+        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800/40 transition-colors mb-2"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" /><polygon points="10 8 16 12 10 16 10 8" />
+        </svg>
+        {isHe ? 'סיור באתר' : 'Site Tour'}
+      </button>
 
       {/* ── Edit mode toolbar ── */}
       <div className="flex flex-wrap items-center gap-2 sm:gap-3">

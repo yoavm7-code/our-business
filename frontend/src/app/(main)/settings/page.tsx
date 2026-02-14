@@ -239,6 +239,9 @@ export default function SettingsPage() {
   const [giCredSandbox, setGiCredSandbox] = useState(false);
   const [giTestingConnection, setGiTestingConnection] = useState(false);
   const [giTestResult, setGiTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [giPopupStep, setGiPopupStep] = useState<'button' | 'form'>('button');
+  const giPopupRef = useRef<Window | null>(null);
+  const giPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   /* ══════════════════════════════════════════════════════════════
      DATA LOADING
@@ -821,6 +824,39 @@ export default function SettingsPage() {
       setGiTestingConnection(false);
     }
   }
+
+  /** Open Morning login in a popup and start polling for connection */
+  function handleMorningPopupConnect() {
+    // Open Morning login page in a popup window
+    const w = 600, h = 700;
+    const left = (screen.width - w) / 2;
+    const top = (screen.height - h) / 2;
+    giPopupRef.current = window.open(
+      'https://app.greeninvoice.co.il/',
+      'morning_login',
+      `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no`,
+    );
+    // Move to the credential form step
+    setGiPopupStep('form');
+    setGiTestResult(null);
+
+    // Start polling to check if popup was closed (user finished logging in)
+    if (giPollRef.current) clearInterval(giPollRef.current);
+    giPollRef.current = setInterval(() => {
+      if (giPopupRef.current && giPopupRef.current.closed) {
+        if (giPollRef.current) clearInterval(giPollRef.current);
+        giPollRef.current = null;
+        giPopupRef.current = null;
+      }
+    }, 1000);
+  }
+
+  // Cleanup popup poll on unmount
+  useEffect(() => {
+    return () => {
+      if (giPollRef.current) clearInterval(giPollRef.current);
+    };
+  }, []);
 
   /* ══════════════════════════════════════════════════════════════
      RENDER: TAB NAVIGATION
@@ -2214,53 +2250,56 @@ export default function SettingsPage() {
             ) : (
               /* ─── Setup / Connect state ─── */
               <div className="space-y-5">
-                {/* Step 1: Log in to Morning */}
-                <div className="p-5 rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/10 dark:to-emerald-900/10 border border-green-200 dark:border-green-800/50">
-                  <div className="flex items-start gap-3 mb-3">
-                    <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center shrink-0 text-sm font-bold">1</div>
-                    <div>
-                      <h4 className="text-sm font-bold text-green-800 dark:text-green-200">
-                        {locale === 'he' ? 'התחבר לחשבון מורנינג שלך' : 'Log in to your Morning account'}
-                      </h4>
-                      <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                {giPopupStep === 'button' ? (
+                  /* Step 1: "Connect to Morning" button */
+                  <div className="text-center space-y-4">
+                    <div className="p-4 rounded-xl bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800/50">
+                      <p className="text-sm text-green-700 dark:text-green-300">
                         {locale === 'he'
-                          ? 'לחץ על הכפתור למטה כדי לפתוח את מורנינג. התחבר או צור חשבון חדש אם אין לך.'
-                          : 'Click the button below to open Morning. Log in or create a new account if you don\'t have one.'}
+                          ? 'לחץ על הכפתור למטה כדי להתחבר לחשבון המורנינג שלך. חלון חדש ייפתח - התחבר לחשבון המורנינג שלך ואז הזן את הפרטים שלך כאן.'
+                          : 'Click the button below to connect to your Morning account. A new window will open - log in to your Morning account and then enter your details here.'}
                       </p>
                     </div>
+                    <button
+                      type="button"
+                      onClick={handleMorningPopupConnect}
+                      className="btn-primary w-full py-3 text-base"
+                    >
+                      <span className="flex items-center justify-center gap-3">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" />
+                        </svg>
+                        {locale === 'he' ? 'התחבר למורנינג' : 'Connect to Morning'}
+                      </span>
+                    </button>
+                    <p className="text-xs text-slate-400">
+                      {locale === 'he' ? 'אין לך חשבון מורנינג? ' : "Don't have a Morning account? "}
+                      <a href="https://app.greeninvoice.co.il/signup" target="_blank" rel="noopener noreferrer" className="text-green-600 dark:text-green-400 hover:underline font-medium">
+                        {locale === 'he' ? 'הירשם כאן' : 'Sign up here'}
+                      </a>
+                    </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => window.open('https://app.greeninvoice.co.il', '_blank', 'noopener')}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-semibold shadow-lg hover:shadow-xl transition-all"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" />
-                    </svg>
-                    {locale === 'he' ? 'פתח את מורנינג' : 'Open Morning'}
-                  </button>
-                </div>
-
-                {/* Step 2: Enter credentials */}
-                <div className="p-5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-[var(--border)]">
-                  <div className="flex items-start gap-3 mb-4">
-                    <div className="w-8 h-8 rounded-full bg-indigo-500 text-white flex items-center justify-center shrink-0 text-sm font-bold">2</div>
-                    <div>
-                      <h4 className="text-sm font-bold">
-                        {locale === 'he' ? 'הזן את פרטי ההתחברות שלך' : 'Enter your login details'}
-                      </h4>
-                      <p className="text-xs text-slate-500 mt-1">
-                        {locale === 'he'
-                          ? 'הכנס את אותם פרטים שבהם נכנסת למורנינג - אימייל וסיסמה.'
-                          : 'Enter the same email and password you used to log in to Morning.'}
-                      </p>
-                    </div>
-                  </div>
-
+                ) : (
+                  /* Step 2: Credential form (shown after popup opens) */
                   <div className="space-y-3">
+                    <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/50">
+                      <div className="flex items-start gap-3">
+                        <div className="shrink-0 w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-800/40 flex items-center justify-center text-blue-600 dark:text-blue-400 mt-0.5">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" />
+                          </svg>
+                        </div>
+                        <p className="text-sm text-blue-700 dark:text-blue-300">
+                          {locale === 'he'
+                            ? 'חלון מורנינג נפתח. לאחר שהתחברת (או אם כבר מחובר), הזן את אותם פרטי התחברות כאן כדי לחבר את החשבון שלך אוטומטית.'
+                            : 'Morning window opened. After logging in (or if already logged in), enter the same credentials here to automatically connect your account.'}
+                        </p>
+                      </div>
+                    </div>
+
                     <div>
                       <label className="block text-sm font-medium mb-1">
-                        {locale === 'he' ? 'אימייל' : 'Email'}
+                        {locale === 'he' ? 'אימייל (כמו במורנינג)' : 'Email (same as Morning)'}
                       </label>
                       <input
                         type="email"
@@ -2273,7 +2312,7 @@ export default function SettingsPage() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-1">
-                        {locale === 'he' ? 'סיסמה' : 'Password'}
+                        {locale === 'he' ? 'סיסמה (כמו במורנינג)' : 'Password (same as Morning)'}
                       </label>
                       <input
                         type="password"
@@ -2333,8 +2372,26 @@ export default function SettingsPage() {
                         <span className="font-medium">{giTestResult.message}</span>
                       </div>
                     )}
+
+                    {/* Back + open Morning again */}
+                    <div className="flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={() => { setGiPopupStep('button'); setGiTestResult(null); }}
+                        className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                      >
+                        {locale === 'he' ? '← חזור' : '← Back'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleMorningPopupConnect}
+                        className="text-xs text-green-600 dark:text-green-400 hover:underline"
+                      >
+                        {locale === 'he' ? 'פתח את מורנינג שוב' : 'Open Morning again'}
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* API Key toggle (for advanced users) */}
                 <details className="group">
