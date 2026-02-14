@@ -228,12 +228,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const userDisplayName = userInfo?.name || userInfo?.email?.split('@')[0] || '';
 
   /* ─────────────── Sidebar content ─────────────── */
+  // On mobile (drawer), always show expanded mode regardless of sidebarCollapsed
+  const isMobileDrawer = drawerOpen;
+  const isCollapsed = sidebarCollapsed && !isMobileDrawer;
+
   const sidebarContent = (
     <>
       {/* Logo / brand */}
-      <div className={`flex items-center justify-between py-4 border-b border-white/10 ${sidebarCollapsed ? 'px-2' : 'px-5'}`}>
-        <Link href="/dashboard" className={`font-bold text-white tracking-tight ${sidebarCollapsed ? 'text-sm mx-auto' : 'text-lg'}`}>
-          {sidebarCollapsed ? 'F' : t('app.name')}
+      <div className={`flex items-center justify-between py-4 border-b border-white/10 ${isCollapsed ? 'px-2' : 'px-5'}`}>
+        <Link href="/dashboard" className={`font-bold text-white tracking-tight ${isCollapsed ? 'text-sm mx-auto' : 'text-lg'}`}>
+          {isCollapsed ? 'F' : t('app.name')}
         </Link>
         <div className="flex items-center gap-2">
           {/* Collapse toggle - desktop only */}
@@ -261,7 +265,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       {/* User profile section */}
       {userInfo && (
-        <div className={`relative pt-4 pb-2 ${sidebarCollapsed ? 'px-1.5' : 'px-3'}`}>
+        <div className={`relative pt-4 pb-2 ${isCollapsed ? 'px-1.5' : 'px-3'}`}>
           <button
             type="button"
             onClick={() => setProfileMenuOpen((o) => !o)}
@@ -274,17 +278,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 {userInitial}
               </div>
             )}
-            {!sidebarCollapsed && (
+            {!isCollapsed && (
               <div className="flex-1 min-w-0 text-start">
                 <p className="font-medium truncate text-sm text-white">{userDisplayName}</p>
                 <p className="text-xs text-[#a0a3bd] truncate">{userInfo.email}</p>
               </div>
             )}
-            {!sidebarCollapsed && (
+            {!isCollapsed && (
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`shrink-0 text-[#a0a3bd] transition-transform ${profileMenuOpen ? 'rotate-180' : ''}`}><polyline points="6 9 12 15 18 9"/></svg>
             )}
           </button>
-          {profileMenuOpen && !sidebarCollapsed && (
+          {profileMenuOpen && !isCollapsed && (
             <div className="mt-1 rounded-xl bg-[#252540] border border-white/10 shadow-lg overflow-hidden animate-fadeIn">
               <Link
                 href="/settings"
@@ -324,19 +328,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               key={group.id}
               className="relative"
               onMouseEnter={() => {
-                if (sidebarCollapsed) {
+                if (isCollapsed) {
                   if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
                   setHoveredGroup(group.id);
                 }
               }}
               onMouseLeave={() => {
-                if (sidebarCollapsed) {
+                if (isCollapsed) {
                   hoverTimeoutRef.current = setTimeout(() => setHoveredGroup(null), 200);
                 }
               }}
             >
               {/* Group header - expanded mode */}
-              {!sidebarCollapsed && (
+              {!isCollapsed && (
                 <div
                   onClick={() => toggleGroup(group.id)}
                   className="flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 cursor-pointer hover:text-slate-300 mt-3 first:mt-0"
@@ -352,7 +356,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               )}
 
               {/* Collapsed mode: show first item icon as group representative */}
-              {sidebarCollapsed && (
+              {isCollapsed && (
                 <div className="flex flex-col items-center gap-0.5 py-1">
                   {group.items.map((item) => {
                     const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
@@ -375,7 +379,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               )}
 
               {/* Collapsed hover flyout */}
-              {sidebarCollapsed && isHovered && (
+              {isCollapsed && isHovered && (
                 <div
                   className="fixed z-[9999] animate-fadeIn"
                   style={{
@@ -425,7 +429,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               )}
 
               {/* Expanded mode: full item list */}
-              {!sidebarCollapsed && openGroups.has(group.id) && group.items.map((item) => {
+              {!isCollapsed && openGroups.has(group.id) && group.items.map((item) => {
                 const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
                 return (
                   <Link
@@ -456,22 +460,22 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <button
           type="button"
           onClick={() => setShowQuickAdd(true)}
-          className={`flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium text-indigo-400 hover:bg-indigo-500/15 transition-all duration-150 mt-4 ${sidebarCollapsed ? 'justify-center' : ''}`}
-          title={sidebarCollapsed ? t('quickAdd.title') : undefined}
+          className={`flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium text-indigo-400 hover:bg-indigo-500/15 transition-all duration-150 mt-4 ${isCollapsed ? 'justify-center' : ''}`}
+          title={isCollapsed ? t('quickAdd.title') : undefined}
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-          {!sidebarCollapsed && <span>{t('quickAdd.title')}</span>}
+          {!isCollapsed && <span>{t('quickAdd.title')}</span>}
         </button>
 
         {/* Site tour button */}
         <button
           type="button"
           onClick={startTour}
-          className={`flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium text-[#a0a3bd] hover:bg-white/5 hover:text-white transition-all duration-150 ${sidebarCollapsed ? 'justify-center' : ''}`}
-          title={sidebarCollapsed ? (locale === 'he' ? 'סיור באתר' : 'Site Tour') : undefined}
+          className={`flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium text-[#a0a3bd] hover:bg-white/5 hover:text-white transition-all duration-150 ${isCollapsed ? 'justify-center' : ''}`}
+          title={isCollapsed ? (locale === 'he' ? 'סיור באתר' : 'Site Tour') : undefined}
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polygon points="10 8 16 12 10 16 10 8" /></svg>
-          {!sidebarCollapsed && <span>{locale === 'he' ? 'סיור באתר' : 'Site Tour'}</span>}
+          {!isCollapsed && <span>{locale === 'he' ? 'סיור באתר' : 'Site Tour'}</span>}
         </button>
 
         {/* Settings - at bottom of nav */}
@@ -485,11 +489,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   isActive
                     ? 'bg-indigo-500/15 text-indigo-400'
                     : 'text-[#a0a3bd] hover:bg-white/5 hover:text-white'
-                } ${sidebarCollapsed ? 'justify-center' : ''}`}
-                title={sidebarCollapsed ? t('nav.settings') : undefined}
+                } ${isCollapsed ? 'justify-center' : ''}`}
+                title={isCollapsed ? t('nav.settings') : undefined}
               >
                 <NavIcon name="settings" />
-                {!sidebarCollapsed && <span>{t('nav.settings')}</span>}
+                {!isCollapsed && <span>{t('nav.settings')}</span>}
               </Link>
             );
           })()}
@@ -497,16 +501,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </nav>
 
       {/* Footer actions */}
-      <div className={`border-t border-white/10 space-y-0.5 ${sidebarCollapsed ? 'p-1.5' : 'p-3'}`}>
+      <div className={`border-t border-white/10 space-y-0.5 ${isCollapsed ? 'p-1.5' : 'p-3'}`}>
         {/* Search shortcut */}
         <button
           type="button"
           onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
-          className={`flex items-center gap-3 w-full rounded-xl text-sm text-[#a0a3bd] hover:bg-white/5 hover:text-white transition-all duration-150 ${sidebarCollapsed ? 'justify-center p-2' : 'px-3 py-2.5'}`}
-          title={sidebarCollapsed ? (t('search.placeholder').split(',')[0]) : undefined}
+          className={`flex items-center gap-3 w-full rounded-xl text-sm text-[#a0a3bd] hover:bg-white/5 hover:text-white transition-all duration-150 ${isCollapsed ? 'justify-center p-2' : 'px-3 py-2.5'}`}
+          title={isCollapsed ? (t('search.placeholder').split(',')[0]) : undefined}
         >
           <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          {!sidebarCollapsed && (
+          {!isCollapsed && (
             <>
               <span>{t('search.placeholder').split(',')[0]}</span>
               <kbd className="ms-auto text-[10px] px-1.5 py-0.5 rounded border border-white/20 text-[#6b6d85] font-mono">K+</kbd>
@@ -517,35 +521,35 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <button
           type="button"
           onClick={toggleTheme}
-          className={`flex items-center gap-3 w-full rounded-xl text-sm text-[#a0a3bd] hover:bg-white/5 hover:text-white transition-all duration-150 ${sidebarCollapsed ? 'justify-center p-2' : 'px-3 py-2.5'}`}
-          title={sidebarCollapsed ? (darkMode ? t('darkMode.dark') : t('darkMode.light')) : undefined}
+          className={`flex items-center gap-3 w-full rounded-xl text-sm text-[#a0a3bd] hover:bg-white/5 hover:text-white transition-all duration-150 ${isCollapsed ? 'justify-center p-2' : 'px-3 py-2.5'}`}
+          title={isCollapsed ? (darkMode ? t('darkMode.dark') : t('darkMode.light')) : undefined}
         >
           {darkMode ? (
             <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
           ) : (
             <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
           )}
-          {!sidebarCollapsed && <span>{darkMode ? t('darkMode.dark') : t('darkMode.light')}</span>}
+          {!isCollapsed && <span>{darkMode ? t('darkMode.dark') : t('darkMode.light')}</span>}
         </button>
         {/* Language toggle */}
         <button
           type="button"
           onClick={toggleLocale}
-          className={`flex items-center gap-3 w-full rounded-xl text-sm text-[#a0a3bd] hover:bg-white/5 hover:text-white transition-all duration-150 ${sidebarCollapsed ? 'justify-center p-2' : 'px-3 py-2.5'}`}
-          title={sidebarCollapsed ? (locale === 'he' ? 'English' : 'עברית') : undefined}
+          className={`flex items-center gap-3 w-full rounded-xl text-sm text-[#a0a3bd] hover:bg-white/5 hover:text-white transition-all duration-150 ${isCollapsed ? 'justify-center p-2' : 'px-3 py-2.5'}`}
+          title={isCollapsed ? (locale === 'he' ? 'English' : 'עברית') : undefined}
         >
           <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
-          {!sidebarCollapsed && <span>{locale === 'he' ? 'English' : 'עברית'}</span>}
+          {!isCollapsed && <span>{locale === 'he' ? 'English' : 'עברית'}</span>}
         </button>
         {/* Sign out */}
         <button
           type="button"
           onClick={logout}
-          className={`flex items-center gap-3 w-full rounded-xl text-sm text-[#a0a3bd] hover:bg-white/5 hover:text-red-400 transition-all duration-150 ${sidebarCollapsed ? 'justify-center p-2' : 'px-3 py-2.5'}`}
-          title={sidebarCollapsed ? t('common.signOut') : undefined}
+          className={`flex items-center gap-3 w-full rounded-xl text-sm text-[#a0a3bd] hover:bg-white/5 hover:text-red-400 transition-all duration-150 ${isCollapsed ? 'justify-center p-2' : 'px-3 py-2.5'}`}
+          title={isCollapsed ? t('common.signOut') : undefined}
         >
           <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          {!sidebarCollapsed && <span>{t('common.signOut')}</span>}
+          {!isCollapsed && <span>{t('common.signOut')}</span>}
         </button>
       </div>
     </>
