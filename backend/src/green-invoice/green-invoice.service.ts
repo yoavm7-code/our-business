@@ -245,32 +245,56 @@ export class GreenInvoiceService {
     this.tokenCache.delete(businessId);
 
     const base = this.getBaseUrl(sandbox);
+    const url = `${base}/account/token`;
 
-    // Authenticate with email/password to get a token
-    const res = await fetch(`${base}/account/token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: email, secret: password }),
-    });
+    this.logger.log(`Attempting Green Invoice login: id=${email}, sandbox=${sandbox}, url=${url}`);
+
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: email, secret: password }),
+      });
+    } catch (fetchError: any) {
+      this.logger.error(`Green Invoice fetch error (network): ${fetchError?.message || fetchError}`);
+      throw new BadRequestException(
+        `Cannot reach Green Invoice servers (${fetchError?.message || 'network error'}). Please check your internet connection and try again.`,
+      );
+    }
 
     if (!res.ok) {
-      const text = await res.text();
-      this.logger.error(`Green Invoice login failed: ${res.status} ${text}`);
+      const text = await res.text().catch(() => '');
+      this.logger.error(`Green Invoice login failed: HTTP ${res.status} - ${text}`);
+
       let detail = '';
       if (res.status === 401 || res.status === 403) {
-        detail = 'Incorrect email or password. Make sure you are using the same credentials as your Morning (Green Invoice) website login.';
+        detail = `Incorrect email or password (HTTP ${res.status}). Make sure you are using the same credentials as your Morning (Green Invoice) website login. If you signed up with Google, you need to set a password first via "Forgot password".`;
       } else if (res.status === 404) {
-        detail = 'API endpoint not found. Try toggling the sandbox mode setting.';
+        detail = `API endpoint not found (HTTP 404). You are using ${sandbox ? 'sandbox' : 'production'} mode — try toggling the sandbox checkbox.`;
       } else if (res.status >= 500) {
-        detail = 'Green Invoice server is temporarily unavailable. Please try again in a few minutes.';
+        detail = `Green Invoice server error (HTTP ${res.status}). Their servers may be temporarily unavailable. Please try again in a few minutes.`;
       } else {
-        detail = `Connection failed (HTTP ${res.status}). Please verify your credentials.`;
+        detail = `Connection failed: HTTP ${res.status}. Response: ${text.slice(0, 200)}`;
       }
       throw new BadRequestException(detail);
     }
 
-    const data = await res.json();
+    let data: any;
+    try {
+      data = await res.json();
+    } catch (jsonError) {
+      this.logger.error('Green Invoice login: could not parse JSON response');
+      throw new BadRequestException('Unexpected response from Green Invoice API. Please try again.');
+    }
+
     const token = data.token as string;
+    if (!token) {
+      this.logger.error(`Green Invoice login: no token in response: ${JSON.stringify(data).slice(0, 200)}`);
+      throw new BadRequestException('Green Invoice did not return an authentication token. Please try again.');
+    }
+
+    this.logger.log(`Green Invoice login successful for business ${businessId}`);
 
     // Cache the token
     this.tokenCache.set(businessId, {
@@ -290,7 +314,7 @@ export class GreenInvoiceService {
       },
     });
 
-    return { success: true };
+    return { success: true, message: 'Connected successfully' };
   }
 
   /** Save Green Invoice credentials for a business */
