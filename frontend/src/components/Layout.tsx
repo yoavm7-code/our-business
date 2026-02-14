@@ -598,7 +598,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           fixed inset-y-0 start-0 z-50 w-72 bg-[#1a1a2e]
           transform transition-transform duration-300 ease-out
           ${drawerOpen ? 'translate-x-0 rtl:-translate-x-0' : 'ltr:-translate-x-full rtl:translate-x-full'}
-          md:sticky md:top-0 md:z-auto md:h-screen md:!translate-x-0
+          md:sticky md:top-0 md:z-40 md:h-screen md:!translate-x-0
           ${sidebarCollapsed ? 'md:w-16' : 'md:w-64'}
           flex flex-col shadow-xl md:shadow-none transition-all
         `}
