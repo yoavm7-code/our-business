@@ -243,7 +243,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             className="p-1.5 rounded-lg text-[#a0a3bd] hover:text-white hover:bg-white/10 transition-colors hidden md:inline-flex"
             aria-label="Toggle sidebar"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ transform: sidebarCollapsed ? 'scaleX(-1)' : undefined }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ transform: sidebarCollapsed ? (locale === 'he' ? 'scaleX(1)' : 'scaleX(-1)') : (locale === 'he' ? 'scaleX(-1)' : 'scaleX(1)') }}>
               <polyline points="11 17 6 12 11 7" /><polyline points="18 17 13 12 18 7" />
             </svg>
           </button>
@@ -377,7 +377,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               {/* Collapsed hover flyout */}
               {sidebarCollapsed && isHovered && (
                 <div
-                  className="fixed z-[60] animate-fadeIn"
+                  className="fixed z-[9999] animate-fadeIn"
                   style={{
                     [locale === 'he' ? 'right' : 'left']: '64px',
                     top: 'var(--flyout-top)',
@@ -400,8 +400,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     hoverTimeoutRef.current = setTimeout(() => setHoveredGroup(null), 200);
                   }}
                 >
-                  <div className="bg-[#252540] border border-white/10 rounded-xl shadow-2xl py-2 px-1 min-w-[180px]">
-                    <p className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">{t(group.labelKey)}</p>
+                  <div className="bg-[#252540] border border-white/10 rounded-xl shadow-2xl py-2 px-1 min-w-[200px]">
+                    <p className="px-3 py-2 text-xs font-bold uppercase tracking-wider text-slate-300 border-b border-white/10 mb-1">{t(group.labelKey)}</p>
                     {group.items.map((item) => {
                       const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
                       return (

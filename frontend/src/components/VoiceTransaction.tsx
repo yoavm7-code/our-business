@@ -102,6 +102,10 @@ export default function VoiceTransaction() {
   const { t, locale } = useTranslation();
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>('idle');
+  const [fabMinimized, setFabMinimized] = useState(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem('voiceFab_minimized') === 'true';
+    return false;
+  });
 
   /* ── data ── */
   const [accountList, setAccountList] = useState<AccountOption[]>([]);
@@ -891,19 +895,46 @@ export default function VoiceTransaction() {
   return (
     <>
       {/* ── Floating Action Button ── */}
-      <button
-        type="button"
-        onClick={handleOpen}
-        className="fixed bottom-24 end-6 z-40 w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/40 hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center"
-        title={t('voice.title')}
-      >
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-          <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-          <line x1="12" y1="19" x2="12" y2="23" />
-          <line x1="8" y1="23" x2="16" y2="23" />
-        </svg>
-      </button>
+      {fabMinimized ? (
+        /* Minimized: small subtle restore button */
+        <button
+          type="button"
+          onClick={() => { setFabMinimized(false); localStorage.setItem('voiceFab_minimized', 'false'); }}
+          className="fixed bottom-6 end-6 z-40 w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 shadow hover:bg-indigo-100 dark:hover:bg-indigo-900/30 hover:text-indigo-500 transition-all duration-200 flex items-center justify-center"
+          title={locale === 'he' ? 'הצג עוזר קולי' : 'Show voice assistant'}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+          </svg>
+        </button>
+      ) : (
+        /* Full FAB with minimize option */
+        <div className="fixed bottom-24 end-6 z-40 group/fab">
+          <button
+            type="button"
+            onClick={handleOpen}
+            className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/40 hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center"
+            title={t('voice.title')}
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+              <line x1="12" y1="19" x2="12" y2="23" />
+              <line x1="8" y1="23" x2="16" y2="23" />
+            </svg>
+          </button>
+          {/* Minimize button */}
+          <button
+            type="button"
+            onClick={() => { setFabMinimized(true); localStorage.setItem('voiceFab_minimized', 'true'); }}
+            className="absolute -top-1 -start-1 w-5 h-5 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 hover:border-red-200 dark:hover:border-red-800 transition-all shadow-sm"
+            title={locale === 'he' ? 'מזער' : 'Minimize'}
+          >
+            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      )}
 
       {/* ── Modal ── */}
       {open && (
