@@ -235,33 +235,52 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const sidebarContent = (
     <>
       {/* Logo / brand */}
-      <div className={`flex items-center justify-between py-4 border-b border-white/10 ${isCollapsed ? 'px-2' : 'px-5'}`}>
-        <Link href="/dashboard" className={`font-bold text-white tracking-tight ${isCollapsed ? 'text-sm mx-auto' : 'text-lg'}`}>
-          {isCollapsed ? 'F' : t('app.name')}
-        </Link>
-        <div className="flex items-center gap-2">
-          {/* Collapse toggle - desktop only */}
+      {isCollapsed ? (
+        <div className="flex flex-col items-center py-4 border-b border-white/10 px-2 group/brand">
+          <Link href="/dashboard" className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-indigo-500/25">
+            F
+          </Link>
+          {/* Expand arrow - appears on hover */}
           <button
             type="button"
-            onClick={() => { setSidebarCollapsed((c) => { const next = !c; localStorage.setItem('sidebar_collapsed', String(next)); return next; }); }}
-            className="p-1.5 rounded-lg text-[#a0a3bd] hover:text-white hover:bg-white/10 transition-colors hidden md:inline-flex"
-            aria-label="Toggle sidebar"
+            onClick={(e) => { e.stopPropagation(); setSidebarCollapsed((c) => { const next = !c; localStorage.setItem('sidebar_collapsed', String(next)); return next; }); }}
+            className="mt-2 p-1 rounded-lg text-[#a0a3bd] hover:text-white hover:bg-white/10 transition-all opacity-0 group-hover/brand:opacity-100 hidden md:inline-flex"
+            aria-label="Expand sidebar"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ transform: sidebarCollapsed ? (locale === 'he' ? 'scaleX(1)' : 'scaleX(-1)') : (locale === 'he' ? 'scaleX(-1)' : 'scaleX(1)') }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ transform: locale === 'he' ? 'scaleX(1)' : 'scaleX(-1)' }}>
               <polyline points="11 17 6 12 11 7" /><polyline points="18 17 13 12 18 7" />
             </svg>
           </button>
-          {/* Close button - mobile only */}
-          <button
-            type="button"
-            onClick={() => setDrawerOpen(false)}
-            className="p-1.5 rounded-lg text-[#a0a3bd] hover:text-white hover:bg-white/10 transition-colors md:hidden"
-            aria-label="Close menu"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
         </div>
-      </div>
+      ) : (
+        <div className="flex items-center justify-between py-4 border-b border-white/10 px-5">
+          <Link href="/dashboard" className="font-bold text-white tracking-tight text-lg">
+            {t('app.name')}
+          </Link>
+          <div className="flex items-center gap-2">
+            {/* Collapse toggle - desktop only */}
+            <button
+              type="button"
+              onClick={() => { setSidebarCollapsed((c) => { const next = !c; localStorage.setItem('sidebar_collapsed', String(next)); return next; }); }}
+              className="p-1.5 rounded-lg text-[#a0a3bd] hover:text-white hover:bg-white/10 transition-colors hidden md:inline-flex"
+              aria-label="Collapse sidebar"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ transform: locale === 'he' ? 'scaleX(-1)' : 'scaleX(1)' }}>
+                <polyline points="11 17 6 12 11 7" /><polyline points="18 17 13 12 18 7" />
+              </svg>
+            </button>
+            {/* Close button - mobile only */}
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(false)}
+              className="p-1.5 rounded-lg text-[#a0a3bd] hover:text-white hover:bg-white/10 transition-colors md:hidden"
+              aria-label="Close menu"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* User profile section */}
       {userInfo && (
@@ -378,8 +397,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 </div>
               )}
 
-              {/* Collapsed hover flyout */}
-              {isCollapsed && isHovered && (
+              {/* Collapsed hover flyout (only for groups with multiple items) */}
+              {isCollapsed && isHovered && group.items.length > 1 && (
                 <div
                   className="fixed z-[9999] animate-fadeIn"
                   style={{
@@ -460,6 +479,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <button
           type="button"
           onClick={() => setShowQuickAdd(true)}
+          onMouseEnter={() => { if (isCollapsed) setHoveredGroup(null); }}
           className={`flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium text-indigo-400 hover:bg-indigo-500/15 transition-all duration-150 mt-4 ${isCollapsed ? 'justify-center' : ''}`}
           title={isCollapsed ? t('quickAdd.title') : undefined}
         >
@@ -471,6 +491,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <button
           type="button"
           onClick={startTour}
+          onMouseEnter={() => { if (isCollapsed) setHoveredGroup(null); }}
           className={`flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium text-[#a0a3bd] hover:bg-white/5 hover:text-white transition-all duration-150 ${isCollapsed ? 'justify-center' : ''}`}
           title={isCollapsed ? (locale === 'he' ? 'סיור באתר' : 'Site Tour') : undefined}
         >
@@ -479,7 +500,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </button>
 
         {/* Settings - at bottom of nav */}
-        <div className="pt-3 mt-3 border-t border-white/10">
+        <div className="pt-3 mt-3 border-t border-white/10" onMouseEnter={() => { if (isCollapsed) setHoveredGroup(null); }}>
           {(() => {
             const isActive = pathname === '/settings';
             return (
@@ -501,7 +522,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </nav>
 
       {/* Footer actions */}
-      <div className={`border-t border-white/10 space-y-0.5 ${isCollapsed ? 'p-1.5' : 'p-3'}`}>
+      <div className={`border-t border-white/10 space-y-0.5 ${isCollapsed ? 'p-1.5' : 'p-3'}`} onMouseEnter={() => { if (isCollapsed) setHoveredGroup(null); }}>
         {/* Search shortcut */}
         <button
           type="button"

@@ -1349,11 +1349,9 @@ export default function InvoicesPage() {
 
   // Morning (Green Invoice) integration state
   const [morningStatus, setMorningStatus] = useState<GreenInvoiceStatus>({ connected: false, sandbox: false, lastSync: null });
-  const [morningBannerForm, setMorningBannerForm] = useState<'none' | 'api_key' | 'credentials'>('none');
+  const [morningBannerForm, setMorningBannerForm] = useState<'none' | 'api_key'>('none');
   const [morningKeyId, setMorningKeyId] = useState('');
   const [morningSecret, setMorningSecret] = useState('');
-  const [morningEmail, setMorningEmail] = useState('');
-  const [morningPassword, setMorningPassword] = useState('');
   const [morningSandbox, setMorningSandbox] = useState(false);
   const [morningConnecting, setMorningConnecting] = useState(false);
   const [morningSuccessMsg, setMorningSuccessMsg] = useState('');
@@ -1616,28 +1614,6 @@ export default function InvoicesPage() {
     }
   }
 
-  async function handleMorningConnectCredentials() {
-    if (!morningEmail.trim() || !morningPassword.trim()) return;
-    setMorningConnecting(true);
-    try {
-      const result = await greenInvoice.connectWithCredentials(morningEmail.trim(), morningPassword.trim(), morningSandbox);
-      if (result.success) {
-        setMorningStatus({ connected: true, sandbox: morningSandbox, lastSync: null });
-        setMorningEmail('');
-        setMorningPassword('');
-        setMorningBannerForm('none');
-        setMorningSuccessMsg(locale === 'he' ? 'חשבון מורנינג חובר בהצלחה!' : 'Morning account connected successfully!');
-        setTimeout(() => setMorningSuccessMsg(''), 5000);
-      } else {
-        toast(locale === 'he' ? 'החיבור נכשל' : 'Connection failed', 'error');
-      }
-    } catch {
-      toast(locale === 'he' ? 'החיבור נכשל' : 'Connection failed', 'error');
-    } finally {
-      setMorningConnecting(false);
-    }
-  }
-
   async function handlePushToMorning(invoiceId: string) {
     setMorningPushing(invoiceId);
     try {
@@ -1750,18 +1726,6 @@ export default function InvoicesPage() {
                       {locale === 'he' ? 'חבר עם מפתח API' : 'Connect with API Key'}
                     </span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setMorningBannerForm('credentials')}
-                    className="px-4 py-2 rounded-xl text-sm font-medium border border-green-300 dark:border-green-700 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
-                  >
-                    <span className="flex items-center gap-1.5">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" />
-                      </svg>
-                      {locale === 'he' ? 'חבר עם שם משתמש' : 'Connect with Username'}
-                    </span>
-                  </button>
                 </div>
               )}
 
@@ -1829,70 +1793,6 @@ export default function InvoicesPage() {
                 </div>
               )}
 
-              {/* Inline Credentials form */}
-              {morningBannerForm === 'credentials' && (
-                <div className="mt-3 space-y-3 max-w-md">
-                  <div>
-                    <label className="block text-xs font-medium text-green-800 dark:text-green-200 mb-1">
-                      {locale === 'he' ? 'אימייל' : 'Email'}
-                    </label>
-                    <input
-                      type="email"
-                      className="input w-full text-sm"
-                      value={morningEmail}
-                      onChange={(e) => setMorningEmail(e.target.value)}
-                      placeholder="your@email.com"
-                      dir="ltr"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-green-800 dark:text-green-200 mb-1">
-                      {locale === 'he' ? 'סיסמה' : 'Password'}
-                    </label>
-                    <input
-                      type="password"
-                      className="input w-full text-sm"
-                      value={morningPassword}
-                      onChange={(e) => setMorningPassword(e.target.value)}
-                      placeholder="********"
-                      dir="ltr"
-                    />
-                  </div>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={morningSandbox}
-                      onChange={(e) => setMorningSandbox(e.target.checked)}
-                      className="rounded border-slate-300 text-green-600 focus:ring-green-500"
-                    />
-                    <span className="text-xs text-green-700 dark:text-green-300">Sandbox</span>
-                  </label>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={handleMorningConnectCredentials}
-                      disabled={morningConnecting || !morningEmail.trim() || !morningPassword.trim()}
-                      className="px-4 py-2 rounded-xl text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
-                    >
-                      {morningConnecting ? (
-                        <span className="flex items-center gap-2">
-                          <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                          {locale === 'he' ? 'מתחבר...' : 'Connecting...'}
-                        </span>
-                      ) : (
-                        locale === 'he' ? 'התחבר' : 'Connect'
-                      )}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setMorningBannerForm('none'); setMorningEmail(''); setMorningPassword(''); }}
-                      className="px-4 py-2 rounded-xl text-sm font-medium border border-green-300 dark:border-green-700 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
-                    >
-                      {locale === 'he' ? 'ביטול' : 'Cancel'}
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
