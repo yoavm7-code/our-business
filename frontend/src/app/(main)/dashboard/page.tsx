@@ -1429,55 +1429,112 @@ export default function DashboardPage() {
 
   const visibleWidgets = widgets.filter((w) => !hiddenWidgetIds.has(w.id));
 
+  // Detect if user is new (no data at all)
+  const isNewUser = summary && !loading && summary.transactionCount === 0 && summary.income === 0 && summary.expenses === 0;
+
   return (
     <div className="space-y-6 animate-fadeIn">
 
-      {/* ── Header ── */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between gap-4">
-          <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
-            {t('dashboard.title')}
-            <HelpTooltip text={t('help.dashboardTitle')} className="ms-1" />
-          </h1>
-        </div>
-        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-3">
-          <div className="w-full sm:w-auto">
-            <DateRangePicker from={from} to={to} onChange={handleDateRangeChange} />
+      {/* ── New user: friendly welcome first ── */}
+      {isNewUser && (
+        <>
+          <div className="flex flex-col items-center justify-center py-12 sm:py-16 px-4 animate-fadeIn">
+            <div className="w-20 h-20 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center mb-6">
+              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary-600 dark:text-primary-400">
+                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+              </svg>
+            </div>
+            <h2 className="text-2xl font-semibold mb-2 text-center">{t('dashboard.welcomeTitle')}</h2>
+            <p className="text-slate-500 dark:text-slate-400 text-center max-w-md mb-8">
+              {t('dashboard.welcomeDescription')}
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <a href="/upload" className="btn-primary flex items-center gap-2 px-6 py-3 text-base">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                {t('dashboard.uploadFile')}
+              </a>
+              <a href="/transactions" className="btn-secondary flex items-center gap-2 px-6 py-3 text-base">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                {t('dashboard.addManually')}
+              </a>
+            </div>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-6 text-center max-w-sm">
+              {t('dashboard.welcomeHint')}
+            </p>
           </div>
-          <HelpTooltip text={t('help.dateRange')} className="hidden sm:block ms-1" />
-          <div className="grid grid-cols-2 sm:flex gap-2 sm:gap-3">
-            <select className="input w-full sm:w-auto sm:min-w-[160px] text-sm" value={accountId} onChange={(e) => setAccountId(e.target.value)} title={t('common.accounts')}>
-              <option value="">{t('common.allAccounts')}</option>
-              {accountsList.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-            </select>
-            <select className="input w-full sm:w-auto sm:min-w-[140px] text-sm" value={categoryId} onChange={(e) => setCategoryId(e.target.value)} title={t('common.categories')}>
-              <option value="">{t('common.allCategories')}</option>
-              {categoriesList.map((c) => {
-                const catKey = c.slug ? `categories.${c.slug}` : '';
-                const catLabel = catKey && t(catKey) !== catKey ? t(catKey) : c.name;
-                return <option key={c.id} value={c.id}>{catLabel}</option>;
-              })}
-            </select>
+
+          {/* ── Onboarding progress (below welcome for new users) ── */}
+          <OnboardingProgress />
+
+          {/* ── Start Tour button ── */}
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={startTour}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800/40 transition-colors"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" /><polygon points="10 8 16 12 10 16 10 8" />
+              </svg>
+              {isHe ? 'סיור באתר' : 'Site Tour'}
+            </button>
           </div>
-        </div>
-      </div>
+        </>
+      )}
 
-      {/* ── Onboarding progress ── */}
-      <OnboardingProgress />
+      {/* ── Existing user: normal dashboard ── */}
+      {!isNewUser && (
+        <>
+          {/* ── Header ── */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-4">
+              <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+                {t('dashboard.title')}
+                <HelpTooltip text={t('help.dashboardTitle')} className="ms-1" />
+              </h1>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-3">
+              <div className="w-full sm:w-auto">
+                <DateRangePicker from={from} to={to} onChange={handleDateRangeChange} />
+              </div>
+              <HelpTooltip text={t('help.dateRange')} className="hidden sm:block ms-1" />
+              <div className="grid grid-cols-2 sm:flex gap-2 sm:gap-3">
+                <select className="input w-full sm:w-auto sm:min-w-[160px] text-sm" value={accountId} onChange={(e) => setAccountId(e.target.value)} title={t('common.accounts')}>
+                  <option value="">{t('common.allAccounts')}</option>
+                  {accountsList.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+                <select className="input w-full sm:w-auto sm:min-w-[140px] text-sm" value={categoryId} onChange={(e) => setCategoryId(e.target.value)} title={t('common.categories')}>
+                  <option value="">{t('common.allCategories')}</option>
+                  {categoriesList.map((c) => {
+                    const catKey = c.slug ? `categories.${c.slug}` : '';
+                    const catLabel = catKey && t(catKey) !== catKey ? t(catKey) : c.name;
+                    return <option key={c.id} value={c.id}>{catLabel}</option>;
+                  })}
+                </select>
+              </div>
+            </div>
+          </div>
 
-      {/* ── Start Tour button (visible to all) ── */}
-      <button
-        type="button"
-        onClick={startTour}
-        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800/40 transition-colors mb-2"
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10" /><polygon points="10 8 16 12 10 16 10 8" />
-        </svg>
-        {isHe ? 'סיור באתר' : 'Site Tour'}
-      </button>
+          {/* ── Onboarding progress ── */}
+          <OnboardingProgress />
 
-      {/* ── Edit mode toolbar ── */}
+          {/* ── Start Tour button (visible to all) ── */}
+          <button
+            type="button"
+            onClick={startTour}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800/40 transition-colors mb-2"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" /><polygon points="10 8 16 12 10 16 10 8" />
+            </svg>
+            {isHe ? 'סיור באתר' : 'Site Tour'}
+          </button>
+
+          {/* ── Edit mode toolbar ── */}
       <div className="flex flex-wrap items-center gap-2 sm:gap-3">
         <button
           type="button"
@@ -1525,37 +1582,8 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* ── Empty state for new users ── */}
-      {summary && !loading && summary.transactionCount === 0 && summary.income === 0 && summary.expenses === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 px-4 animate-fadeIn">
-          <div className="w-20 h-20 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center mb-6">
-            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary-600 dark:text-primary-400">
-              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-            </svg>
-          </div>
-          <h2 className="text-2xl font-semibold mb-2">{t('dashboard.welcomeTitle')}</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-center max-w-md mb-8">
-            {t('dashboard.welcomeDescription')}
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <a href="/upload" className="btn-primary flex items-center gap-2 px-6 py-3 text-base">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
-              </svg>
-              {t('dashboard.uploadFile')}
-            </a>
-            <a href="/transactions" className="btn-secondary flex items-center gap-2 px-6 py-3 text-base">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
-              {t('dashboard.addManually')}
-            </a>
-          </div>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-6 text-center max-w-sm">
-            {t('dashboard.welcomeHint')}
-          </p>
-        </div>
-      ) : summary && (
+      {/* ── Data widgets (only shown when user has data) ── */}
+      {summary && !isNewUser && (
         <>
           {/* ── Quick Actions ── */}
           <QuickActionsWidget />
@@ -1580,6 +1608,10 @@ export default function DashboardPage() {
               </div>
             </SortableContext>
           </DndContext>
+        </>
+      )}
+
+        {/* end !isNewUser */}
         </>
       )}
 
