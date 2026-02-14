@@ -103,11 +103,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { t, locale, setLocale } = useTranslation();
-  const { phase: onboardingPhase } = useOnboarding();
+  const { phase: onboardingPhase, startTour } = useOnboarding();
 
   /* --- State --- */
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('sidebar_collapsed');
+      return stored === null ? true : stored === 'true'; // default collapsed on desktop
+    }
+    return true;
+  });
+  const [hoveredGroup, setHoveredGroup] = useState<string | null>(null);
+  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set(['main', 'business', 'finance', 'reports', 'more']));
   const [userInfo, setUserInfo] = useState<{ name: string | null; email: string; avatarUrl?: string | null } | null>(null);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -223,15 +231,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const sidebarContent = (
     <>
       {/* Logo / brand */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
-        <Link href="/dashboard" className="text-lg font-bold text-white tracking-tight">
+      <div className={`flex items-center justify-between py-4 border-b border-white/10 ${sidebarCollapsed ? 'px-2' : 'px-5'}`}>
+        <Link href="/dashboard" className={`font-bold text-white tracking-tight ${sidebarCollapsed ? 'text-sm mx-auto' : 'text-lg'}`}>
           {sidebarCollapsed ? 'F' : t('app.name')}
         </Link>
         <div className="flex items-center gap-2">
           {/* Collapse toggle - desktop only */}
           <button
             type="button"
-            onClick={() => setSidebarCollapsed((c) => !c)}
+            onClick={() => { setSidebarCollapsed((c) => { const next = !c; localStorage.setItem('sidebar_collapsed', String(next)); return next; }); }}
             className="p-1.5 rounded-lg text-[#a0a3bd] hover:text-white hover:bg-white/10 transition-colors hidden md:inline-flex"
             aria-label="Toggle sidebar"
           >
@@ -253,7 +261,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       {/* User profile section */}
       {userInfo && (
-        <div className="relative px-3 pt-4 pb-2">
+        <div className={`relative pt-4 pb-2 ${sidebarCollapsed ? 'px-1.5' : 'px-3'}`}>
           <button
             type="button"
             onClick={() => setProfileMenuOpen((o) => !o)}
@@ -308,60 +316,162 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
-        {navGroups.map((group) => (
-          <div key={group.id}>
-            {/* Group header */}
-            {!sidebarCollapsed && (
-              <div
-                onClick={() => toggleGroup(group.id)}
-                className="flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 cursor-pointer hover:text-slate-300 mt-3 first:mt-0"
-              >
-                <span>{t(group.labelKey)}</span>
-                <svg
-                  className={`w-4 h-4 transition-transform duration-200 ${openGroups.has(group.id) ? 'rotate-180' : ''}`}
-                  viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+      <nav className="flex-1 px-2 py-2 space-y-0.5 overflow-y-auto">
+        {navGroups.map((group) => {
+          const isHovered = hoveredGroup === group.id;
+          return (
+            <div
+              key={group.id}
+              className="relative"
+              onMouseEnter={() => {
+                if (sidebarCollapsed) {
+                  if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+                  setHoveredGroup(group.id);
+                }
+              }}
+              onMouseLeave={() => {
+                if (sidebarCollapsed) {
+                  hoverTimeoutRef.current = setTimeout(() => setHoveredGroup(null), 200);
+                }
+              }}
+            >
+              {/* Group header - expanded mode */}
+              {!sidebarCollapsed && (
+                <div
+                  onClick={() => toggleGroup(group.id)}
+                  className="flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 cursor-pointer hover:text-slate-300 mt-3 first:mt-0"
                 >
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
-              </div>
-            )}
-            {(sidebarCollapsed || openGroups.has(group.id)) && group.items.map((item) => {
-              const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  title={sidebarCollapsed ? `${t(item.key)}${item.descKey ? ' - ' + t(item.descKey) : ''}` : (item.descKey ? t(item.descKey) : undefined)}
-                  className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 group/nav ${
-                    isActive
-                      ? 'bg-indigo-500/15 text-indigo-400'
-                      : 'text-[#a0a3bd] hover:bg-white/5 hover:text-white'
-                  } ${sidebarCollapsed ? 'justify-center' : ''}`}
+                  <span>{t(group.labelKey)}</span>
+                  <svg
+                    className={`w-4 h-4 transition-transform duration-200 ${openGroups.has(group.id) ? 'rotate-180' : ''}`}
+                    viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </div>
+              )}
+
+              {/* Collapsed mode: show first item icon as group representative */}
+              {sidebarCollapsed && (
+                <div className="flex flex-col items-center gap-0.5 py-1">
+                  {group.items.map((item) => {
+                    const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={`flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-150 ${
+                          isActive
+                            ? 'bg-indigo-500/15 text-indigo-400'
+                            : 'text-[#a0a3bd] hover:bg-white/8 hover:text-white'
+                        }`}
+                        title={t(item.key)}
+                      >
+                        <NavIcon name={item.icon} />
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Collapsed hover flyout */}
+              {sidebarCollapsed && isHovered && (
+                <div
+                  className="fixed z-[60] animate-fadeIn"
+                  style={{
+                    [locale === 'he' ? 'right' : 'left']: '64px',
+                    top: 'var(--flyout-top)',
+                  }}
+                  ref={(el) => {
+                    if (el) {
+                      const parent = el.parentElement;
+                      if (parent) {
+                        const rect = parent.getBoundingClientRect();
+                        el.style.setProperty('top', `${rect.top}px`);
+                        el.style.removeProperty('--flyout-top');
+                      }
+                    }
+                  }}
+                  onMouseEnter={() => {
+                    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+                    setHoveredGroup(group.id);
+                  }}
+                  onMouseLeave={() => {
+                    hoverTimeoutRef.current = setTimeout(() => setHoveredGroup(null), 200);
+                  }}
                 >
-                  <NavIcon name={item.icon} />
-                  {!sidebarCollapsed && (
+                  <div className="bg-[#252540] border border-white/10 rounded-xl shadow-2xl py-2 px-1 min-w-[180px]">
+                    <p className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">{t(group.labelKey)}</p>
+                    {group.items.map((item) => {
+                      const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={() => setHoveredGroup(null)}
+                          className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all ${
+                            isActive
+                              ? 'bg-indigo-500/15 text-indigo-400'
+                              : 'text-[#a0a3bd] hover:bg-white/8 hover:text-white'
+                          }`}
+                        >
+                          <NavIcon name={item.icon} className="w-4 h-4" />
+                          <span>{t(item.key)}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Expanded mode: full item list */}
+              {!sidebarCollapsed && openGroups.has(group.id) && group.items.map((item) => {
+                const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    title={item.descKey ? t(item.descKey) : undefined}
+                    className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 group/nav ${
+                      isActive
+                        ? 'bg-indigo-500/15 text-indigo-400'
+                        : 'text-[#a0a3bd] hover:bg-white/5 hover:text-white'
+                    }`}
+                  >
+                    <NavIcon name={item.icon} />
                     <div className="flex-1 min-w-0">
                       <span>{t(item.key)}</span>
                       {item.descKey && (
                         <p className="text-[10px] text-slate-500 font-normal truncate mt-0.5 opacity-0 group-hover/nav:opacity-100 transition-opacity">{t(item.descKey)}</p>
                       )}
                     </div>
-                  )}
-                </Link>
-              );
-            })}
-          </div>
-        ))}
+                  </Link>
+                );
+              })}
+            </div>
+          );
+        })}
 
         {/* Quick Add in sidebar */}
         <button
           type="button"
           onClick={() => setShowQuickAdd(true)}
           className={`flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium text-indigo-400 hover:bg-indigo-500/15 transition-all duration-150 mt-4 ${sidebarCollapsed ? 'justify-center' : ''}`}
+          title={sidebarCollapsed ? t('quickAdd.title') : undefined}
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
           {!sidebarCollapsed && <span>{t('quickAdd.title')}</span>}
+        </button>
+
+        {/* Site tour button */}
+        <button
+          type="button"
+          onClick={startTour}
+          className={`flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium text-[#a0a3bd] hover:bg-white/5 hover:text-white transition-all duration-150 ${sidebarCollapsed ? 'justify-center' : ''}`}
+          title={sidebarCollapsed ? (locale === 'he' ? 'סיור באתר' : 'Site Tour') : undefined}
+        >
+          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polygon points="10 8 16 12 10 16 10 8" /></svg>
+          {!sidebarCollapsed && <span>{locale === 'he' ? 'סיור באתר' : 'Site Tour'}</span>}
         </button>
 
         {/* Settings - at bottom of nav */}
@@ -376,6 +486,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     ? 'bg-indigo-500/15 text-indigo-400'
                     : 'text-[#a0a3bd] hover:bg-white/5 hover:text-white'
                 } ${sidebarCollapsed ? 'justify-center' : ''}`}
+                title={sidebarCollapsed ? t('nav.settings') : undefined}
               >
                 <NavIcon name="settings" />
                 {!sidebarCollapsed && <span>{t('nav.settings')}</span>}
@@ -386,14 +497,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </nav>
 
       {/* Footer actions */}
-      <div className="p-3 border-t border-white/10 space-y-0.5">
+      <div className={`border-t border-white/10 space-y-0.5 ${sidebarCollapsed ? 'p-1.5' : 'p-3'}`}>
         {/* Search shortcut */}
         <button
           type="button"
           onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
-          className={`flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm text-[#a0a3bd] hover:bg-white/5 hover:text-white transition-all duration-150 ${sidebarCollapsed ? 'justify-center' : ''}`}
+          className={`flex items-center gap-3 w-full rounded-xl text-sm text-[#a0a3bd] hover:bg-white/5 hover:text-white transition-all duration-150 ${sidebarCollapsed ? 'justify-center p-2' : 'px-3 py-2.5'}`}
+          title={sidebarCollapsed ? (t('search.placeholder').split(',')[0]) : undefined}
         >
-          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           {!sidebarCollapsed && (
             <>
               <span>{t('search.placeholder').split(',')[0]}</span>
@@ -405,12 +517,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <button
           type="button"
           onClick={toggleTheme}
-          className={`flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm text-[#a0a3bd] hover:bg-white/5 hover:text-white transition-all duration-150 ${sidebarCollapsed ? 'justify-center' : ''}`}
+          className={`flex items-center gap-3 w-full rounded-xl text-sm text-[#a0a3bd] hover:bg-white/5 hover:text-white transition-all duration-150 ${sidebarCollapsed ? 'justify-center p-2' : 'px-3 py-2.5'}`}
+          title={sidebarCollapsed ? (darkMode ? t('darkMode.dark') : t('darkMode.light')) : undefined}
         >
           {darkMode ? (
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+            <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
           ) : (
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
           )}
           {!sidebarCollapsed && <span>{darkMode ? t('darkMode.dark') : t('darkMode.light')}</span>}
         </button>
@@ -418,18 +531,20 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <button
           type="button"
           onClick={toggleLocale}
-          className={`flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm text-[#a0a3bd] hover:bg-white/5 hover:text-white transition-all duration-150 ${sidebarCollapsed ? 'justify-center' : ''}`}
+          className={`flex items-center gap-3 w-full rounded-xl text-sm text-[#a0a3bd] hover:bg-white/5 hover:text-white transition-all duration-150 ${sidebarCollapsed ? 'justify-center p-2' : 'px-3 py-2.5'}`}
+          title={sidebarCollapsed ? (locale === 'he' ? 'English' : 'עברית') : undefined}
         >
-          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+          <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
           {!sidebarCollapsed && <span>{locale === 'he' ? 'English' : 'עברית'}</span>}
         </button>
         {/* Sign out */}
         <button
           type="button"
           onClick={logout}
-          className={`flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm text-[#a0a3bd] hover:bg-white/5 hover:text-red-400 transition-all duration-150 ${sidebarCollapsed ? 'justify-center' : ''}`}
+          className={`flex items-center gap-3 w-full rounded-xl text-sm text-[#a0a3bd] hover:bg-white/5 hover:text-red-400 transition-all duration-150 ${sidebarCollapsed ? 'justify-center p-2' : 'px-3 py-2.5'}`}
+          title={sidebarCollapsed ? t('common.signOut') : undefined}
         >
-          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
           {!sidebarCollapsed && <span>{t('common.signOut')}</span>}
         </button>
       </div>
@@ -480,7 +595,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           transform transition-transform duration-300 ease-out
           ${drawerOpen ? 'translate-x-0 rtl:-translate-x-0' : 'ltr:-translate-x-full rtl:translate-x-full'}
           md:sticky md:top-0 md:z-auto md:h-screen md:!translate-x-0
-          ${sidebarCollapsed ? 'md:w-[72px]' : 'md:w-64'}
+          ${sidebarCollapsed ? 'md:w-16' : 'md:w-64'}
           flex flex-col shadow-xl md:shadow-none transition-all
         `}
       >
@@ -506,21 +621,22 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-2">
             {/* Smart AI Tips */}
             <SmartTip />
-            {/* Voice button with minimize option */}
+            {/* Voice button with minimize toggle */}
             {voiceMinimized ? (
               <button
                 type="button"
                 onClick={() => { setVoiceMinimized(false); localStorage.setItem('voiceIcon_minimized', 'false'); }}
-                className="relative shrink-0 p-1 rounded-full text-slate-300 dark:text-slate-600 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all duration-200"
-                title={t('voice.start')}
+                className="relative shrink-0 p-1.5 rounded-lg text-slate-300 dark:text-slate-600 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all duration-200"
+                title={locale === 'he' ? 'הצג זיהוי קולי' : 'Show voice'}
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
                   <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                  <line x1="2" y1="2" x2="22" y2="22" />
                 </svg>
               </button>
             ) : (
-              <div className="relative group">
+              <div className="flex items-center gap-0.5">
                 <button
                   type="button"
                   onClick={handleVoiceClick}
@@ -534,14 +650,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     <line x1="8" y1="23" x2="16" y2="23" />
                   </svg>
                 </button>
-                {/* Minimize button - shown on hover */}
+                {/* Minimize button — always visible, clickable */}
                 <button
                   type="button"
                   onClick={() => { setVoiceMinimized(true); localStorage.setItem('voiceIcon_minimized', 'true'); }}
-                  className="absolute -top-1 -end-1 w-3.5 h-3.5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 flex items-center justify-center hover:bg-red-200 dark:hover:bg-red-800 hover:text-red-600 dark:hover:text-red-300 transition-colors opacity-60 hover:opacity-100"
-                  title={locale === 'he' ? '\u05DE\u05D6\u05E2\u05E8' : 'Minimize'}
+                  className="shrink-0 p-1 rounded-md text-slate-300 dark:text-slate-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200"
+                  title={locale === 'he' ? 'מזער' : 'Minimize'}
                 >
-                  <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               </div>
             )}

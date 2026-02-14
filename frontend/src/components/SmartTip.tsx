@@ -6,31 +6,36 @@ import { useTranslation } from '@/i18n/context';
 
 /** Lines that look like schema/field labels rather than actual tips */
 const JUNK_PATTERNS = [
-  /^description\s*:/i,
-  /^title\s*:/i,
-  /^type\s*:/i,
-  /^summary\s*:/i,
-  /^note\s*:/i,
-  /^name\s*:/i,
-  /^key\s*:/i,
-  /^value\s*:/i,
-  /^label\s*:/i,
-  /^section\s*:/i,
-  /^category\s*:/i,
   /^\{/,
   /^\[/,
   /^```/,
 ];
 
-/** Strip common schema-like prefixes from the text */
+/**
+ * Aggressively strip any leading `someWord:` or `some_word:` prefix
+ * (e.g. "description:", "message:", "title:", "content:", etc.)
+ * Repeats to handle chained prefixes like "message: description: actual text"
+ */
 function cleanTipText(text: string): string {
-  return text
-    .replace(/^(description|title|summary|note|label|section|category)\s*:\s*/i, '')
-    .trim();
+  let prev = '';
+  let cleaned = text;
+  while (cleaned !== prev) {
+    prev = cleaned;
+    cleaned = cleaned.replace(/^[a-zA-Z_][a-zA-Z0-9_]*\s*:\s*/, '').trim();
+  }
+  return cleaned;
+}
+
+/** Return true if the line is nothing but a label/key (no real content) */
+function isJunkLine(line: string): boolean {
+  // Matches lines like "description:", "message:", "key:", etc.
+  if (/^[a-zA-Z_][a-zA-Z0-9_]*\s*:\s*$/.test(line)) return true;
+  if (JUNK_PATTERNS.some((p) => p.test(line))) return true;
+  return false;
 }
 
 /** Storage key — bump version to bust old cached tips that contained junk */
-const TIPS_STORAGE_KEY = 'smartTips_v3';
+const TIPS_STORAGE_KEY = 'smartTips_v4';
 
 function extractMultipleTips(content: string, max: number = 5): string[] {
   const lines = content.split('\n').map((l: string) => l.trim()).filter(Boolean);
@@ -40,25 +45,27 @@ function extractMultipleTips(content: string, max: number = 5): string[] {
     if (results.length >= max) break;
     if (line.startsWith('#')) continue;
     if (line.endsWith(':')) continue;
+    if (isJunkLine(line)) continue;
     if (line.replace(/[*•\-\d.)#]/g, '').trim().length < 15) continue;
     if (/^[a-zA-Z][a-zA-Z0-9]*([A-Z][a-zA-Z0-9]*)+$/.test(line.trim())) continue;
     if (/^[a-zA-Z_][a-zA-Z0-9_.]+$/.test(line.trim()) && !line.includes(' ')) continue;
-    // Skip lines that look like schema/label fields
-    if (JUNK_PATTERNS.some((p) => p.test(line))) continue;
 
+    // Remove bullet/numbering/bold markers
     let cleaned = line
       .replace(/^[•\-*]\s*/, '')
       .replace(/^\d+[.)]\s*/, '')
       .replace(/\*\*/g, '')
       .trim();
 
+    // Strip leading label prefixes like "message:", "description:", etc.
+    cleaned = cleanTipText(cleaned);
+
     if (cleaned.length < 15) continue;
     if (/^[a-zA-Z][a-zA-Z0-9]*([A-Z][a-zA-Z0-9]*)+$/.test(cleaned)) continue;
-    // Also check cleaned text for junk patterns
-    if (JUNK_PATTERNS.some((p) => p.test(cleaned))) continue;
+    if (isJunkLine(cleaned)) continue;
     if (cleaned.length > 200) cleaned = cleaned.slice(0, 197) + '...';
 
-    results.push(cleanTipText(cleaned));
+    results.push(cleaned);
   }
 
   return results;
